@@ -63,28 +63,28 @@
                             <div class="text-sm font-semibold text-on-surface">{{t "sy.onboard.phone"}}</div>
                             <div class="text-xs text-secondary truncate">{{if $uphone}}{{$uphone}}{{else}}{{t "sy.onboard.not_provided_add"}}{{end}}</div>
                         </div>
-                        {{if $uphone}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-semibold text-emerald-strong dark:text-emerald-300 shrink-0">{{t "sy.onboard.completed"}}</span>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong shrink-0">{{t "sy.onboard.pending"}}</span>{{end}}
+                        {{if $uphone}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-semibold text-emerald-strong shrink-0">{{t "sy.onboard.completed"}}</span>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong shrink-0">{{t "sy.onboard.pending"}}</span>{{end}}
                     </div>
                     <div class="flex items-center justify-between p-4 bg-surface-container-low/70 border border-border-subtle rounded-xl">
                         <div class="min-w-0">
                             <div class="text-sm font-semibold text-on-surface">{{t "sy.onboard.name"}}</div>
                             <div class="text-xs text-secondary truncate">{{if $uname}}{{$uname}}{{else}}{{t "sy.onboard.not_provided"}}{{end}}</div>
                         </div>
-                        {{if $uname}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-semibold text-emerald-strong dark:text-emerald-300 shrink-0">{{t "sy.onboard.completed"}}</span>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong shrink-0">{{t "sy.onboard.pending"}}</span>{{end}}
+                        {{if $uname}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-semibold text-emerald-strong shrink-0">{{t "sy.onboard.completed"}}</span>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong shrink-0">{{t "sy.onboard.pending"}}</span>{{end}}
                     </div>
                     <div class="flex items-center justify-between p-4 bg-surface-container-low/70 border border-border-subtle rounded-xl">
                         <div class="min-w-0">
                             <div class="text-sm font-semibold text-on-surface">{{t "sy.onboard.timezone"}}</div>
                             <div class="text-xs text-secondary truncate">{{if $utz}}{{$utz}}{{else}}{{t "sy.onboard.not_set"}}{{end}}</div>
                         </div>
-                        {{if $utz}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-semibold text-emerald-strong dark:text-emerald-300 shrink-0">{{t "sy.onboard.completed"}}</span>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong shrink-0">{{t "sy.onboard.pending"}}</span>{{end}}
+                        {{if $utz}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-semibold text-emerald-strong shrink-0">{{t "sy.onboard.completed"}}</span>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong shrink-0">{{t "sy.onboard.pending"}}</span>{{end}}
                     </div>
                     <div class="flex items-center justify-between p-4 bg-surface-container-low/70 border border-border-subtle rounded-xl">
                         <div class="min-w-0">
                             <div class="text-sm font-semibold text-on-surface">{{t "sy.onboard.email_addr"}}</div>
                             <div class="text-xs text-secondary truncate">{{if $uemail}}{{$uemail}}{{else}}{{t "sy.onboard.not_available"}}{{end}}</div>
                         </div>
-                        {{if $everified}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-semibold text-emerald-strong dark:text-emerald-300 shrink-0">{{t "sy.onboard.verified"}}</span>{{else if $uemail}}<form method="POST" action="/user/send-verification"><button type="submit" class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong hover:bg-amber-500/20 transition-colors shrink-0 cursor-pointer">{{t "sy.onboard.verify_email"}}</button></form>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong shrink-0">{{t "sy.onboard.pending"}}</span>{{end}}
+                        {{if $everified}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-semibold text-emerald-strong shrink-0">{{t "sy.onboard.verified"}}</span>{{else if $uemail}}<form method="POST" action="/user/send-verification"><button type="submit" class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong hover:bg-amber-500/20 transition-colors shrink-0 cursor-pointer">{{t "sy.onboard.verify_email"}}</button></form>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong shrink-0">{{t "sy.onboard.pending"}}</span>{{end}}
                     </div>
                 </div>
             </div>

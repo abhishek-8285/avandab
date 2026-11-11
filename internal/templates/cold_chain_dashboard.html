@@ -14,7 +14,7 @@
 <!-- KPI Stats Grid -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
     <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-sky-500/10 border border-sky-500/20 grid place-items-center text-sky-600 shrink-0">
+        <div class="w-10 h-10 rounded-lg bg-sky-soft border border-sky-500/20 grid place-items-center text-sky-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/><path d="M12 12v3"/></svg>
         </div>
         <div class="min-w-0">
@@ -24,7 +24,7 @@
     </div>
 
     <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 grid place-items-center text-emerald-600 shrink-0">
+        <div class="w-10 h-10 rounded-lg bg-emerald-soft border border-emerald-500/20 grid place-items-center text-emerald-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         </div>
         <div class="min-w-0">
@@ -34,7 +34,7 @@
     </div>
 
     <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-500/20 grid place-items-center text-rose-600 shrink-0">
+        <div class="w-10 h-10 rounded-lg bg-rose-soft border border-rose-500/20 grid place-items-center text-rose-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
         </div>
         <div class="min-w-0">
@@ -44,7 +44,7 @@
     </div>
 
     <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 grid place-items-center text-amber-600 shrink-0">
+        <div class="w-10 h-10 rounded-lg bg-amber-soft border border-amber-500/20 grid place-items-center text-amber-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
         </div>
         <div class="min-w-0">
@@ -54,7 +54,7 @@
     </div>
 
     <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 grid place-items-center text-indigo-600 shrink-0">
+        <div class="w-10 h-10 rounded-lg bg-indigo-soft border border-indigo-500/20 grid place-items-center text-indigo-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><circle cx="14" cy="12" r="1"/></svg>
         </div>
         <div class="min-w-0">
@@ -64,7 +64,7 @@
     </div>
 
     <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-teal-500/10 border border-teal-500/20 grid place-items-center text-teal-600 shrink-0">
+        <div class="w-10 h-10 rounded-lg bg-teal-soft border border-teal-500/20 grid place-items-center text-teal-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
         <div class="min-w-0">
@@ -121,7 +121,7 @@
                     <td class="py-3.5 px-4">
                         {{if .Telemetry}}
                         <div class="flex items-center gap-2">
-                            <span class="text-base font-semibold tabular-nums {{if .IsInExcursion}}text-rose-600 dark:text-rose-400{{else}}text-on-surface{{end}}">
+                            <span class="text-base font-semibold tabular-nums {{if .IsInExcursion}}text-rose-mid dark:text-rose-400{{else}}text-on-surface{{end}}">
                                 {{printf "%.1f" .Telemetry.Zone1TempC}}°C
                             </span>
                         </div>
@@ -148,20 +148,20 @@
                     <td class="py-3.5 px-4">
                         {{if .Telemetry}}
                         {{if eq .Telemetry.ReeferMode "COOLING"}}
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-strong">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                             COOLING
                         </span>
                         {{else if eq .Telemetry.ReeferMode "DEFROST"}}
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/15 text-amber-strong">
                             DEFROST
                         </span>
                         {{else if eq .Telemetry.ReeferMode "HEATING"}}
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-500/15 text-orange-700 dark:text-orange-300">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-500/15 text-orange-strong">
                             HEATING
                         </span>
                         {{else}}
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-500/15 text-slate-700 dark:text-slate-300">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-500/15 text-slate-strong">
                             {{.Telemetry.ReeferMode}}
                         </span>
                         {{end}}
@@ -175,11 +175,11 @@
                     <td class="py-3.5 px-4">
                         {{if .Telemetry}}
                         {{if eq .Telemetry.DoorStatus "OPEN"}}
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-rose-500/15 text-rose-700 dark:text-rose-300">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-rose-500/15 text-rose-strong">
                             OPEN ({{.Telemetry.DoorOpenDurationSec}}s)
                         </span>
                         {{else}}
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-strong">
                             CLOSED
                         </span>
                         {{end}}
@@ -189,11 +189,11 @@
                     </td>
                     <td class="py-3.5 px-4">
                         {{if .IsInExcursion}}
-                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/15 text-rose-700 dark:text-rose-300 animate-pulse">
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/15 text-rose-strong animate-pulse">
                             EXCURSION
                         </span>
                         {{else}}
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-500/15 text-teal-700 dark:text-teal-300">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-500/15 text-teal-strong">
                             NORMAL
                         </span>
                         {{end}}
@@ -251,9 +251,9 @@
                         <td class="py-2.5 px-4">
                             <div class="flex items-center gap-1.5">
                                 {{if eq .Severity "CRITICAL"}}
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-rose-500/15 text-rose-700 dark:text-rose-300">CRITICAL</span>
+                                <span class="px-1.5 py-0.5 rounded text-[11px] font-medium bg-rose-500/15 text-rose-strong">CRITICAL</span>
                                 {{else}}
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-700 dark:text-amber-300">WARNING</span>
+                                <span class="px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-500/15 text-amber-strong">WARNING</span>
                                 {{end}}
                                 <span class="font-semibold tabular-nums text-on-surface">{{printf "%.1f" .PeakTempC}}°C</span>
                             </div>
@@ -261,16 +261,16 @@
                         </td>
                         <td class="py-2.5 px-4">
                             {{if eq .Status "RESOLVED"}}
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/15 text-emerald-strong">
                                 RESOLVED
                             </span>
-                            {{if .ResolvedBy}}<div class="text-[10px] text-secondary font-medium mt-0.5">By: {{.ResolvedBy}}</div>{{end}}
+                            {{if .ResolvedBy}}<div class="text-[11px] text-secondary font-medium mt-0.5">By: {{.ResolvedBy}}</div>{{end}}
                             {{else if eq .Status "ACKNOWLEDGED"}}
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/15 text-amber-strong">
                                 ACKNOWLEDGED
                             </span>
                             {{else}}
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-rose-500/15 text-rose-700 dark:text-rose-300">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-rose-500/15 text-rose-strong">
                                 OPEN
                             </span>
                             {{end}}
@@ -332,11 +332,11 @@
                         </td>
                         <td class="py-2.5 px-4">
                             {{if eq .ComplianceStatus "COMPLIANT"}}
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-teal-500/15 text-teal-700 dark:text-teal-300">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-teal-500/15 text-teal-strong">
                                 COMPLIANT
                             </span>
                             {{else}}
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-rose-500/15 text-rose-700 dark:text-rose-300">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-rose-500/15 text-rose-strong">
                                 BREACHED
                             </span>
                             {{end}}

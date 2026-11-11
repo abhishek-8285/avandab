@@ -67,7 +67,7 @@
             <div class="p-4 rounded-xl bg-surface-container-lowest border border-border-subtle shadow-xs">
                 <div class="text-[11px] font-medium text-secondary uppercase tracking-wider mb-1">30-Day Availability</div>
                 {{if .UptimeMeasured}}
-                <div class="text-2xl sm:text-3xl font-semibold text-emerald-600 font-display tabular-nums">{{printf "%.2f" .UptimePercentage}}%</div>
+                <div class="text-2xl sm:text-3xl font-semibold text-emerald-mid font-display tabular-nums">{{printf "%.2f" .UptimePercentage}}%</div>
                 <div class="text-[11px] text-text-muted mt-1">From {{.UptimeSamples}} samples; SLA target: {{.SLATarget}}</div>
                 {{else}}
                 <div class="text-2xl sm:text-3xl font-semibold text-secondary font-display tabular-nums">&mdash;</div>
@@ -114,7 +114,7 @@
                         <div class="flex items-center gap-2.5">
                             <span class="w-2 h-2 rounded-full {{if eq .Status "operational"}}bg-emerald-500{{else if eq .Status "degraded"}}bg-amber-500{{else}}bg-slate-400{{end}}"></span>
                             <span class="text-sm font-semibold text-on-surface">{{.Name}}</span>
-                            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-container text-secondary">{{.Category}}</span>
+                            <span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-surface-container text-secondary">{{.Category}}</span>
                         </div>
                         <p class="text-xs text-secondary mt-1">{{.Description}}</p>
                     </div>
@@ -125,7 +125,7 @@
                             <span class="font-mono font-medium text-on-surface">{{.Latency}}</span>
                         </div>
                         {{end}}
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium {{if eq .Status "operational"}}bg-emerald-500/10 text-emerald-700 border border-emerald-500/20{{else if eq .Status "degraded"}}bg-amber-500/10 text-amber-700 border border-amber-500/20{{else}}bg-surface-container text-secondary border border-border-subtle{{end}}">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium {{if eq .Status "operational"}}bg-emerald-soft text-emerald-strong border border-emerald-500/20{{else if eq .Status "degraded"}}bg-amber-soft text-amber-strong border border-amber-500/20{{else}}bg-surface-container text-secondary border border-border-subtle{{end}}">
                             {{if eq .Status "operational"}}Operational{{else if eq .Status "degraded"}}Degraded{{else if eq .Status "configured"}}Configured{{else if eq .Status "not_probed"}}Not probed{{else}}Not configured{{end}}
                         </span>
                     </div>
@@ -138,7 +138,7 @@
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle p-6 sm:p-8 shadow-xs mb-10">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-sm font-semibold text-on-surface">30-Day Platform Continuity</h3>
-                {{if .HistoryAvailable}}<span class="text-xs font-mono text-emerald-600 font-semibold">Measured history</span>{{else if .UptimeCollecting}}<span class="text-xs font-mono text-text-muted font-semibold">Collecting history</span>{{end}}
+                {{if .HistoryAvailable}}<span class="text-xs font-mono text-emerald-mid font-semibold">Measured history</span>{{else if .UptimeCollecting}}<span class="text-xs font-mono text-text-muted font-semibold">Collecting history</span>{{end}}
             </div>
             {{if .HistoryAvailable}}
             <div class="grid grid-cols-15 sm:grid-cols-30 gap-1 sm:gap-1.5 h-8">
@@ -169,7 +169,7 @@
                 <div class="p-4 rounded-xl bg-surface border border-border-subtle">
                     <div class="flex items-center justify-between mb-1">
                         <span class="text-xs font-semibold text-on-surface">{{.Title}}</span>
-                        <span class="text-[10px] font-mono font-semibold {{if eq .Status "Resolved"}}text-emerald-600{{else}}text-amber-600{{end}}">{{.Status}}</span>
+                        <span class="text-[11px] font-mono font-semibold {{if eq .Status "Resolved"}}text-emerald-mid{{else}}text-amber-mid{{end}}">{{.Status}}</span>
                     </div>
                     <div class="text-[11px] text-text-muted mb-2">{{.Date}}</div>
                     <p class="text-xs text-on-surface-variant leading-relaxed">{{.Description}}</p>
@@ -178,7 +178,7 @@
             </div>
             {{else}}
             <div class="p-6 rounded-xl bg-surface-container-low border border-border-subtle text-center">
-                <div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 mb-2">
+                <div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-soft text-emerald-mid mb-2">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
                 <div class="text-xs font-semibold text-on-surface">No incidents recorded</div>

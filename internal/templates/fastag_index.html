@@ -66,9 +66,9 @@
                             <td data-label="{{t "mo.ftg.balance"}}" class="px-3 py-2 text-sm font-bold text-primary tabular-nums text-right" data-numeric>₹{{printf "%.2f" .Balance}}</td>
                             <td data-label="{{t "mo.c.status"}}" class="px-3 py-2">
                                 {{if eq .Status "ACTIVE"}}
-                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-soft border border-emerald-line text-emerald-strong dark:text-emerald-300"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
+                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-soft border border-emerald-line text-emerald-strong"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
                                 {{else}}
-                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-rose-soft border border-rose-line text-rose-strong dark:text-rose-300"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
+                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-rose-soft border border-rose-line text-rose-strong"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
                                 {{end}}
                             </td>
                             <td data-label="{{t "mo.ftg.last_sync"}}" class="px-3 py-2 text-xs text-text-muted tabular-nums">{{.LastSyncStr}}</td>
@@ -119,7 +119,7 @@
                     <div id="fastag-reconcile-result" class="min-h-[1rem]"></div>
                 </form>
                 {{else}}
-                <div class="inline-flex items-center gap-2 p-3 w-full bg-blue-soft border border-blue-line text-xs font-medium text-blue-strong dark:text-blue-300 rounded-lg">
+                <div class="inline-flex items-center gap-2 p-3 w-full bg-blue-soft border border-blue-line text-xs font-medium text-blue-strong rounded-lg">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                     {{t "mo.ftg.readonly"}}
                 </div>

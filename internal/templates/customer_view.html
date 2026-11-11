@@ -15,7 +15,7 @@
                             {{if eq .Customer.Type "supplier"}} bg-amber-50 text-amber-strong border-amber-200
                             {{else if eq .Customer.Type "facilitator"}} bg-violet-50 text-violet-strong border-violet-200
                             {{else if eq .Customer.Type "contact"}} bg-slate-50 text-slate-strong border-slate-200
-                            {{else}} bg-sky-50 text-sky-700 border-sky-200{{end}}">{{.Customer.Type}}</span>
+                            {{else}} bg-sky-50 text-sky-strong border-sky-200{{end}}">{{.Customer.Type}}</span>
                     </div>
                     <p class="text-sm text-text-muted mt-1.5 flex flex-wrap items-center gap-2">
                         {{if .Customer.Company}}<span class="font-medium text-secondary">{{nullString .Customer.Company}}</span><span>·</span>{{end}}

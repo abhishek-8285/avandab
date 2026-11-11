@@ -256,16 +256,16 @@
                 var statusBadgeClass = 'bg-surface-container text-text-muted border-border-subtle';
 
                 if (m.status === 'completed') {
-                    badgeColor = 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600';
+                    badgeColor = 'bg-emerald-soft border-emerald-500/30 text-emerald-mid';
                     dotColor = 'bg-emerald-500';
                     statusLabel = tlcStr('stCompleted', 'Completed');
-                    statusBadgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300';
+                    statusBadgeClass = 'bg-emerald-50 text-emerald-strong border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300';
                 } else if (m.status === 'in_progress') {
-                    badgeColor = 'bg-blue-500/15 border-blue-500 text-blue-600';
+                    badgeColor = 'bg-blue-500/15 border-blue-500 text-blue-mid';
                     dotColor = 'bg-blue-600';
                     pulse = '<span class="absolute -inset-1 rounded-full bg-blue-400 opacity-60 animate-ping"></span>';
                     statusLabel = tlcStr('stTransit', 'In-Transit');
-                    statusBadgeClass = 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300';
+                    statusBadgeClass = 'bg-blue-50 text-blue-strong border-blue-200 dark:bg-blue-950/40 dark:text-blue-300';
                 }
 
                 var timeStr = m.timestamp ? (fmtTime(m.timestamp) + (fmtDate(m.timestamp) ? ' · ' + fmtDate(m.timestamp) : '')) : tlcStr('pending', 'Pending checkpoint');

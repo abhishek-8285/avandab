@@ -17,7 +17,7 @@
     </div>
 
     {{if .FlashSuccess}}
-    <div class="bg-emerald-soft border border-emerald-500/20 text-emerald-strong dark:text-emerald-300 rounded-xl px-4 py-3 text-sm flex items-center gap-2">
+    <div class="bg-emerald-soft border border-emerald-500/20 text-emerald-strong rounded-xl px-4 py-3 text-sm flex items-center gap-2">
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         <span>{{.FlashSuccess}}</span>
     </div>
@@ -150,27 +150,27 @@
 
                         <td data-label="{{t "fl.kind"}}" class="px-3 py-2 whitespace-nowrap">
                             {{if eq .Kind "pickup"}}
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-soft text-emerald-strong dark:text-emerald-300 border border-emerald-line">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-soft text-emerald-strong border border-emerald-line">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                 {{t "fl.pickup"}}
                             </span>
                             {{else if eq .Kind "drop"}}
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-cyan-soft text-cyan-strong dark:text-cyan-300 border border-cyan-line">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-cyan-soft text-cyan-strong border border-cyan-line">
                                 <span class="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
                                 {{t "fl.drop"}}
                             </span>
                             {{else if eq .Kind "depot"}}
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-soft text-blue-strong dark:text-blue-300 border border-blue-line">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-soft text-blue-strong border border-blue-line">
                                 <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                                 {{t "fl.depot_hub"}}
                             </span>
                             {{else if eq .Kind "restricted"}}
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-soft text-amber-strong dark:text-amber-300 border border-amber-line">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-soft text-amber-strong border border-amber-line">
                                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                                 {{t "fl.restricted"}}
                             </span>
                             {{else}}
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-soft text-rose-strong dark:text-rose-300 border border-rose-line">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-soft text-rose-strong border border-rose-line">
                                 <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                                 {{t "fl.no_entry_2"}}
                             </span>
@@ -211,7 +211,7 @@
 
                         <td data-label="{{t "fl.status"}}" class="px-3 py-2 text-center whitespace-nowrap">
                             {{if .IsActive}}
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-soft text-emerald-strong dark:text-emerald-300 border border-emerald-line">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-soft text-emerald-strong border border-emerald-line">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                                 {{t "fl.active_2"}}
                             </span>

@@ -13,7 +13,7 @@
         </div>
     </div>
     <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
-        <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 grid place-items-center text-blue-600 shrink-0">
+        <div class="w-9 h-9 rounded-lg bg-blue-soft border border-blue-500/20 grid place-items-center text-blue-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         </div>
         <div class="min-w-0">
@@ -22,7 +22,7 @@
         </div>
     </div>
     <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
-        <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 grid place-items-center text-emerald-600 shrink-0">
+        <div class="w-9 h-9 rounded-lg bg-emerald-soft border border-emerald-500/20 grid place-items-center text-emerald-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <div class="min-w-0">
@@ -71,7 +71,7 @@
                         <div class="text-xs text-text-muted font-mono mt-0.5">ID: {{.ID}}</div>
                     </td>
                     <td class="px-4 py-3 font-semibold uppercase text-xs">{{.VehicleTypeRequired}}</td>
-                    <td class="px-4 py-3 font-mono font-semibold text-emerald-600">₹{{priceFormat .TargetRate}}</td>
+                    <td class="px-4 py-3 font-mono font-semibold text-emerald-mid">₹{{priceFormat .TargetRate}}</td>
                     <td class="px-4 py-3 font-mono text-xs text-text-muted">₹{{priceFormat .MaxRate}}</td>
                     <td class="px-4 py-3 text-xs font-mono text-primary">
                         {{if .STONumber}}STO: {{.STONumber}}{{else if .STOID}}STO: {{.STOID}}{{else}}Direct Load{{end}}
@@ -81,9 +81,9 @@
                     </td>
                     <td class="px-4 py-3">
                         <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold
-                            {{if eq .Status "OPEN"}}bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800
-                            {{else if eq .Status "BIDDING"}}bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800
-                            {{else if eq .Status "AWARDED"}}bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800
+                            {{if eq .Status "OPEN"}}bg-emerald-50 text-emerald-strong dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800
+                            {{else if eq .Status "BIDDING"}}bg-blue-50 text-blue-strong dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800
+                            {{else if eq .Status "AWARDED"}}bg-purple-50 text-purple-strong dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800
                             {{else}}bg-surface-container text-text-muted border border-border-subtle{{end}} uppercase tracking-wider">
                             {{.Status}}
                         </span>

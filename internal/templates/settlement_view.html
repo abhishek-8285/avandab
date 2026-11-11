@@ -195,7 +195,7 @@
                                 <div class="text-xs font-semibold text-on-surface tabular-nums">₹{{printf "%.2f" .Amount}}</div>
                                 <div class="text-[11px] text-text-muted">{{.InitiatedAt.Format "02 Jan 15:04"}}{{if .UTR}} · UTR {{.UTR}}{{end}}</div>
                             </div>
-                            <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase {{if eq .Status "paid"}}bg-status-success/10 text-status-success{{else if eq .Status "failed"}}bg-status-alert/10 text-status-alert{{else}}bg-status-warning/10 text-status-warning{{end}}">{{.Status}}</span>
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase {{if eq .Status "paid"}}bg-status-success/10 text-status-success{{else if eq .Status "failed"}}bg-status-alert/10 text-status-alert{{else}}bg-status-warning/10 text-status-warning{{end}}">{{.Status}}</span>
                         </div>
                         {{end}}
                     </div>

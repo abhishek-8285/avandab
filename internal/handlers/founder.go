@@ -11,7 +11,9 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"transport-app/internal/auth"
+	experimentapp "transport-app/internal/experiments"
 	"transport-app/internal/middleware"
+	pnlapp "transport-app/internal/pnl"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 )
@@ -191,17 +193,13 @@ func (h *FounderHandlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 	recentSignals, _, _ := h.Signals.ListSignals(ctx, tenantID, service.SignalFilters{UnacknowledgedOnly: true, Limit: 5})
 
 	var activeExp int
-	if h.App.Services.Experiments != nil {
-		activeExp, _ = h.App.Services.Experiments.CountByStatus(ctx, tenantID, service.ExperimentStatusRunning)
-	}
+	activeExp, _ = experimentapp.NewQueries(h.DB).CountByStatus(ctx, tenantID, experimentapp.ExperimentStatusRunning)
 	var openAlerts int
 	if h.App.Services.OpsAlerts != nil {
 		openAlerts, _ = h.App.Services.OpsAlerts.CountByStatus(ctx, tenantID, service.OpsAlertStatusOpen)
 	}
 	var latestPNL interface{}
-	if h.App.Services.PNL != nil {
-		latestPNL, _ = h.App.Services.PNL.GetLatest(ctx, tenantID)
-	}
+	latestPNL, _ = pnlapp.NewSnapshotQueries(h.DB).Latest(ctx, tenantID)
 
 	data := map[string]interface{}{
 		"unacknowledged_signals": unackCount,

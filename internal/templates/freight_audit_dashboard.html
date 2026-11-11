@@ -14,7 +14,7 @@
         </div>
     </div>
     <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
-        <div class="w-9 h-9 rounded-lg bg-slate-500/10 border border-slate-500/20 grid place-items-center text-slate-600 shrink-0">
+        <div class="w-9 h-9 rounded-lg bg-slate-soft border border-slate-500/20 grid place-items-center text-slate-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         </div>
         <div class="min-w-0">
@@ -25,7 +25,7 @@
         </div>
     </div>
     <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
-        <div class="w-9 h-9 rounded-lg bg-sky-500/10 border border-sky-500/20 grid place-items-center text-sky-600 shrink-0">
+        <div class="w-9 h-9 rounded-lg bg-sky-soft border border-sky-500/20 grid place-items-center text-sky-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <div class="min-w-0">
@@ -36,29 +36,29 @@
         </div>
     </div>
     <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
-        <div class="w-9 h-9 rounded-lg {{if and .Extra.Summary (gt .Extra.Summary.DiscrepancyCount 0)}}bg-rose-500/15 border border-rose-500/30 text-rose-600 animate-pulse{{else}}bg-slate-500/10 border border-slate-500/20 text-slate-600{{end}} grid place-items-center shrink-0">
+        <div class="w-9 h-9 rounded-lg {{if and .Extra.Summary (gt .Extra.Summary.DiscrepancyCount 0)}}bg-rose-500/15 border border-rose-500/30 text-rose-mid animate-pulse{{else}}bg-slate-soft border border-slate-500/20 text-slate-mid{{end}} grid place-items-center shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
         </div>
         <div class="min-w-0">
-            <div class="text-xl font-semibold tabular-nums text-rose-600 leading-none">
+            <div class="text-xl font-semibold tabular-nums text-rose-mid leading-none">
                 ₹{{if .Extra.Summary}}{{printf "%.0f" .Extra.Summary.TotalOverbillingAmount}}{{else}}0{{end}}
             </div>
             <div class="text-xs text-secondary font-medium mt-1">Overbilling Found</div>
         </div>
     </div>
     <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
-        <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 grid place-items-center text-emerald-600 shrink-0">
+        <div class="w-9 h-9 rounded-lg bg-emerald-soft border border-emerald-500/20 grid place-items-center text-emerald-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
         <div class="min-w-0">
-            <div class="text-xl font-semibold tabular-nums text-emerald-600 leading-none">
+            <div class="text-xl font-semibold tabular-nums text-emerald-mid leading-none">
                 ₹{{if .Extra.Summary}}{{printf "%.0f" .Extra.Summary.TotalDeductionsAmount}}{{else}}0{{end}}
             </div>
             <div class="text-xs text-secondary font-medium mt-1">Deductions Saved</div>
         </div>
     </div>
     <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
-        <div class="w-9 h-9 rounded-lg bg-teal-500/10 border border-teal-500/20 grid place-items-center text-teal-600 shrink-0">
+        <div class="w-9 h-9 rounded-lg bg-teal-soft border border-teal-500/20 grid place-items-center text-teal-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
         </div>
         <div class="min-w-0">
@@ -148,10 +148,10 @@
                     </td>
                     <td class="px-4 py-3 text-right font-mono">
                         {{if gt .OverbillingAmount 0.0}}
-                        <div class="font-semibold text-rose-600">+₹{{printf "%.2f" .OverbillingAmount}}</div>
+                        <div class="font-semibold text-rose-mid">+₹{{printf "%.2f" .OverbillingAmount}}</div>
                         <div class="text-[11px] text-rose-500 font-medium">{{printf "%.1f" .VariancePct}}% inflated</div>
                         {{else}}
-                        <div class="font-medium text-emerald-600">Clean Match</div>
+                        <div class="font-medium text-emerald-mid">Clean Match</div>
                         {{end}}
                     </td>
                     <td class="px-4 py-3 text-center">
@@ -170,9 +170,9 @@
                         <div class="font-mono text-primary font-semibold">Debit Note: {{.DebitNoteNumber}}</div>
                         <div>Deducted: ₹{{printf "%.2f" .DeductionAmount}}</div>
                         {{else if .DisputeReason}}
-                        <div class="text-purple-600 font-medium">Dispute: {{.DisputeReason}}</div>
+                        <div class="text-purple-mid font-medium">Dispute: {{.DisputeReason}}</div>
                         {{else if .DiscrepancyFlags}}
-                        <div class="text-rose-600">{{.DiscrepancyFlags}}</div>
+                        <div class="text-rose-mid">{{.DiscrepancyFlags}}</div>
                         {{else}}
                         <div>-</div>
                         {{end}}
@@ -255,7 +255,7 @@
                     <td class="px-4 py-3 text-right font-mono font-semibold">₹{{printf "%.2f" .Rate}}</td>
                     <td class="px-4 py-3 text-right font-mono text-secondary">₹{{printf "%.0f" .MinCharge}}</td>
                     <td class="px-4 py-3 text-right font-mono text-secondary">{{printf "%.0f" .FreeDetentionHours}} hrs</td>
-                    <td class="px-4 py-3 text-right font-mono font-medium text-amber-600">₹{{printf "%.0f" .DetentionRatePerHour}}</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium text-amber-mid">₹{{printf "%.0f" .DetentionRatePerHour}}</td>
                 </tr>
                 {{end}}
                 {{else}}

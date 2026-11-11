@@ -546,12 +546,12 @@
             if (title) title.innerText = (banner && banner.dataset.t1Title) || "Tier 1: GST Registered Enterprise Mode";
             if (desc) desc.innerText = (banner && banner.dataset.t1Desc) || "Invoices will issue as standard B2B 'TAX INVOICE' with CGST/SGST/IGST breakdown, IRN generation, and e-Way Bill support.";
         } else if (panVal && panVal.length >= 10) {
-            if (card2) card2.className = "tier-card p-3 rounded-xl border border-amber-500 bg-amber-500/10 cursor-pointer transition shadow-xs";
-            if (banner) banner.className = "rounded-xl p-3.5 border transition bg-amber-500/10 border-amber-500/30";
+            if (card2) card2.className = "tier-card p-3 rounded-xl border border-amber-500 bg-amber-soft cursor-pointer transition shadow-xs";
+            if (banner) banner.className = "rounded-xl p-3.5 border transition bg-amber-soft border-amber-500/30";
             if (title) title.innerText = (banner && banner.dataset.t2Title) || "Tier 2: Non-GST with PAN (RCM & Bill of Supply)";
             if (desc) desc.innerText = (banner && banner.dataset.t2Desc) || "Invoices will issue as 'BILL OF SUPPLY / FREIGHT BILL' under Section 31(3)(c) with Reverse Charge (RCM Sec 9(3)). Section 194C(6) TDS declaration applies (0% TDS).";
         } else {
-            if (card3) card3.className = "tier-card p-3 rounded-xl border border-slate-400 bg-slate-500/10 cursor-pointer transition shadow-xs";
+            if (card3) card3.className = "tier-card p-3 rounded-xl border border-slate-400 bg-slate-soft cursor-pointer transition shadow-xs";
             if (banner) banner.className = "rounded-xl p-3.5 border transition bg-surface-container-high/60 border-border-subtle";
             if (title) title.innerText = (banner && banner.dataset.t3Title) || "Tier 3: Micro Transporter (Rule 54(3) Bilty)";
             if (desc) desc.innerText = (banner && banner.dataset.t3Desc) || "Invoices will issue as 'CONSIGNMENT FREIGHT BILL' under Rule 54(3) CGST Rules. No GSTIN or PAN required to unlock operations.";

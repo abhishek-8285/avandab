@@ -1,7 +1,7 @@
 {{template "page_header.html" (dict "Title" "Backhaul Engine" "Subtitle" "Eliminate empty return miles with automated return-corridor cargo matching")}}
 
 {{if .Offered}}
-<div class="mb-5 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
+<div class="mb-5 p-4 rounded-xl bg-emerald-soft border border-emerald-500/20 text-emerald-strong flex items-center justify-between">
     <div class="flex items-center gap-3">
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 text-emerald-500 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         <span class="text-sm font-semibold">Backhaul dispatch offer successfully created and queued for driver assignment!</span>
@@ -23,7 +23,7 @@
         </div>
     </div>
     <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
-        <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 grid place-items-center text-blue-600 shrink-0">
+        <div class="w-9 h-9 rounded-lg bg-blue-soft border border-blue-500/20 grid place-items-center text-blue-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="16" height="16" x="4" y="4" rx="2"/><path d="M9 9h6v6H9z"/></svg>
         </div>
         <div class="min-w-0">
@@ -32,7 +32,7 @@
         </div>
     </div>
     <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
-        <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 grid place-items-center text-emerald-600 shrink-0">
+        <div class="w-9 h-9 rounded-lg bg-emerald-soft border border-emerald-500/20 grid place-items-center text-emerald-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         </div>
         <div class="min-w-0">
@@ -41,7 +41,7 @@
         </div>
     </div>
     <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
-        <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 grid place-items-center text-amber-600 shrink-0">
+        <div class="w-9 h-9 rounded-lg bg-amber-soft border border-amber-500/20 grid place-items-center text-amber-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         </div>
         <div class="min-w-0">
@@ -129,7 +129,7 @@
                         </div>
                     </td>
                     <td class="px-4 py-3">
-                        <div class="font-semibold tabular-nums text-amber-600">{{priceFormat .DeadheadKm}} km</div>
+                        <div class="font-semibold tabular-nums text-amber-mid">{{priceFormat .DeadheadKm}} km</div>
                         <div class="text-xs text-secondary font-mono">Pickup dist: {{priceFormat .PickupDistanceKm}} km</div>
                     </td>
                     <td class="px-4 py-3">
@@ -137,11 +137,11 @@
                         <div class="text-xs text-secondary">{{.VehicleType}}</div>
                     </td>
                     <td class="px-4 py-3">
-                        <div class="font-semibold font-mono text-emerald-600">₹{{priceFormat .Price}}</div>
+                        <div class="font-semibold font-mono text-emerald-mid">₹{{priceFormat .Price}}</div>
                         <div class="text-xs text-secondary font-mono">Margin: ₹{{priceFormat .FreightMargin}}</div>
                     </td>
                     <td class="px-4 py-3">
-                        <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                        <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-strong dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
                             +{{priceFormat .CorridorSavingsPct}}% Saved
                         </span>
                     </td>

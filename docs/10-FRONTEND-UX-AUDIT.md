@@ -487,3 +487,53 @@ ratcheted but not yet migrated.
 | `experiments/experiments.go` | safe-ish | two independent clock components, still not collision-proof |
 5. **(answered)** The #12 chip migration uses dark-aware equivalents — light mode stays pixel-identical (verified against the pre-migration bundle, not just asserted).
 6. **(answered)** The four Go-emitted chip sites are migrated, and the ratchet now scans `internal/**/*.go` so the hole stays closed. 56 raw-palette classes remain across 6 Go files (`alerts.go` 9, `compliance.go` 19, `invoices.go` 4, `kharcha.go` 20, `maintenance.go` 1, `scorecard.go` 3) — mostly one-off error/banner fragments. They are frozen in the baseline; working them down needs a token + a `@source inline` entry per class.
+
+---
+
+### Update 2026-11-11 — typography floor restored + ratchet, CSS bundle resynced
+
+Claims above had drifted; measured, fixed or partially fixed in the working tree:
+
+1. **§6b "Zero sub-11px text remains" was stale.** Later dashboards (video,
+   cold chain, control tower, status, settlement, feature) reintroduced
+   `text-[8px]`/`text-[9px]`/`text-[10px]`: **29 occurrences across 6 templates**.
+   All bumped to `text-[11px]`, and the floor is now enforced by
+   `internal/handlers/templates_typography_guard_test.go::TestTemplates_NoTextBelow11px`
+   (walks the template set, fails on any arbitrary text size < 11px; red-proven
+   with the 29 violations before the fix, green after).
+2. **CSS bundle was stale again.** `scripts/css-sync-audit.py` reported 3 classes
+   referenced by `status.html` resolving to no CSS (`hover:opacity-80`,
+   `bg-amber-400/80`, `bg-red-500/80`). Bundle rebuilt with the locked
+   Tailwind v4.3.3 CLI; audit now reports `every template class resolves to
+   defined CSS` and the palette ratchet remains green (1,689 classes / 103
+   files, no regression).
+3. **Palette debt reduced repo-wide: 1,689 -> 1,268 raw-palette classes
+   (-25%), ratchet tightened to 99 files.** Four mechanical waves, all
+   light-mode-identical by construction:
+   a. chip-token contract on the three newest dashboards
+      (`video_dashboard` 141 -> 97, `control_tower` 76 -> 48,
+      `cold_chain_dashboard` 68 -> 47);
+   b. the same contract applied to the remaining 19 templates (146 occurrences;
+      unprefixed utilities only);
+   c. 137 now-redundant `dark:` companions removed — after a chip token exists,
+      `text-<fam>-strong dark:text-<fam>-300` is the same colour twice;
+   d. contract extended to the last five families the newer dashboards use
+      (`sky`, `teal`, `purple`, `zinc`, `orange`; 40 new tokens in
+      `src/input.css`), then 73 more conversions.
+   **Deliberately not converted:** always-dark video-player chrome
+   (`zinc-950/900/800`), variant-prefixed utilities (`hover:*`, `dark:*` that do
+   not duplicate a token), `*/20`/`*/30` borders outside the 15% contract, solid
+   fills/gradients, and chart-series colours. The remaining top files are data
+   viz / marketing brand colour (`feature.html` 81, `video_dashboard` 70,
+   `dashboard.html` 60) — converting those needs a chart-palette design decision,
+   not a mechanical token swap.
+4. **JS-authored classes are now audited.** Converting the last template users of
+   `bg-emerald-500/10` etc. let the purge drop classes that
+   `internal/static/js/geofence_draw.js` and `compress-image.js` assemble in
+   literals (legend badges, upload state) — Tailwind only scans
+   `internal/templates`. Fixed by an `@source inline(...)` safelist in
+   `src/input.css`; `scripts/css-sync-audit.py` now has bucket **C** that fails
+   when a literal palette class in local JS has no compiled rule (red-proven by
+   removing `bg-cyan-500/10` from the safelist: bucket C = 1, FAIL).
+5. **Browser gate is Chromium-only** — unchanged; WebKit/Firefox Playwright smoke
+   still an open ticket.

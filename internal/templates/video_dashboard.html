@@ -14,7 +14,7 @@
 <!-- KPI Stats Grid -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
     <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-sky-500/10 border border-sky-500/20 grid place-items-center text-sky-600 shrink-0">
+        <div class="w-10 h-10 rounded-lg bg-sky-soft border border-sky-500/20 grid place-items-center text-sky-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
         </div>
         <div class="min-w-0">
@@ -24,7 +24,7 @@
     </div>
 
     <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 grid place-items-center text-emerald-600 shrink-0">
+        <div class="w-10 h-10 rounded-lg bg-emerald-soft border border-emerald-500/20 grid place-items-center text-emerald-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" x2="12.01" y1="20" y2="20"/></svg>
         </div>
         <div class="min-w-0">
@@ -34,7 +34,7 @@
     </div>
 
     <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 grid place-items-center text-indigo-600 shrink-0">
+        <div class="w-10 h-10 rounded-lg bg-indigo-soft border border-indigo-500/20 grid place-items-center text-indigo-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
         <div class="min-w-0">
@@ -44,7 +44,7 @@
     </div>
 
     <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-500/20 grid place-items-center text-rose-600 shrink-0">
+        <div class="w-10 h-10 rounded-lg bg-rose-soft border border-rose-500/20 grid place-items-center text-rose-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
         </div>
         <div class="min-w-0">
@@ -54,7 +54,7 @@
     </div>
 
     <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 grid place-items-center text-amber-600 shrink-0">
+        <div class="w-10 h-10 rounded-lg bg-amber-soft border border-amber-500/20 grid place-items-center text-amber-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
         </div>
         <div class="min-w-0">
@@ -64,7 +64,7 @@
     </div>
 
     <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-teal-500/10 border border-teal-500/20 grid place-items-center text-teal-600 shrink-0">
+        <div class="w-10 h-10 rounded-lg bg-teal-soft border border-teal-500/20 grid place-items-center text-teal-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         </div>
         <div class="min-w-0">
@@ -121,17 +121,17 @@
                     <td class="py-3.5 px-4">
                         {{if .Profile}}
                             {{if eq .Profile.Status "ONLINE"}}
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-soft text-emerald-mid border border-emerald-500/20">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                                 ONLINE
                             </span>
                             {{else if eq .Profile.Status "STANDBY"}}
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-soft text-amber-mid border border-amber-500/20">
                                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                                 STANDBY
                             </span>
                             {{else}}
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-500/10 text-zinc-600 border border-zinc-500/20">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-soft text-zinc-mid border border-zinc-500/20">
                                 <span class="w-1.5 h-1.5 rounded-full bg-zinc-500"></span>
                                 OFFLINE
                             </span>
@@ -143,27 +143,27 @@
                     <td class="py-3.5 px-4">
                         {{if .Profile}}
                         <div class="flex flex-wrap gap-1">
-                            {{if .Profile.DualFacing}}<span class="px-1.5 py-0.5 rounded text-[11px] font-medium bg-sky-500/10 text-sky-600 border border-sky-500/20">Dual Cam</span>{{end}}
-                            {{if .Profile.ADASEnabled}}<span class="px-1.5 py-0.5 rounded text-[11px] font-medium bg-indigo-500/10 text-indigo-600 border border-indigo-500/20">ADAS</span>{{end}}
-                            {{if .Profile.DMSEnabled}}<span class="px-1.5 py-0.5 rounded text-[11px] font-medium bg-purple-500/10 text-purple-600 border border-purple-500/20">DMS</span>{{end}}
-                            {{if .Profile.LiveStreamSupported}}<span class="px-1.5 py-0.5 rounded text-[11px] font-medium bg-teal-500/10 text-teal-600 border border-teal-500/20">Live</span>{{end}}
+                            {{if .Profile.DualFacing}}<span class="px-1.5 py-0.5 rounded text-[11px] font-medium bg-sky-soft text-sky-mid border border-sky-500/20">Dual Cam</span>{{end}}
+                            {{if .Profile.ADASEnabled}}<span class="px-1.5 py-0.5 rounded text-[11px] font-medium bg-indigo-soft text-indigo-mid border border-indigo-500/20">ADAS</span>{{end}}
+                            {{if .Profile.DMSEnabled}}<span class="px-1.5 py-0.5 rounded text-[11px] font-medium bg-purple-soft text-purple-mid border border-purple-500/20">DMS</span>{{end}}
+                            {{if .Profile.LiveStreamSupported}}<span class="px-1.5 py-0.5 rounded text-[11px] font-medium bg-teal-soft text-teal-mid border border-teal-500/20">Live</span>{{end}}
                         </div>
                         {{else}}
                         <span class="text-xs text-secondary">-</span>
                         {{end}}
                     </td>
                     <td class="py-3.5 px-4">
-                        <div class="text-sm tabular-nums font-semibold {{if gt .CriticalEventsCount 0}}text-rose-600{{else}}text-on-surface{{end}}">
+                        <div class="text-sm tabular-nums font-semibold {{if gt .CriticalEventsCount 0}}text-rose-mid{{else}}text-on-surface{{end}}">
                             {{.TodayEventsCount}} <span class="text-xs font-normal text-secondary">({{if gt .CriticalEventsCount 0}}{{.CriticalEventsCount}} critical{{else}}0 critical{{end}})</span>
                         </div>
                     </td>
                     <td class="py-3.5 px-4">
                         {{if gt .PendingReviewsCount 0}}
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-soft text-amber-mid border border-amber-500/20">
                             {{.PendingReviewsCount}} pending
                         </span>
                         {{else}}
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-soft text-emerald-mid border border-emerald-500/20">
                             All reviewed
                         </span>
                         {{end}}
@@ -174,12 +174,12 @@
                             <button type="button" onclick="openLivestreamViewer('{{.VehicleNumber}}', '{{.ActiveLivestream.Channel}}', '{{.ActiveLivestream.StreamURL}}', '{{.ActiveLivestream.ID}}', '{{.ActiveLivestream.Status}}')"
                                 {{if eq .ActiveLivestream.Status "ACTIVE"}}class="px-2.5 py-1 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-700 transition flex items-center gap-1 shadow-xs">
                                 <span class="w-2 h-2 rounded-full bg-white animate-ping"></span>
-                                Live Now{{else}}class="px-2.5 py-1 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded text-xs font-medium transition">
+                                Live Now{{else}}class="px-2.5 py-1 bg-amber-soft text-amber-mid border border-amber-500/20 rounded text-xs font-medium transition">
                                 Stream requested{{end}}
                             </button>
                             {{else}}
                             <button type="button" onclick="openStartLivestreamModal('{{.VehicleID}}', '{{.VehicleNumber}}')" class="px-2.5 py-1 bg-surface-container-high text-on-surface rounded text-xs font-medium hover:bg-surface-container-highest transition flex items-center gap-1">
-                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5 text-sky-600"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5 text-sky-mid"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
                                 Stream
                             </button>
                             {{end}}
@@ -233,21 +233,21 @@
                         <td class="py-3.5 px-4 font-medium">
                             <div class="flex items-center gap-1.5 mb-1">
                                 {{if eq .Category "DMS"}}
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-500/10 text-purple-600 border border-purple-500/20">DMS</span>
+                                <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-purple-soft text-purple-mid border border-purple-500/20">DMS</span>
                                 {{else if eq .Category "ADAS"}}
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-500/10 text-sky-600 border border-sky-500/20">ADAS</span>
+                                <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-sky-soft text-sky-mid border border-sky-500/20">ADAS</span>
                                 {{else}}
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-600 border border-rose-500/20">SOS</span>
+                                <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-rose-soft text-rose-mid border border-rose-500/20">SOS</span>
                                 {{end}}
 
                                 {{if eq .Severity "CRITICAL"}}
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-600 border border-rose-500/20">CRITICAL</span>
+                                <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-rose-soft text-rose-mid border border-rose-500/20">CRITICAL</span>
                                 {{else if eq .Severity "HIGH"}}
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-500/10 text-orange-600 border border-orange-500/20">HIGH</span>
+                                <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-orange-soft text-orange-mid border border-orange-500/20">HIGH</span>
                                 {{else if eq .Severity "MEDIUM"}}
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-600 border border-amber-500/20">MEDIUM</span>
+                                <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-amber-soft text-amber-mid border border-amber-500/20">MEDIUM</span>
                                 {{else}}
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">LOW</span>
+                                <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-emerald-soft text-emerald-mid border border-emerald-500/20">LOW</span>
                                 {{end}}
                             </div>
                             <div class="font-semibold text-on-surface">{{.EventType}}</div>
@@ -268,27 +268,27 @@
                                 <span>Play Clip</span>
                             </button>
                             {{else}}
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-zinc-500/10 text-zinc-500 border border-zinc-500/20">Evidence Pending</span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-zinc-soft text-zinc-500 border border-zinc-500/20">Evidence Pending</span>
                             {{end}}
                         </td>
                         <td class="py-3.5 px-4">
                             {{if eq .ReviewStatus "COACHED"}}
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-soft text-emerald-mid border border-emerald-500/20">
                                 Coached
                             </span>
                             {{if .CoachingNote}}
                             <p class="text-xs text-secondary mt-1 italic line-clamp-1">"{{.CoachingNote}}"</p>
                             {{end}}
                             {{else if eq .ReviewStatus "DISMISSED"}}
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-500/10 text-zinc-600 border border-zinc-500/20">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-soft text-zinc-mid border border-zinc-500/20">
                                 Dismissed
                             </span>
                             {{else if eq .ReviewStatus "ESCALATED"}}
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-600 border border-rose-500/20">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-rose-soft text-rose-mid border border-rose-500/20">
                                 Escalated
                             </span>
                             {{else}}
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-soft text-amber-mid border border-amber-500/20">
                                 Pending Review
                             </span>
                             {{end}}
@@ -328,7 +328,7 @@
                 <div class="min-w-0 flex-1">
                     <div class="flex items-center justify-between gap-2 mb-1">
                         <span class="font-semibold text-sm text-on-surface truncate">{{if .DriverName}}{{.DriverName}}{{else}}{{.DriverID}}{{end}}</span>
-                        <span class="text-xs font-semibold tabular-nums {{if ge .SafetyScore 85.0}}text-emerald-600{{else if ge .SafetyScore 70.0}}text-sky-600{{else if ge .SafetyScore 50.0}}text-amber-600{{else}}text-rose-600{{end}}">
+                        <span class="text-xs font-semibold tabular-nums {{if ge .SafetyScore 85.0}}text-emerald-mid{{else if ge .SafetyScore 70.0}}text-sky-mid{{else if ge .SafetyScore 50.0}}text-amber-mid{{else}}text-rose-mid{{end}}">
                             {{printf "%.1f" .SafetyScore}}/100
                         </span>
                     </div>
@@ -340,13 +340,13 @@
                     <div class="flex items-center justify-between text-xs text-secondary">
                         <span>{{printf "%.0f" .DistanceKM}} km &bull; {{.ADASEventCount}} ADAS &bull; {{.DMSEventCount}} DMS</span>
                         {{if eq .RiskTier "LOW_RISK"}}
-                        <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600">Low Risk</span>
+                        <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-emerald-soft text-emerald-mid">Low Risk</span>
                         {{else if eq .RiskTier "MODERATE_RISK"}}
-                        <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-500/10 text-sky-600">Moderate</span>
+                        <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-sky-soft text-sky-mid">Moderate</span>
                         {{else if eq .RiskTier "HIGH_RISK"}}
-                        <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-600">High Risk</span>
+                        <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-amber-soft text-amber-mid">High Risk</span>
                         {{else}}
-                        <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-600">Critical</span>
+                        <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-rose-soft text-rose-mid">Critical</span>
                         {{end}}
                     </div>
                 </div>
@@ -534,7 +534,7 @@
             <div class="flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full bg-zinc-400"></span>
                 <span class="font-semibold text-sm" id="live-viewer-title">CAM-001 &bull; ROAD_FACING</span>
-                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-500/20 text-zinc-400 border border-zinc-500/30" id="live-status-chip">INITIATED</span>
+                <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-zinc-500/20 text-zinc-400 border border-zinc-500/30" id="live-status-chip">INITIATED</span>
             </div>
             <button type="button" onclick="document.getElementById('livestream-viewer-modal').classList.add('hidden')" class="text-zinc-400 hover:text-white">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
@@ -544,7 +544,7 @@
         <div class="p-6">
             <div class="aspect-video bg-zinc-900 rounded-xl overflow-hidden relative flex items-center justify-center border border-zinc-800 shadow-inner">
                 <div class="text-center p-6 space-y-3">
-                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-12 h-12 text-zinc-600 mx-auto animate-pulse"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-12 h-12 text-zinc-mid mx-auto animate-pulse"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
                     <div class="text-sm font-medium text-zinc-300" id="live-session-title">Video stream session</div>
                     <div id="live-stream-url" class="text-xs text-zinc-500 font-mono break-all max-w-md">&ndash;</div>
                     <div class="text-xs text-zinc-500 font-medium">URL points at your configured media server &mdash; playback still needs the device to confirm the stream</div>
@@ -579,7 +579,7 @@
         <div class="p-6">
             <div class="aspect-video bg-zinc-900 rounded-xl overflow-hidden relative flex items-center justify-center border border-zinc-800 shadow-inner">
                 <div class="text-center p-6 space-y-2">
-                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-10 h-10 text-zinc-600 mx-auto"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-10 h-10 text-zinc-mid mx-auto"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
                     <div id="clip-url-display" class="text-xs text-zinc-400 font-mono">&ndash;</div>
                     <div class="text-xs text-zinc-500">Recorded clip from the device upload &mdash; duration shown on the incident row</div>
                 </div>
@@ -645,8 +645,8 @@ function openLivestreamViewer(vehNum, channel, streamURL, sessionID, status) {
     if (chip) {
         chip.textContent = state;
         chip.className = state === 'ACTIVE'
-            ? 'px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30'
-            : 'px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-500/20 text-zinc-400 border border-zinc-500/30';
+            ? 'px-1.5 py-0.5 rounded text-[11px] font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30'
+            : 'px-1.5 py-0.5 rounded text-[11px] font-semibold bg-zinc-500/20 text-zinc-400 border border-zinc-500/30';
     }
     var headline = document.getElementById('live-session-title');
     if (headline) headline.textContent = state === 'ACTIVE' ? 'Live stream in progress' : 'Stream session ' + state + ' \u2014 awaiting device confirmation';

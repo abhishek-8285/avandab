@@ -54,7 +54,7 @@
                         <td data-label="{{t "fl.due_since"}}" class="px-3 py-2 text-sm font-bold text-status-warning tabular-nums" data-numeric>{{.DueDate}}</td>
                         <td data-label="{{t "fl.dispatch_status"}}" class="px-3 py-2">
                             {{if .IsOverridden}}
-                            <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-blue-soft border border-blue-line text-blue-strong dark:text-blue-300 font-bold" title="{{t "fl.reason"}}: {{.OverrideReason}}">{{t "fl.overridden_by"}} {{.OverrideBy}}</span>
+                            <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-blue-soft border border-blue-line text-blue-strong font-bold" title="{{t "fl.reason"}}: {{.OverrideReason}}">{{t "fl.overridden_by"}} {{.OverrideBy}}</span>
                             {{else}}
                             <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-status-alert/10 border border-status-alert/20 text-status-alert font-bold">{{t "fl.blocked"}}</span>
                             {{end}}
@@ -116,7 +116,7 @@
                         </td>
                         <td data-label="{{t "fl.status"}}" class="px-3 py-2">
                             {{if .Active}}
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] rounded-full bg-emerald-soft border border-emerald-line text-emerald-strong dark:text-emerald-300 font-bold"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{t "fl.active_2"}}</span>
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] rounded-full bg-emerald-soft border border-emerald-line text-emerald-strong font-bold"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{t "fl.active_2"}}</span>
                             {{else}}
                             <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-surface-container-high text-secondary font-semibold">{{t "fl.paused"}}</span>
                             {{end}}
@@ -165,11 +165,11 @@
                         <td data-label="{{t "fl.assignee"}}" class="px-3 py-2 text-sm text-secondary">{{if .Assignee}}{{.Assignee}}{{else}}—{{end}}</td>
                         <td data-label="{{t "fl.status"}}" class="px-3 py-2">
                             {{if eq .Status "open"}}
-                            <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-blue-soft border border-blue-line text-blue-strong dark:text-blue-300 font-bold uppercase">{{t "fl.open"}}</span>
+                            <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-blue-soft border border-blue-line text-blue-strong font-bold uppercase">{{t "fl.open"}}</span>
                             {{else if eq .Status "assigned"}}
-                            <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-indigo-soft border border-indigo-line text-indigo-strong dark:text-indigo-300 font-bold uppercase">{{t "fl.assigned"}}</span>
+                            <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-indigo-soft border border-indigo-line text-indigo-strong font-bold uppercase">{{t "fl.assigned"}}</span>
                             {{else if eq .Status "in_progress"}}
-                            <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-amber-soft border border-amber-line text-amber-strong dark:text-amber-300 font-bold uppercase">{{t "fl.in_progress"}}</span>
+                            <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-amber-soft border border-amber-line text-amber-strong font-bold uppercase">{{t "fl.in_progress"}}</span>
                             {{else}}
                             <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-surface-container-high text-secondary font-semibold uppercase">{{t "fl.on_hold"}}</span>
                             {{end}}
@@ -219,17 +219,17 @@
                         <td data-label="{{t "fl.dtc_code"}}" class="px-3 py-2 text-sm font-data-mono font-black text-on-surface">{{.DtcCode}}</td>
                         <td data-label="{{t "fl.severity"}}" class="px-3 py-2">
                             {{if eq .Severity "critical"}}
-                            <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-rose-soft border border-rose-line text-rose-strong dark:text-rose-300 font-black uppercase">{{t "fl.critical"}}</span>
+                            <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-rose-soft border border-rose-line text-rose-strong font-black uppercase">{{t "fl.critical"}}</span>
                             {{else if eq .Severity "warning"}}
-                            <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-amber-soft border border-amber-line text-amber-strong dark:text-amber-300 font-bold uppercase">{{t "fl.warning"}}</span>
+                            <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-amber-soft border border-amber-line text-amber-strong font-bold uppercase">{{t "fl.warning"}}</span>
                             {{else}}
-                            <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-blue-soft border border-blue-line text-blue-strong dark:text-blue-300 font-semibold uppercase">{{t "fl.info"}}</span>
+                            <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-blue-soft border border-blue-line text-blue-strong font-semibold uppercase">{{t "fl.info"}}</span>
                             {{end}}
                         </td>
                         <td data-label="{{t "fl.description"}}" class="px-3 py-2 text-sm text-text-muted max-w-xs truncate">{{if .Description}}{{.Description}}{{else}}—{{end}}</td>
                         <td data-label="{{t "fl.status"}}" class="px-3 py-2">
                             {{if .ResolvedAt}}
-                            <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-emerald-soft border border-emerald-line text-emerald-strong dark:text-emerald-300 font-bold tabular-nums">Resolved ({{datetime .ResolvedAt}})</span>
+                            <span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-emerald-soft border border-emerald-line text-emerald-strong font-bold tabular-nums">Resolved ({{datetime .ResolvedAt}})</span>
                             {{else}}
                             <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] rounded-full bg-status-alert/10 border border-status-alert/20 text-status-alert font-bold"><span class="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>{{t "fl.active_2"}}</span>
                             {{end}}

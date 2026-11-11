@@ -133,7 +133,31 @@ def esc(t):
     return "." + "".join(c if (c.isalnum() or c in "-_") else "\\" + c for c in t)
 
 
+# Local JS authors complete class strings in its data structures
+# (geofence_draw.js legend badges, compress-image.js upload state). Tailwind
+# only scans internal/templates, so a palette class used solely from JS must be
+# safelisted in src/input.css (@source inline). Without that it is silently
+# purged and the dynamic UI renders unstyled — this bucket makes that failure
+# visible instead of shipping it.
+PALETTE = re.compile(
+    r"\b(?:bg|text|border|ring|fill|stroke|from|to|via)-"
+    r"(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|"
+    r"emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-"
+    r"[0-9]{2,3}(?:/[0-9]+)?\b"
+)
+js_tokens = {}
+for f in glob.glob("internal/static/js/**/*.js", recursive=True):
+    if ".min." in f:
+        continue
+    try:
+        src = open(f, encoding="utf-8", errors="ignore").read()
+    except OSError:
+        continue
+    for t in PALETTE.findall(src):
+        js_tokens.setdefault(t, f)
+
 missing = [t for t in sorted(tokens) if esc(t) not in corpus and ("." + t) not in corpus]
+missing_js = [t for t in sorted(js_tokens) if esc(t) not in corpus and ("." + t) not in corpus]
 
 stale, dead = [], []
 for t in missing:
@@ -151,10 +175,16 @@ print(f"B. DEAD / TYPO CLASS (not a utility, not defined) : {len(dead)}")
 for t in dead:
     print("   ", t, "  <-", tokens[t])
 
-if missing:
+print()
+print(f"C. JS-AUTHORED PALETTE CLASS (not in compiled bundle) : {len(missing_js)}")
+for t in missing_js:
+    print("   ", t, "  <-", js_tokens[t])
+
+if missing or missing_js:
     print()
-    print(f"FAIL: {len(missing)} class(es) referenced in templates resolve to no CSS.")
-    print("Run `make build-css`, or fix the class name if it is a typo.")
+    print(f"FAIL: {len(missing)} template class(es) and {len(missing_js)} JS class(es) resolve to no CSS.")
+    print("Run `make build-css`; for JS-authored classes add them to the")
+    print("@source inline(...) safelist in src/input.css.")
     sys.exit(1)
 print()
-print("OK: every template class resolves to defined CSS.")
+print("OK: every template class resolves to defined CSS, and every JS-authored palette class is compiled.")

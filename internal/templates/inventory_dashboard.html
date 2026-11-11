@@ -14,7 +14,7 @@
         </div>
     </div>
     <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
-        <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 grid place-items-center text-emerald-600 shrink-0">
+        <div class="w-9 h-9 rounded-lg bg-emerald-soft border border-emerald-500/20 grid place-items-center text-emerald-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         </div>
         <div class="min-w-0">
@@ -25,7 +25,7 @@
         </div>
     </div>
     <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
-        <div class="w-9 h-9 rounded-lg {{if and .Extra.Summary (gt .Extra.Summary.LowStockCount 0)}}bg-rose-500/15 border border-rose-500/30 text-rose-600 animate-pulse{{else}}bg-slate-500/10 border border-slate-500/20 text-slate-600{{end}} grid place-items-center shrink-0">
+        <div class="w-9 h-9 rounded-lg {{if and .Extra.Summary (gt .Extra.Summary.LowStockCount 0)}}bg-rose-500/15 border border-rose-500/30 text-rose-mid animate-pulse{{else}}bg-slate-soft border border-slate-500/20 text-slate-mid{{end}} grid place-items-center shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </div>
         <div class="min-w-0">
@@ -36,7 +36,7 @@
         </div>
     </div>
     <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
-        <div class="w-9 h-9 rounded-lg bg-sky-500/10 border border-sky-500/20 grid place-items-center text-sky-600 shrink-0">
+        <div class="w-9 h-9 rounded-lg bg-sky-soft border border-sky-500/20 grid place-items-center text-sky-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>
         </div>
         <div class="min-w-0">
@@ -47,7 +47,7 @@
         </div>
     </div>
     <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
-        <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 grid place-items-center text-amber-600 shrink-0">
+        <div class="w-9 h-9 rounded-lg bg-amber-soft border border-amber-500/20 grid place-items-center text-amber-mid shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M3 21h18"/><path d="M9 8h1"/><path d="M9 12h1"/><path d="M9 16h1"/><path d="M14 8h1"/><path d="M14 12h1"/><path d="M14 16h1"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16Z"/></svg>
         </div>
         <div class="min-w-0">
@@ -151,11 +151,11 @@
                         </td>
                         <td class="px-4 py-3 text-center">
                             {{if .IsActive}}
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-strong dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
                                 ACTIVE
                             </span>
                             {{else}}
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-mid dark:bg-slate-800">
                                 INACTIVE
                             </span>
                             {{end}}
@@ -263,7 +263,7 @@
                     <td class="px-4 py-3 text-secondary">
                         {{if .FacilityName}}{{.FacilityName}}{{else}}-{{end}}
                     </td>
-                    <td class="px-4 py-3 text-right font-mono font-semibold {{if eq .TransactionType "ISSUE"}}text-rose-600{{else}}text-emerald-600{{end}}">
+                    <td class="px-4 py-3 text-right font-mono font-semibold {{if eq .TransactionType "ISSUE"}}text-rose-mid{{else}}text-emerald-mid{{end}}">
                         {{if eq .TransactionType "ISSUE"}}-{{else}}+{{end}}{{printf "%.0f" .Quantity}}
                     </td>
                     <td class="px-4 py-3 text-right font-mono font-medium text-on-surface">

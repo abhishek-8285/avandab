@@ -944,6 +944,29 @@ runs). Next-increment candidates remain the live-handler fields: Events (1),
 FounderSignals (2), Experiments (4), PNL (4), Scorecard (4), Compliance (5),
 Notes (5).
 
+**Phase 4 progress (2026-11-11, third increment - founder-domain reads):**
+migrated all recoverable founder-domain handler reads off the legacy
+container: `founder.go` Dashboard moved the experiment count and latest P&L
+reads to `internal/experiments.Queries` (new read facade over
+experiments_spec16) and `internal/pnl.SnapshotQueries` (new read facade over
+pnl_daily, field/JSON-compatible with `service.PNLSnapshot`), and
+`founder_ui.go` moved unacknowledged-count + recent-signals (new
+`internal/founder.SignalQueries` over founder_signals with the legacy filter
+shape), active-experiments, experiments list, latest P&L and P&L range onto the
+same facades. Handler `Services.*` call sites dropped **241 -> 231** across
+**24 -> 21 fields**; handlers raw SQL stays zero and behavior/JSON/templates are
+unchanged (facade types mirror the legacy field names/JSON tags). **Container
+fields were NOT removed this increment** (`PNL`, `Experiments`,
+`FounderSignals` stay): repo-wide compile-time proof shows non-handler
+consumers still reference them - `cmd/server` console handler + nightly P&L
+cron (`services.PNL`), `handlers/app.go` composition of the AB-experiments
+handler (`svc.Experiments`) and founder write handlers
+(`svc.FounderSignals`), plus `test/` fixtures (`svcs.PNL`,
+`svcs.Experiments`, `svcs.FounderSignals`). Per the zero-reference rule the
+fields stay until those consumers migrate; legacy `PNLService`/
+`ExperimentsService`/`FounderSignalsService` code is retained for the same
+reason.
+
 ### 5. Exit criteria per file/domain
 
 - zero raw SQL in the handler/tool file (ratchet cap 0),

@@ -67,7 +67,7 @@
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
             </div>
             <div class="mt-3">
-                <div class="text-xl font-black tracking-tight tabular-nums text-amber-mid dark:text-amber-400 leading-none" data-numeric>₹{{printf "%.2f" $latest.DriverPayouts}}</div>
+                <div class="text-xl font-black tracking-tight tabular-nums text-amber-mid leading-none" data-numeric>₹{{printf "%.2f" $latest.DriverPayouts}}</div>
                 <div class="text-xs font-medium text-secondary mt-1.5">{{t "mo.pnl.driver_pay"}}</div>
             </div>
         </div>
@@ -87,7 +87,7 @@
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-2.8a.5.5 0 0 0-.45-.3H3a.5.5 0 0 0-.45.3L1.14 12.2a1.5 1.5 0 0 0 0 1.6L2.6 16.6A.5.5 0 0 0 3.05 17H18"/></svg>
             </div>
             <div class="mt-3">
-                <div class="text-xl font-black tracking-tight tabular-nums text-violet-mid dark:text-violet-400 leading-none" data-numeric>{{$latest.TripCount}}</div>
+                <div class="text-xl font-black tracking-tight tabular-nums text-violet-mid leading-none" data-numeric>{{$latest.TripCount}}</div>
                 <div class="text-xs font-medium text-secondary mt-1.5">{{t "mo.pnl.trips_latest"}}</div>
             </div>
         </div>

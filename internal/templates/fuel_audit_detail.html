@@ -64,7 +64,7 @@
                     <span class="w-8 h-8 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid text-xs font-black shrink-0">A</span>
                     <div class="min-w-0">
                         <p class="text-sm font-semibold text-on-surface">Level sensor
-                            {{if .Claim.ExpectedLevel}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong dark:text-emerald-300">available</span>{{else}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold text-text-muted">{{t "mo.ful.no_evidence"}}</span>{{end}}
+                            {{if .Claim.ExpectedLevel}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong">available</span>{{else}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold text-text-muted">{{t "mo.ful.no_evidence"}}</span>{{end}}
                         </p>
                         <p class="text-xs text-text-muted mt-1">
                             Σ refill_detected events in the claim window
@@ -83,7 +83,7 @@
                     <span class="w-8 h-8 rounded-lg bg-violet-soft border border-violet-line grid place-items-center text-violet-mid text-xs font-black shrink-0">B</span>
                     <div class="min-w-0">
                         <p class="text-sm font-semibold text-on-surface">Odometer
-                            {{if .Claim.ExpectedOdo}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong dark:text-emerald-300">available</span>{{else}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold text-text-muted">{{t "mo.ful.no_evidence"}}</span>{{end}}
+                            {{if .Claim.ExpectedOdo}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong">available</span>{{else}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold text-text-muted">{{t "mo.ful.no_evidence"}}</span>{{end}}
                         </p>
                         <p class="text-xs text-text-muted mt-1 tabular-nums">
                             odometer delta {{printf "%.1f" .Claim.OdometerDeltaKm}} km ÷ kmpl {{printf "%.2f" .Claim.KmplUsed}}
