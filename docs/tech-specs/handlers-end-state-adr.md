@@ -903,6 +903,27 @@ facade; remove inline SQL; approval gate stays where it is.
 **Phase 4 — cleanup**: delete replaced legacy services and `App.DB`
 fields domain by domain; update `docs/09` architecture score.
 
+**Phase 4 progress (2026-11-11, first increment - cleanup inventory):**
+inventory of the legacy `service.Services` container against the tree at
+`4a3b07f`: every one of its 30 service fields still has live non-test callers
+(**241** `Services.*` call sites in `internal/handlers`, plus
+`cmd/server` construction), and no handler performs raw data access anymore
+(zero `.DB.Query/QueryRow/Exec/Begin` sites; remaining `.DB` references are
+composition and nil-checks). **Zero whole legacy components are safely
+deletable in this increment** - the first Phase 4 change must be handler
+call-site migration, not deletion. A method-level zero-reference heuristic
+was run over `internal/service/*.go`; a first deletion attempt was reverted
+when the compiler showed same-file uses the heuristic had discounted, so no
+methods were deleted this increment (deferred to the next one with a
+compile-time dead-code tool + reviewer sign-off). No behavior changes.
+`docs/09-CODEBASE-AND-FEATURE-ASSESSMENT.md` refreshed: architecture
+consistency **6 -> 8/10** on executed evidence (handlers/ raw SQL 245 -> 0
+with an `assert.Zero` ratchet at `e3dd6fe`, agent/tools.go 0 SQL + 0
+`env.Services` refs at `a20aabf`, EWB cross-tenant exposure fixed at
+`504ddef`, ~40 handler files migrated to slices; residual 241 live
+`Services.*` handler sites + capped-but-large god-files), overall held at
+8.5 because external acceptance remains the binding constraint.
+
 ### 5. Exit criteria per file/domain
 
 - zero raw SQL in the handler/tool file (ratchet cap 0),

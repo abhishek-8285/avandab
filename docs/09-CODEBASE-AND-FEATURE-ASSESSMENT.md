@@ -1,6 +1,6 @@
 # 09 — Codebase & Feature Assessment
 
-> Evidence-based snapshot of built state, quality, and honest gaps. Survey date: **2026-11-10**, commit `41345ca` (branch `feat/trip-fuel-rollup`, 29 commits ahead of `origin`, clean tree). Supersedes the `544247ca` (2026-09-10), `3f015a8b` (2026-09-08) and `ea5b078` surveys; deltas called out per section. `docs/*.md` supersede on conflict (per `docs/ROADMAP.md` header rule).
+> Evidence-based snapshot of built state, quality, and honest gaps. Refreshed survey date: **2026-11-11**, commit `4a3b07f` (branch `feat/trip-fuel-rollup`). Supersedes the `41345ca` (2026-11-10), `544247ca` (2026-09-10), `3f015a8b` (2026-09-08) and `ea5b078` surveys; deltas called out per section. This refresh records the executed end-state migrations (ADR Phases 2–3 complete) and the first Phase 4 cleanup inventory. `docs/*.md` supersede on conflict (per `docs/ROADMAP.md` header rule).
 
 ---
 
@@ -14,7 +14,10 @@
 | Go coverage | **61.2%** total / 60.9% filtered (floor 50); money paths **67.3%** (floor 65) | `go tool cover` + `scripts/check-coverage.sh` floors |
 | Mobile tests | **69 suites / 428 tests**, all pass | `jest` 2026-11-10 |
 | Mobile coverage | stmt 85.56% / **branch 76.31%** / func 85% / line 88.09% (branch floor 75% — thin margin) | `jest --coverage` 2026-11-10 |
-| Build / vet / gofmt | exit 0 / exit 0 / clean (tracked Go) | `go build ./...`, `go vet ./...`, `gofmt -l` 2026-11-10 |
+| Build / vet / gofmt | exit 0 / exit 0 / clean (tracked Go) | `go build ./...`, `go vet ./...`, `gofmt -l` 2026-11-11 |
+| ADR ratchet — `internal/handlers/` raw SQL | **0** sites (was 245 at `41345ca`); asserted with `assert.Zero` + per-file line caps may only shrink | `internal/architecture/ratchet_test.go`; Phase 2 complete at `e3dd6fe` |
+| ADR ratchet — `internal/agent/tools.go` | **0** raw SQL, **0** `env.Services` refs, 1,027 lines (was 1,186 lines / 1 SQL site / legacy service container) | same ratchet; Phase 3 complete at `a20aabf` |
+| Legacy service container remaining live use | **241** `Services.*` call sites in `internal/handlers` (Phase 4 cleanup target; zero whole-service deletions yet — every legacy service still has live callers) | `grep` 2026-11-11 |
 | Security gate | **Partial locally** — golangci-lint 0 issues across all branch changes; `govulncheck` + `-race` are CI-only on this android/arm64 host | `golangci-lint --new-from-rev=origin` 2026-11-10 |
 | Migrations | **179 files each engine, head `00185`**, SQLite + PG mirrors | `ls db/migrations*/ *.sql` |
 | Schema | 179 tables / 283 indexes | regenerated `db/schema.sql` at head |
@@ -25,7 +28,8 @@
 | CI | 8 workflows; aggregate gate + backend build/test, security, mobile, PG parity, Playwright, deploy, restore drill, perf/mutation | `.github/workflows/` |
 | PG rehearsal | **v185**, PG 18.2: 179/179 table parity, down→0→up clean, `-tags pg_integration` green, PG boot smokes 200 | `docs/tech-specs/c2-pg-cutover-runbook.md` |
 
-### Deltas since `544247ca` (2026-09-10 → 2026-11-10)
+### Deltas since `544247ca` (2026-09-10 → 2026-11-10, refreshed 2026-11-11)
+- **Architecture end-state executed (ADR Phases 2–3 complete)**: `internal/handlers/` raw SQL `245 → 0` at `e3dd6fe` (~40 handler files migrated into owning slice application packages; the CI ratchet now asserts zero rather than a cap), `internal/agent/tools.go` raw SQL `1 → 0` and legacy `env.Services` references `0` at `a20aabf` (20 tools now schema + argument mapping + delegate; 1,186 → 1,027 lines), and the pre-existing E-way-bill cross-tenant presentation/detail/write exposure was fixed at `504ddef` (reads scoped through `trips.tenant_id`, fail-closed, cross-tenant indistinguishable from unknown). Phase 4 cleanup inventory (2026-11-11): every legacy service still has live callers, so no component is safely deletable yet.
 - **Trust surface truth pass**: `/status` is measured (availability sampler, real incident history, coverage-gated 30-day uptime — no 99.98% invention), `/pricing` 99.9% is a target, marketing copy de-fabricated; SLA breach alerting (00182) + auto-resolve on recovery; alert escalation defaults (00181) and **recipient targeting** (role → active tenant users, explicit recipients, cross-tenant excluded).
 - **Money movement**: real **RazorpayX payout rail** (IMPS, penny-drop verification, signed webhook reconciliation, exactly-once wallet compensation), driver + admin payout UI, and a **stuck-payout sweep** (00184) that alerts when a payout sits in initiated/processing past threshold.
 - **Privacy/retention**: business-data retention worker (00183 indexes; video 90d, audit/breach 3y, consents/DSAR 5y) and **driver KYC post-tenure purge** (00185: deactivated_at/kyc_purged_at, KYC fields + documents + local blobs purged after 3y, financial ledger preserved).
@@ -45,9 +49,9 @@
 
 ## 3. Honest weaknesses
 
-### 3.1 Two architectures coexist (highest structural risk — grew)
-- `internal/handlers/` god-files grew: `trips.go` 2,034, `app.go` 1,764, `invoices_consolidate.go` 1,673, `invoices.go` 1,258; `internal/agent/tools.go` 1,185 keeps the pattern alive in a new directory.
-- **End-state now decided**: `docs/tech-specs/handlers-end-state-adr.md` (2026-11-10) sets the target boundary (handlers/ = HTTP+composition only, zero SQL/business rules; agent tools delegate to application services), a phased migration order, exit criteria, and a CI ratchet (`internal/architecture/ratchet_test.go`: 245 handler SQL sites, per-file caps, god-file line caps may only shrink). Score stays 6/10 until execution reduces those caps.
+### 3.1 Two architectures coexist (structural risk — now shrinking; ADR Phases 2–3 complete)
+- **End-state executed, not just decided**: `docs/tech-specs/handlers-end-state-adr.md` set the boundary (handlers/ = HTTP+composition only; agent tools = schema + mapping only, delegate to application services) and the big-ticket migration is done: handlers/ raw SQL **245 → 0** at `e3dd6fe` (Phase 2, ~40 handler files moved into owning slice application packages; ratchet lowered from per-file caps to `assert.Zero`), and `internal/agent/tools.go` raw SQL **1 → 0**, legacy `env.Services` references **0**, lines **1,186 → 1,027** at `a20aabf` (Phase 3 complete across 20 tools: alerts, maintenance, money, booking/trip, dispatch/availability/dashboard/EWB facades). The E-way-bill cross-tenant presentation/detail/write exposure was closed at `504ddef` (tenant scoped via `trips.tenant_id`, fail-closed on empty tenant, unknown vs cross-tenant indistinguishable).
+- **Remaining structural work (Phase 4)**: the legacy `service.Services` container still has **241 live `Services.*` call sites in handlers** (plus its own web/settlement/dashboard services), and the large god-files are capped-but-still-large (`trips.go` 1,931 cap, `app.go` 1,764, `maintenance.go` 1,081). Nothing was deleted in the first Phase 4 increment because every legacy service still has live callers; deletion must follow call-site migration, not precede it. Score: architecture consistency **6 → 8/10** (evidence above), overall held at 8.5 because external acceptance remains the binding constraint.
 
 ### 3.2 Production readiness gaps (external acceptance, not code)
 | Area | State | Proof / blocker |
@@ -86,10 +90,10 @@
 | Security & tenancy | 9/10 | fail-closed multi-tenant default, tenant isolation triggers/tests, webhook HMACs, encrypted bank data/backups; full `security-check.sh` is CI-only here |
 | Migrations & data governance | 9/10 | 179-file append-only dual-engine chain, head 00185, ownership index, PG 18.2 v185 rehearsal (parity + down/up) |
 | Testing | 9/10 | 148 Go packages 0 FAIL + coverage floors (61.2% / money 67.3%), 69 mobile suites/428 tests, ratchets; 95 no-test Go packages and thin mobile branch margin remain |
-| Architecture consistency | 6/10 | god-files grew (trips 2,034 / app 1,764 / agent tools 1,185); no end-state ADR |
+| Architecture consistency | **8/10** (was 6) | end-state ADR executed: handlers/ raw SQL 245→0 with `assert.Zero` ratchet (`e3dd6fe`), agent/tools.go 0 SQL + 0 `env.Services` refs at 1,027 lines (`a20aabf`), EWB cross-tenant exposure fixed (`504ddef`), ~40 handler files migrated to slices; residual: 241 live `Services.*` handler call sites + large capped god-files (Phase 4) |
 | Feature depth / prod readiness | 7/10 (was 6) | payout rail, retention (incl KYC), report delivery, encrypted backups, measured trust surface shipped; live provider creds, PG cutover, hardware, off-host restore proof still missing |
 | Documentation honesty | 9/10 | roadmap/RELEASES/retention schedule self-report; this refresh replaces stale claims |
-| **Overall** | **8.5/10** (was 8) | code-side depth + safety improved materially; external acceptance (creds, VPS, hardware) still gates production |
+| **Overall** | **8.5/10** (held; architecture 6→8) | code-side depth + safety improved, architecture risk retired from the blocking list; external acceptance (creds, VPS, hardware) and Phase 4 legacy-service deletion still gate production |
 
 *(Scores re-derived this survey from the evidence in §1; no re-grading of untouched areas without new evidence.)*
 
@@ -101,7 +105,7 @@
 1. **PG live cutover** using the v185-rehearsed runbook (freeze → encrypted backup → `sqlite2pg --check` tenant-orphans=0 → live copy → PG smokes → flip → rollback kept).
 2. **Provider go-live per `c4-provider-golive-runbook.md`** — EWB/GSTN/FASTag partner certs; implement Zoho/QuickBooks live adapters (currently mock-only).
 3. **Ops acceptance**: verify stuck-payout escalation + alert recipient targeting in a real tenant; reconcile KYC blob `blobs_pending` manual queue.
-4. **Architecture end-state ADR** for `handlers/` + `agent/tools.go` god-files before further growth.
+4. **Phase 4 cleanup**: migrate the remaining **241** `Services.*` handler call sites onto slice facades, then delete the replaced legacy services and `App.DB` fields domain by domain (first inventory at 2026-11-11 found no whole component safely deletable yet); keep the ratchet caps shrinking.
 5. **OpenAPI spec** for the new driver payout/webhook routes; re-run A6 parity audit.
 6. **Test-debt triage**: 95 no-test Go packages; mobile branch margin; keep race/govulncheck/soak in CI.
 
@@ -111,4 +115,5 @@
 - `/data/data/com.termux/files/home/dsh-verify/mobile-coverage.log` — `jest --coverage`, 2026-11-10
 - `go tool cover -func=coverage.out`; `scripts/check-coverage.sh` floors; `golangci-lint --new-from-rev=origin`
 - `docs/tech-specs/c2-pg-cutover-runbook.md` (PG 18.2 v185 rehearsal); `docs/RELEASES.md`; `docs/ROADMAP.md`; `docs/PLAN-fleetx-parity-2026-10-28.md`
+- `internal/architecture/ratchet_test.go` + `docs/tech-specs/handlers-end-state-adr.md` — end-state evidence at `e3dd6fe` (handlers zero SQL), `a20aabf` (agent tools zero SQL / no legacy service access), `504ddef` (EWB tenant-scoping fix); Phase 4 inventory `grep` run 2026-11-11
 - Measured on commit `41345ca`; prior surveys `544247ca` (2026-09-10), `3f015a8b` (2026-09-08), `ea5b078`

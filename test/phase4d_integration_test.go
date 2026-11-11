@@ -88,7 +88,7 @@ func TestSubTask4D_MasterIntegrationSuite(t *testing.T) {
 	assert.Contains(t, mutating, "extend_ewaybill")
 
 	toolEnv := &agent.ToolEnv{
-		Services: svcs,
+		DB:       svcs.DB(),
 		UserID:   "admin-101",
 		UserName: "Admin",
 	}
