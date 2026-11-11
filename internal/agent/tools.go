@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -11,8 +12,11 @@ import (
 	dispatchapp "transport-app/internal/dispatch/application"
 	"transport-app/internal/domain"
 	"transport-app/internal/ewaybill"
+	invoiceapp "transport-app/internal/invoice/application"
+	kharchaapp "transport-app/internal/kharcha/application"
 	"transport-app/internal/maintenance"
 	maintdomain "transport-app/internal/maintenance/domain"
+	paymentapp "transport-app/internal/payment/application"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 	tripagg "transport-app/internal/trip/domain/aggregate"
@@ -541,24 +545,15 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if err := json.Unmarshal(args, &in); err != nil {
 					return "", err
 				}
-				inv, err := env.Services.Invoices.GetInvoiceByNumber(ctx, in.Number)
+				db, err := moneyDB(env)
+				if err != nil {
+					return "", err
+				}
+				inv, err := invoiceapp.NewAgentInvoiceQueries(db).GetByNumber(ctx, shared.TenantIDFromContext(ctx), in.Number)
 				if err != nil {
 					return "", fmt.Errorf("invoice not found: %v", err)
 				}
-				balance, err := env.Services.Invoices.GetBalance(ctx, inv.ID)
-				if err != nil {
-					return "", fmt.Errorf("balance unavailable: %w", err)
-				}
-				return jsonString(map[string]any{
-					"id":          inv.ID.String(),
-					"number":      inv.InvoiceNumber,
-					"customer":    inv.CustomerName,
-					"total":       inv.Total,
-					"paid":        inv.PaidAmount,
-					"outstanding": balance,
-					"status":      inv.Status,
-					"due_date":    inv.DueDate,
-				})
+				return jsonString(map[string]any{"id": inv.ID, "number": inv.Number, "customer": inv.Customer, "total": inv.Total, "paid": inv.Paid, "outstanding": inv.Outstanding, "status": inv.Status, "due_date": inv.DueDate})
 			},
 		},
 		{
@@ -571,33 +566,18 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				"properties": map[string]any{},
 			},
 			Handler: func(ctx context.Context, args json.RawMessage) (string, error) {
-				invs, _, err := env.Services.Invoices.ListInvoices(ctx, "", "", 50, 0)
+				db, err := moneyDB(env)
 				if err != nil {
 					return "", err
 				}
-				type row struct {
-					ID          string  `json:"id"`
-					Number      string  `json:"number"`
-					Customer    string  `json:"customer"`
-					Total       float64 `json:"total"`
-					Paid        float64 `json:"paid"`
-					Outstanding float64 `json:"outstanding"`
+				invs, err := invoiceapp.NewAgentInvoiceQueries(db).ListUnpaid(ctx, shared.TenantIDFromContext(ctx), 50)
+				if err != nil {
+					return "", err
 				}
-				var out []row
-				for _, inv := range invs {
-					if inv.PaymentStatus == "paid" {
-						continue
-					}
-					balance, err := env.Services.Invoices.GetBalance(ctx, inv.ID)
-					if err != nil {
-						return "", fmt.Errorf("balance unavailable: %w", err)
-					}
-					out = append(out, row{inv.ID.String(), inv.InvoiceNumber, inv.CustomerName, inv.Total, inv.PaidAmount, balance})
-				}
-				if len(out) == 0 {
+				if len(invs) == 0 {
 					return "No unpaid invoices. All invoices are settled.", nil
 				}
-				return jsonString(out)
+				return jsonString(invs)
 			},
 		},
 		{
@@ -630,24 +610,24 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if in.Amount <= 0 {
 					return "", fmt.Errorf("amount must be greater than zero, got %.2f", in.Amount)
 				}
-				balance, err := env.Services.Invoices.GetBalance(ctx, domain.InvoiceID(in.InvoiceID))
-				if err != nil {
-					return "", fmt.Errorf("balance unavailable: %w", err)
-				}
-				if in.Amount > balance {
-					return "", fmt.Errorf("payment amount %.2f exceeds outstanding balance %.2f; record only up to the outstanding amount", in.Amount, balance)
-				}
-				p, err := env.Services.Payments.RecordPayment(ctx, domain.InvoiceID(in.InvoiceID), in.Amount, domain.PaymentMethod(strings.ToLower(in.Method)), in.Reference, in.Remarks, "")
+				db, err := moneyDB(env)
 				if err != nil {
 					return "", err
 				}
-				return jsonString(map[string]any{
-					"payment_id": p.ID.String(),
-					"invoice_id": in.InvoiceID,
-					"amount":     p.Amount,
-					"method":     p.Method,
-					"status":     "recorded",
-				})
+				tenant := shared.TenantIDFromContext(ctx)
+				inv, err := invoiceapp.NewAgentInvoiceQueries(db).GetByID(ctx, tenant, in.InvoiceID)
+				if err != nil {
+					return "", fmt.Errorf("balance unavailable: %w", err)
+				}
+				if in.Amount > inv.Outstanding {
+					return "", fmt.Errorf("payment amount %.2f exceeds outstanding balance %.2f; record only up to the outstanding amount", in.Amount, inv.Outstanding)
+				}
+				method := strings.ToLower(in.Method)
+				pid, err := paymentapp.NewAgentMoneyService(db).RecordPayment(ctx, tenant, in.InvoiceID, in.Amount, method, in.Reference, in.Remarks)
+				if err != nil {
+					return "", err
+				}
+				return jsonString(map[string]any{"payment_id": pid, "invoice_id": in.InvoiceID, "amount": in.Amount, "method": method, "status": "recorded"})
 			},
 		},
 		{
@@ -660,19 +640,15 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				"properties": map[string]any{},
 			},
 			Handler: func(ctx context.Context, args json.RawMessage) (string, error) {
-				total, err := env.Services.Payments.GetTotalRevenue(ctx)
+				db, err := moneyDB(env)
+				if err != nil {
+					return "", err
+				}
+				total, monthly, err := paymentapp.NewAgentMoneyService(db).Revenue(ctx, shared.TenantIDFromContext(ctx))
 				if err != nil {
 					return "", fmt.Errorf("revenue unavailable: %w", err)
 				}
-				monthly, err := env.Services.Payments.GetMonthlyRevenue(ctx)
-				if err != nil {
-					return "", fmt.Errorf("revenue unavailable: %w", err)
-				}
-				rows := make([]map[string]any, 0, len(monthly))
-				for _, m := range monthly {
-					rows = append(rows, map[string]any{"month": m.Month, "total": m.Total})
-				}
-				return jsonString(map[string]any{"total_revenue": total, "monthly": rows})
+				return jsonString(map[string]any{"total_revenue": total, "monthly": monthly})
 			},
 		},
 		{
@@ -685,26 +661,18 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				"properties": map[string]any{},
 			},
 			Handler: func(ctx context.Context, args json.RawMessage) (string, error) {
-				expenses, err := env.Services.Kharcha.ListPendingExpenses(ctx)
+				db, err := moneyDB(env)
 				if err != nil {
 					return "", err
 				}
-				type row struct {
-					ID       string  `json:"id"`
-					Trip     string  `json:"trip_number"`
-					Driver   string  `json:"driver"`
-					Category string  `json:"category"`
-					Amount   float64 `json:"amount"`
-					Desc     string  `json:"description"`
+				expenses, err := kharchaapp.NewAgentExpenseStore(db).ListPending(ctx, shared.TenantIDFromContext(ctx))
+				if err != nil {
+					return "", err
 				}
-				out := make([]row, 0, len(expenses))
-				for _, e := range expenses {
-					out = append(out, row{e.ID, e.TripNumber, e.DriverName, e.Category, e.Amount, e.Description})
-				}
-				if len(out) == 0 {
+				if len(expenses) == 0 {
 					return "No pending kharcha expenses.", nil
 				}
-				return jsonString(out)
+				return jsonString(expenses)
 			},
 		},
 		{
@@ -730,7 +698,11 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if actor == "" {
 					actor = env.UserID
 				}
-				if err := env.Services.Kharcha.ApproveExpense(ctx, in.ExpenseID, actor); err != nil {
+				db, err := moneyDB(env)
+				if err != nil {
+					return "", err
+				}
+				if err := kharchaapp.NewAgentExpenseStore(db).Approve(ctx, shared.TenantIDFromContext(ctx), in.ExpenseID, actor); err != nil {
 					return "", err
 				}
 				return fmt.Sprintf("Expense %s approved.", in.ExpenseID), nil
@@ -761,7 +733,11 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if actor == "" {
 					actor = env.UserID
 				}
-				if err := env.Services.Kharcha.RejectExpense(ctx, in.ExpenseID, actor, in.Reason); err != nil {
+				db, err := moneyDB(env)
+				if err != nil {
+					return "", err
+				}
+				if err := kharchaapp.NewAgentExpenseStore(db).Reject(ctx, shared.TenantIDFromContext(ctx), in.ExpenseID, actor, in.Reason); err != nil {
 					return "", err
 				}
 				return fmt.Sprintf("Expense %s rejected: %s", in.ExpenseID, in.Reason), nil
@@ -1093,6 +1069,15 @@ func workOrderFacade(env *ToolEnv) (*maintenance.WorkOrderFacade, error) {
 		return nil, maintenance.ErrStoreUnavailable
 	}
 	return f, nil
+}
+
+// moneyDB returns the service database for the money application facades
+// (invoice/payment/kharcha). Tools fail closed when it is unavailable.
+func moneyDB(env *ToolEnv) (*sql.DB, error) {
+	if env == nil || env.Services == nil || env.Services.DB() == nil {
+		return nil, fmt.Errorf("database unavailable")
+	}
+	return env.Services.DB(), nil
 }
 
 // workOrderJSON renders one job card for the assistant.

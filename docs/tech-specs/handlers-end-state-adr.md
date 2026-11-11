@@ -806,6 +806,34 @@ lifecycle transitions including the service-record side effect, not-found and
 store-unavailable mapping, and new `TestWorkOrderTools_TenantIsolation` pins
 cross-tenant invisibility through the tool layer.
 
+**Phase 3 progress (2026-11-11, third increment - money tools):** the seven
+invoice/payment/kharcha agent tools (`get_invoice`, `list_unpaid_invoices`,
+`record_payment`, `get_revenue`, `list_pending_kharcha`, `approve_kharcha`,
+`reject_kharcha`) no longer read `env.Services.Invoices/Payments/Kharcha`.
+They delegate to new facades in their owning slices:
+`internal/invoice/application.AgentInvoiceQueries` (tenant-scoped by-number/
+by-id lookup and 50-newest unpaid list with the legacy balance math
+total - summed payments clamped at 0), `internal/payment/application.
+AgentMoneyService` (tenant revenue total + monthly buckets matching
+`db/query/payments.sql`; payment recording delegates to the same clean
+`RecordPaymentUseCase` the HTTP payment handlers use, keeping the idempotent
+claim and invoice paid_amount/payment_status update) and
+`internal/kharcha/application.AgentExpenseStore` (tenant-scoped pending list;
+approve copies the legacy state machine - fuel-audit enforce gate for
+needs_review claims, pending->approved guard, driver-settlement deduction +
+settlement line in one transaction and the audit_logs row; reject keeps the
+mandatory-reason guard and pending-only flip). Tools keep schemas, argument
+validation strings, RBAC tags (`invoices:read`, `payments:create`,
+`reports:read`, `trips:read/update`), approval-gate membership
+(record_payment/approve_kharcha/reject_kharcha stay in MutatingTools), exact
+JSON output shapes/fields and model-facing error strings; a missing DB fails
+closed with "database unavailable". `internal/agent/tools.go` is now 1,125
+lines / 0 SQL and its line cap was lowered 1141 -> 1126. Existing agent tests
+pass unchanged; new facade tests pin tenant isolation, balance/revenue math,
+and the approve/reject state machines with their settlement/audit side
+effects; a new agent regression test pins registry/RBAC tags, cross-tenant
+invisibility and the legacy model strings.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 
