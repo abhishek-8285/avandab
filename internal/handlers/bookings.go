@@ -413,51 +413,29 @@ func (h *BookingHandlers) Board(w http.ResponseWriter, r *http.Request) {
 	h.init()
 	tenantID := shared.TenantIDFromContext(r.Context())
 
-	rows, err := h.DB.QueryContext(r.Context(), `
-		SELECT b.id, b.booking_number, COALESCE(c.name,''), b.status,
-		       COALESCE(b.price,0), b.pickup_date,
-		       COALESCE(v.vehicle_number,''),
-		       COALESCE(d.first_name || ' ' || d.last_name, '')
-		FROM bookings b
-		LEFT JOIN customers c ON c.id = b.customer_id
-		LEFT JOIN trips t ON t.booking_id = b.id
-		     AND t.status IN ('assigned','started','reached_pickup','in_transit')
-		LEFT JOIN vehicles v ON v.id = t.vehicle_id
-		LEFT JOIN drivers d ON d.id = t.driver_id
-		WHERE b.tenant_id = $1
-		ORDER BY b.created_at DESC LIMIT 200`, tenantID)
+	boardRows, err := bookingapp.NewBoardQueries(h.DB).Rows(r.Context(), string(tenantID))
 	if err != nil {
 		httpx.Error(w, r, err)
 		return
 	}
-	defer func() { _ = rows.Close() }()
 
 	cardsByStatus := make(map[string][]boardCard, len(boardColumns))
 	for _, s := range boardColumns {
 		cardsByStatus[s] = []boardCard{}
 	}
-	for rows.Next() {
-		var (
-			card   boardCard
-			status string
-			pickup sql.NullTime
-		)
-		if err := rows.Scan(&card.ID, &card.Number, &card.Customer, &status,
-			&card.Freight, &pickup, &card.Vehicle, &card.Driver); err != nil {
-			httpx.Error(w, r, err)
-			return
+	for _, row := range boardRows {
+		card := boardCard{
+			ID: row.ID, Number: row.Number, Customer: row.Customer,
+			Freight: row.Freight, Vehicle: row.Vehicle, Driver: row.Driver,
 		}
-		if pickup.Valid {
-			card.Deadline = pickup.Time.Format("2006-01-02")
+		if row.Pickup.Valid {
+			card.Deadline = row.Pickup.Time.Format("2006-01-02")
 		}
+		status := row.Status
 		if _, known := cardsByStatus[status]; !known {
 			status = "pending"
 		}
 		cardsByStatus[status] = append(cardsByStatus[status], card)
-	}
-	if err := rows.Err(); err != nil {
-		httpx.Error(w, r, err)
-		return
 	}
 
 	columns := make([]boardColumn, 0, len(boardColumns))

@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	backhaulapp "transport-app/internal/backhaul/application"
 	"transport-app/internal/middleware"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
@@ -43,22 +44,8 @@ func (h *BackhaulHandlers) WebBackhaulPage(w http.ResponseWriter, r *http.Reques
 	}
 
 	var trips []BackhaulTripOption
-	if h.DB != nil {
-		rows, err := h.DB.QueryContext(r.Context(), `
-			SELECT id, trip_number, status
-			FROM trips
-			WHERE tenant_id = $1 AND status IN ('scheduled', 'assigned', 'started', 'completed')
-			ORDER BY created_at DESC
-			LIMIT 50`, tenantID)
-		if err == nil {
-			defer func() { _ = rows.Close() }()
-			for rows.Next() {
-				var t BackhaulTripOption
-				if scanErr := rows.Scan(&t.ID, &t.TripNumber, &t.Status); scanErr == nil {
-					trips = append(trips, t)
-				}
-			}
-		}
+	for _, t := range backhaulapp.RecentTrips(r.Context(), h.DB, tenantID) {
+		trips = append(trips, BackhaulTripOption{ID: t.ID, TripNumber: t.TripNumber, Status: t.Status})
 	}
 
 	selectedTripID := strings.TrimSpace(r.URL.Query().Get("trip_id"))

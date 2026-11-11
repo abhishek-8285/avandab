@@ -13,6 +13,7 @@ import (
 	"transport-app/internal/fuel"
 	"transport-app/internal/middleware"
 	"transport-app/internal/shared"
+	vehicleapp "transport-app/internal/vehicle/application"
 )
 
 // RegisterFuelIssueAPIRoutes mounts the /api/v1/fuel-issues REST endpoints.
@@ -414,21 +415,13 @@ func (h *ColdChainHandlers) WebColdChainDashboard(w http.ResponseWriter, r *http
 	}
 
 	// Fetch all fleet vehicles for the configuration modal dropdown
-	rows, err := h.DB.QueryContext(r.Context(), `SELECT id, vehicle_number, registration_number
-		FROM vehicles WHERE tenant_id = $1 ORDER BY vehicle_number ASC`, tenantID)
 	var allVehicles []map[string]string
-	if err == nil {
-		defer func() { _ = rows.Close() }()
-		for rows.Next() {
-			var id, vNum, regNum string
-			if err := rows.Scan(&id, &vNum, &regNum); err == nil {
-				allVehicles = append(allVehicles, map[string]string{
-					"ID":                 id,
-					"VehicleNumber":      vNum,
-					"RegistrationNumber": regNum,
-				})
-			}
-		}
+	for _, v := range vehicleapp.VehicleOptions(r.Context(), h.DB, tenantID) {
+		allVehicles = append(allVehicles, map[string]string{
+			"ID":                 v.ID,
+			"VehicleNumber":      v.VehicleNumber,
+			"RegistrationNumber": v.RegistrationNumber,
+		})
 	}
 
 	data := PageData{

@@ -22,18 +22,18 @@ var sqlTokens = []string{"QueryContext(", "ExecContext(", "QueryRowContext("}
 // handlerSQLCaps is the per-file raw-SQL call-site baseline.
 var handlerSQLCaps = map[string]int{
 	"assignment.go":           0,
-	"backhaul.go":             1,
-	"bookings.go":             1,
+	"backhaul.go":             0,
+	"bookings.go":             0,
 	"compliance.go":           0,
 	"console.go":              0,
 	"contact.go":              0,
 	"customer_portal.go":      0,
-	"customers.go":            1,
+	"customers.go":            0,
 	"driver_money.go":         0,
 	"drivers.go":              0,
 	"ewaybill.go":             0,
-	"failpage.go":             1,
-	"fuel_issues.go":          1,
+	"failpage.go":             0,
+	"fuel_issues.go":          0,
 	"invoices.go":             0,
 	"invoices_consolidate.go": 0,
 	"kharcha.go":              0,
@@ -42,13 +42,13 @@ var handlerSQLCaps = map[string]int{
 	"maintenance.go":          0,
 	"maintenance_plans.go":    0,
 	"mqtt_credentials.go":     0,
-	"otp.go":                  1,
-	"outbox_batch.go":         1,
+	"otp.go":                  0,
+	"outbox_batch.go":         0,
 	"public_payment.go":       0,
 	"routes.go":               0,
-	"scorecard.go":            1,
-	"search.go":               2,
-	"settings.go":             1,
+	"scorecard.go":            0,
+	"search.go":               0,
+	"settings.go":             0,
 	"share.go":                0,
 	"sos.go":                  0,
 	"telemetry_devices.go":    0,
@@ -92,6 +92,16 @@ var handlerLineCaps = map[string]int{
 	"telemetry_devices.go":    700,
 	"compliance.go":           329,
 	"contact.go":              273,
+	"search.go":               112,
+	"settings.go":             576,
+	"scorecard.go":            670,
+	"outbox_batch.go":         65,
+	"otp.go":                  135,
+	"fuel_issues.go":          538,
+	"failpage.go":             315,
+	"customers.go":            416,
+	"bookings.go":             458,
+	"backhaul.go":             246,
 }
 
 func countSQL(text string) int {
@@ -133,8 +143,11 @@ func TestArchitectureRatchet_HandlersSQLAndGodFiles(t *testing.T) {
 				"%s grew to %d lines (cap %d): split at the adapter boundary and lower the cap (handlers-end-state ADR)", name, lineCount(text), capLines)
 		}
 	}
-	assert.LessOrEqual(t, totalSQL, 11,
-		"handlers/ raw SQL total grew to %d (cap 11): new SQL belongs in a domain repository", totalSQL)
+	// Phase 2 is complete: handlers/ reached zero raw SQL (baseline 245 at
+	// 41345ca). Zero is the invariant, not a cap to grow into — any new SQL
+	// here must move into the owning domain repository instead.
+	assert.Zero(t, totalSQL,
+		"handlers/ gained %d raw SQL call site(s): handlers/ is an HTTP layer and must stay at zero (handlers-end-state ADR Phase 2 complete)", totalSQL)
 
 	agentPath := filepath.Join("..", "agent", "tools.go")
 	agentData, err := os.ReadFile(agentPath)

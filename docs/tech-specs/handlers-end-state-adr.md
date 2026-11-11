@@ -670,6 +670,46 @@ and new `internal/compliance/application/dashboard_test.go` pins tenant
 isolation vs bootstrap-global, blocked/expired/expiring-soon rules, reason
 precedence/defaults and pending-document scoping.
 
+**Phase 2 FINAL (2026-11-11, twenty-first increment - final sweep, handlers/ at
+ZERO raw SQL):** the last 11 raw-SQL call sites across 10 handler files moved
+into owning slices, completing Phase 2. Baseline at 41345ca was 245 sites in
+handlers/; it is now 0. Packages picked (new packages only where no slice
+existed): **new** `internal/search/application` (whole cross-entity search
+engine - specs/queries/tenant scoping/LIKE escaping/row scanning behind a
+permission callback, so the handler keeps only AuthSrv gating, JSON/HTML
+shaping); **new** `internal/outbox/application` (mobile outbox batch:
+single-Tx insert with idempotency-key primary keys and typed
+unavailable/write-failed errors); **new** `internal/backhaul/application`
+(backhaul page trip selector); extensions of existing slices:
+`internal/vehicle/application.VehicleOptions` (shared tenant vehicle
+dropdown for the video-telematics and cold-chain modals),
+`internal/tenant/application.SyncTenantDisplayName` (onboarding wizard
+display-only sync, best-effort),
+`internal/auth.MarkPhoneVerified` (OTP possession stamp, first stamp wins),
+`internal/customer/application.LinkPortalUser` (idempotent customer_users
+link), `internal/booking/application.BoardQueries` (kanban board read model;
+lane mapping/rendering stays in the handler) and
+`internal/availability.LoadIncidents` (status-page incident feed with the
+legacy 10-minute de-duplication and nil-on-error behavior). Every handler
+keeps HTTP parsing/validation/auth/permission closure, status codes/messages,
+JSON/HTML shapes and rendering; tenant scoping, rate limiting, idempotency,
+money/fuel math, lifecycle/state rules and audit behavior are preserved
+verbatim. Per-file SQL caps are now all 0; the per-file line caps were added
+for the swept files (search.go 112, settings.go 576, scorecard.go 670,
+outbox_batch.go 65, otp.go 135, fuel_issues.go 538, failpage.go 315,
+customers.go 416, bookings.go 458, backhaul.go 246) and **the total assertion
+was tightened to `assert.Zero(totalSQL)`** so handlers/ can never grow raw
+SQL again (0 is the invariant; no cap to grow into). Existing characterization
+tests (search grouping/permission-gating/API tenant scoping, outbox
+persistence/idempotent replay/503/400, OTP verify stamping + no-enumeration,
+status page HTML/JSON + measured uptime, cold-chain + video dashboards and
+RBAC, bookings board render/a11y/status lanes, portal-access grant idempotency,
+backhaul e2e, settings/onboard) pass unchanged; new focused tests pin search
+permission/tenant scoping + LIKE escaping, outbox batch idempotency, vehicle
+dropdown scoping, tenant-name sync, phone-verified first-stamp, portal-link
+idempotency, board tenant/active-trip join, availability incident
+filter/de-dup and backhaul trip eligibility.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 
