@@ -759,6 +759,29 @@ tenant B's EWB return the same 404 body as an unknown number (own record still
 renders with its events) and tenant A trip-card requests for tenant B's trip
 return the same 404 as an unknown trip.
 
+**Phase 3 progress (2026-11-11, first increment - agent tools zero SQL):**
+`internal/agent/tools.go` (1,186 lines at `41345ca`) now has ZERO raw SQL -
+the last inline query, in the `get_open_alerts` handler, moved into the
+owning alerts slice as
+`internal/alerts/application.OpenAlertQueries.List` (tenant-scoped
+`alerts WHERE status='open' AND tenant_id = ?` with optional severity
+filter, newest-first legacy LIMIT 20, nullable entity_* columns preserved via
+pointer scans, JSON tags byte-compatible with the legacy tool output). The
+tool now has the ADR Phase 3 shape - schema + argument mapping + delegate -
+and keeps the exact model-facing strings ("database not available",
+"No alerts found: <err>", "No open alerts found."), the tenant extraction
+from ctx (`shared.TenantIDFromContext`), the `alerts:read` Resource/Action
+gate and unchanged RegisterTools wiring; the 2026-09-17 cross-tenant
+regression test (`TestGetOpenAlerts_TenantIsolation`) passes unchanged. The
+other 24 tools already delegate to the legacy `service.Services` container,
+maintenance repository, ewaybill service or dispatch application facade -
+mapping each to a domain application facade remains for later Phase 3
+increments. Ratchet: agent/tools.go 1 -> 0 SQL and line cap 1186 -> 1152 (the
+handlers zero-SQL invariant is untouched). New
+`internal/alerts/application/open_alerts_test.go` pins tenant isolation,
+open-only + severity filtering, ordering/limit, nullable entity fields, the
+JSON wire shape and error mapping.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 

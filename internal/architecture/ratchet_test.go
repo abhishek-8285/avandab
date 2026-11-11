@@ -153,8 +153,11 @@ func TestArchitectureRatchet_HandlersSQLAndGodFiles(t *testing.T) {
 	agentData, err := os.ReadFile(agentPath)
 	require.NoError(t, err)
 	agentText := string(agentData)
-	assert.LessOrEqual(t, countSQL(agentText), 1,
-		"agent/tools.go raw SQL grew to %d (cap 1): tools must delegate to application services", countSQL(agentText))
-	assert.LessOrEqual(t, lineCount(agentText), 1186,
-		"agent/tools.go grew to %d lines (cap 1186): split tools per domain and lower the cap", lineCount(agentText))
+	// Phase 3 first increment: the last inline SQL site moved into the owning
+	// alerts read model, so tools.go is now at zero raw SQL (0 is the
+	// invariant, not a cap to grow into).
+	assert.Zero(t, countSQL(agentText),
+		"agent/tools.go gained %d raw SQL call site(s): tools must delegate to application services (handlers-end-state ADR Phase 3)", countSQL(agentText))
+	assert.LessOrEqual(t, lineCount(agentText), 1152,
+		"agent/tools.go grew to %d lines (cap 1152): split tools per domain and lower the cap", lineCount(agentText))
 }
