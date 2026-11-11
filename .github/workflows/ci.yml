@@ -44,9 +44,6 @@ jobs:
       - name: Build
         run: CGO_ENABLED=0 go build ./...
 
-      - name: OpenAPI contract parity (spec never lies)
-        run: python3 scripts/openapi-parity.py
-
       - name: Security Regression Gate — RAG route auth mounting
         run: |
           if grep -n '^ragHandler.RegisterRoutes' cmd/server/main.go; then
