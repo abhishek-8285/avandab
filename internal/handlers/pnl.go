@@ -9,6 +9,7 @@ import (
 
 	"transport-app/internal/auth"
 	"transport-app/internal/middleware"
+	pnlapp "transport-app/internal/pnl"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 )
@@ -66,13 +67,13 @@ func (h *PNLHandlers) GetPNLRange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	snapshots, err := h.PNLSvc.GetPNLRange(ctx, tenantID, from, to)
+	snapshots, err := pnlapp.NewSnapshotQueries(h.App.DB).Range(ctx, tenantID, from, to)
 	if err != nil {
 		http.Error(w, `{"error":"failed to retrieve P&L data"}`, http.StatusInternalServerError)
 		return
 	}
 	if snapshots == nil {
-		snapshots = []service.PNLSnapshot{} // return empty array, not null
+		snapshots = []pnlapp.Snapshot{} // return empty array, not null
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -110,7 +111,7 @@ func (h *PNLHandlers) GenerateSnapshot(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	snap, err := h.PNLSvc.GenerateDailySnapshot(ctx, tenantID, targetDate)
+	snap, err := pnlapp.NewSnapshotQueries(h.App.DB).GenerateDailySnapshot(ctx, tenantID, targetDate)
 	if err != nil {
 		http.Error(w, `{"error":"P&L snapshot generation failed"}`, http.StatusInternalServerError)
 		return

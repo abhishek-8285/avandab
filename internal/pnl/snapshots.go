@@ -8,7 +8,10 @@ package pnl
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
+
+	"github.com/google/uuid"
 
 	"transport-app/internal/shared"
 )
@@ -93,4 +96,128 @@ func scanSnapshot(row interface{ Scan(...any) error }) (Snapshot, error) {
 	err := row.Scan(&s.ID, &s.TenantID, &s.SnapshotDate, &s.Revenue, &s.Expenses, &s.FuelCosts,
 		&s.DriverPayouts, &s.Maintenance, &s.TollCosts, &s.TdsDeducted, &s.NetProfit, &s.TripCount, &s.VehicleCount)
 	return s, err
+}
+
+// GenerateDailySnapshot generates a pnl_daily row for the date, upserting idempotently.
+func (q *SnapshotQueries) GenerateDailySnapshot(ctx context.Context, tenantID string, date time.Time) (*Snapshot, error) {
+	if q == nil || q.db == nil {
+		return nil, sql.ErrNoRows
+	}
+	tid, err := shared.RequireTenantOr(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	dateStr := date.Format("2006-01-02")
+	revenue, fuelCosts, driverPayouts, maintenance, tollCosts, err := q.dailyTotals(ctx, string(tid), dateStr)
+	if err != nil {
+		return nil, err
+	}
+
+	var tdsDeducted float64
+	_ = q.db.QueryRowContext(ctx,
+		`SELECT COALESCE(SUM(ds.tds_amount), 0)
+		 FROM driver_settlements ds
+		 JOIN trips t ON ds.trip_id = t.id
+		 WHERE t.tenant_id = $1 AND DATE(ds.created_at) = $2`,
+		string(tid), dateStr).Scan(&tdsDeducted)
+
+	var tripCount int
+	_ = q.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM trips WHERE tenant_id = $1 AND DATE(departure_time) = $2`,
+		string(tid), dateStr).Scan(&tripCount)
+
+	var vehicleCount int
+	_ = q.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM vehicles WHERE tenant_id = $1 AND status = 'active'`,
+		string(tid)).Scan(&vehicleCount)
+
+	expenses := fuelCosts + driverPayouts + maintenance + tollCosts
+	netProfit := revenue - expenses
+
+	snap := &Snapshot{
+		ID:            fmt.Sprintf("pnl-%s", uuid.NewString()[:8]),
+		TenantID:      string(tid),
+		SnapshotDate:  dateStr,
+		Revenue:       revenue,
+		Expenses:      expenses,
+		FuelCosts:     fuelCosts,
+		DriverPayouts: driverPayouts,
+		Maintenance:   maintenance,
+		TollCosts:     tollCosts,
+		TdsDeducted:   tdsDeducted,
+		NetProfit:     netProfit,
+		TripCount:     tripCount,
+		VehicleCount:  vehicleCount,
+	}
+
+	_, err = q.db.ExecContext(ctx,
+		`INSERT INTO pnl_daily
+		   (id, tenant_id, snapshot_date, revenue, expenses, fuel_costs,
+		    driver_payouts, maintenance, toll_costs, tds_deducted, net_profit,
+		    trip_count, vehicle_count)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		 ON CONFLICT (tenant_id, snapshot_date) DO UPDATE SET
+		   revenue       = excluded.revenue,
+		   expenses      = excluded.expenses,
+		   fuel_costs    = excluded.fuel_costs,
+		   driver_payouts= excluded.driver_payouts,
+		   maintenance   = excluded.maintenance,
+		   toll_costs    = excluded.toll_costs,
+		   tds_deducted  = excluded.tds_deducted,
+		   net_profit    = excluded.net_profit,
+		   trip_count    = excluded.trip_count,
+		   vehicle_count = excluded.vehicle_count`,
+		snap.ID, snap.TenantID, snap.SnapshotDate, snap.Revenue,
+		snap.Expenses, snap.FuelCosts, snap.DriverPayouts,
+		snap.Maintenance, snap.TollCosts, snap.TdsDeducted,
+		snap.NetProfit, snap.TripCount, snap.VehicleCount)
+	if err != nil {
+		return snap, err
+	}
+	return snap, nil
+}
+
+func (q *SnapshotQueries) dailyTotals(ctx context.Context, tenantID, dateStr string) (revenue, fuel, driverPayouts, maint, toll float64, err error) {
+	if err = q.db.QueryRowContext(ctx,
+		`SELECT COALESCE(SUM(total), 0) FROM invoices
+		 WHERE tenant_id = $1 AND payment_status = 'paid' AND DATE(created_at) = $2`,
+		tenantID, dateStr).Scan(&revenue); err != nil {
+		return 0, 0, 0, 0, 0, fmt.Errorf("pnl revenue read failed: %w", err)
+	}
+
+	if err = q.db.QueryRowContext(ctx,
+		`SELECT COALESCE(SUM(de.amount), 0) FROM driver_expenses de
+		 WHERE de.tenant_id = $1 AND de.category = 'fuel' AND DATE(de.created_at) = $2
+		   AND NOT EXISTS (
+		     SELECT 1 FROM settlement_lines sl
+		     WHERE sl.ref_id = de.id AND sl.line_type IN ('deduction', 'advances')
+		   )`,
+		tenantID, dateStr).Scan(&fuel); err != nil {
+		return 0, 0, 0, 0, 0, fmt.Errorf("pnl fuel cost read failed: %w", err)
+	}
+
+	if err = q.db.QueryRowContext(ctx,
+		`SELECT COALESCE(SUM(ds.net_payout), 0)
+		 FROM driver_settlements ds
+		 JOIN trips t ON ds.trip_id = t.id
+		 WHERE t.tenant_id = $1 AND DATE(ds.created_at) = $2`,
+		tenantID, dateStr).Scan(&driverPayouts); err != nil {
+		return 0, 0, 0, 0, 0, fmt.Errorf("pnl driver payout read failed: %w", err)
+	}
+
+	if err = q.db.QueryRowContext(ctx,
+		`SELECT COALESCE(SUM(cost), 0) FROM maintenance_records
+		 WHERE tenant_id = $1 AND DATE(performed_at) = $2`,
+		tenantID, dateStr).Scan(&maint); err != nil {
+		maint = 0
+	}
+
+	if err = q.db.QueryRowContext(ctx,
+		`SELECT COALESCE(SUM(amount), 0) FROM fastag_transactions
+		 WHERE tenant_id = $1 AND DATE(txn_timestamp) = $2`,
+		tenantID, dateStr).Scan(&toll); err != nil {
+		return 0, 0, 0, 0, 0, fmt.Errorf("pnl toll cost read failed: %w", err)
+	}
+
+	return revenue, fuel, driverPayouts, maint, toll, nil
 }
