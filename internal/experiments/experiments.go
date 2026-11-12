@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"log/slog"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // DashboardExperiment is the dashboard redesign A/B test.
@@ -103,5 +105,5 @@ func (r *Recorder) RecordAsync(ctx context.Context, tenantID, userID, experiment
 }
 
 func newID(prefix string) string {
-	return fmt.Sprintf("%s-%d-%d", prefix, time.Now().UnixNano(), time.Now().UnixMilli()%100000)
+	return fmt.Sprintf("%s-%s", prefix, uuid.NewString())
 }

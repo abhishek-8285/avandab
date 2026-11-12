@@ -12,6 +12,7 @@ import (
 
 	"transport-app/internal/auth"
 	experimentapp "transport-app/internal/experiments"
+	founderapp "transport-app/internal/founder"
 	"transport-app/internal/middleware"
 	pnlapp "transport-app/internal/pnl"
 	"transport-app/internal/service"
@@ -96,11 +97,11 @@ func (h *FounderHandlers) tenantID(r *http.Request) string {
 // ListSignals handles GET /api/v1/founder/signals
 func (h *FounderHandlers) ListSignals(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	filters := service.SignalFilters{
+	filters := founderapp.SignalFilters{
 		SignalType:         q.Get("signal_type"),
 		UnacknowledgedOnly: q.Get("unacknowledged") == "true" || q.Get("unacknowledged") == "1",
 	}
-	signals, total, err := h.Signals.ListSignals(r.Context(), h.tenantID(r), filters)
+	signals, total, err := founderapp.NewSignalQueries(h.DB).ListSignals(r.Context(), h.tenantID(r), filters)
 	if err != nil {
 		http.Error(w, `{"error":"failed to list signals"}`, http.StatusInternalServerError)
 		return
@@ -116,19 +117,17 @@ func (h *FounderHandlers) GetSignal(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"signal id required"}`, http.StatusBadRequest)
 		return
 	}
-	signals, _, err := h.Signals.ListSignals(r.Context(), h.tenantID(r), service.SignalFilters{})
+	signal, err := founderapp.NewSignalQueries(h.DB).FindByID(r.Context(), h.tenantID(r), id)
 	if err != nil {
 		http.Error(w, `{"error":"failed to list signals"}`, http.StatusInternalServerError)
 		return
 	}
-	for _, s := range signals {
-		if s.ID == id {
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(s)
-			return
-		}
+	if signal == nil {
+		http.Error(w, `{"error":"signal not found"}`, http.StatusNotFound)
+		return
 	}
-	http.Error(w, `{"error":"signal not found"}`, http.StatusNotFound)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(signal)
 }
 
 // AcknowledgeSignal handles POST /api/v1/founder/signals/{id}/acknowledge
@@ -146,9 +145,20 @@ func (h *FounderHandlers) AcknowledgeSignal(w http.ResponseWriter, r *http.Reque
 			role = s.Role
 		}
 	}
-	if err := h.Signals.AcknowledgeSignal(r.Context(), id, userID, role); err != nil {
+	if err := founderapp.NewSignalQueries(h.DB).Acknowledge(r.Context(), h.tenantID(r), id, userID); err != nil {
 		http.Error(w, `{"error":"`+strings.ReplaceAll(err.Error(), `"`, "'")+`"}`, http.StatusConflict)
 		return
+	}
+	if h.Audit != nil {
+		_ = h.Audit.RecordAudit(r.Context(), service.AuditEntry{
+			TenantID:     h.tenantID(r),
+			ActorID:      userID,
+			ActorRole:    role,
+			Action:       service.AuditActionSignalAcknowledge,
+			ResourceType: "founder_signal",
+			ResourceID:   id,
+			Details:      "{}",
+		})
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{"signal_id": id, "acknowledged": true})
@@ -174,7 +184,7 @@ func (h *FounderHandlers) ListAudit(w http.ResponseWriter, r *http.Request) {
 func (h *FounderHandlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	tenantID := h.tenantID(r)
-	if h.Signals != nil && h.Audit != nil {
+	if h.Audit != nil {
 		_ = h.Audit.RecordAudit(ctx, service.AuditEntry{
 			TenantID:     tenantID,
 			ActorID:      "system",
@@ -186,11 +196,8 @@ func (h *FounderHandlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	var unackCount int
-	if h.Signals != nil {
-		unackCount, _ = h.Signals.CountUnacknowledged(ctx, tenantID)
-	}
-	recentSignals, _, _ := h.Signals.ListSignals(ctx, tenantID, service.SignalFilters{UnacknowledgedOnly: true, Limit: 5})
+	unackCount, _ := founderapp.NewSignalQueries(h.DB).CountUnacknowledged(ctx, tenantID)
+	recentSignals, _, _ := founderapp.NewSignalQueries(h.DB).ListSignals(ctx, tenantID, founderapp.SignalFilters{UnacknowledgedOnly: true, Limit: 5})
 
 	var activeExp int
 	activeExp, _ = experimentapp.NewQueries(h.DB).CountByStatus(ctx, tenantID, experimentapp.ExperimentStatusRunning)

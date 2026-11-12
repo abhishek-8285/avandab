@@ -123,7 +123,7 @@ func (uc *AssignVehicleUseCase) checkVehicleCompliance(ctx ports.TxContext, cmd 
 					}
 					blockedBy := expiry.name + "_expiry"
 					if _, ierr := repository.ExecTx(ctx, dbGetter.DB(), `INSERT INTO dispatch_overrides (id, tenant_id, trip_id, vehicle_id, driver_id, blocked_by, reason, overridden_by, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-						fmt.Sprintf("ovr-%d", time.Now().UnixNano()), string(tenant), string(cmd.TripID), cmd.VehicleID, "", blockedBy, cmd.OverrideReason, overriddenBy, time.Now().UTC().Format("2006-01-02 15:04:05")); ierr != nil {
+						newOverrideID(), string(tenant), string(cmd.TripID), cmd.VehicleID, "", blockedBy, cmd.OverrideReason, overriddenBy, time.Now().UTC().Format("2006-01-02 15:04:05")); ierr != nil {
 						return ierr
 					}
 				}
@@ -159,7 +159,7 @@ func (uc *AssignVehicleUseCase) checkVehicleCompliance(ctx ports.TxContext, cmd 
 							overriddenBy = string(*uid)
 						}
 						_, _ = repository.ExecTx(ctx, dbGetter.DB(), `INSERT INTO dispatch_overrides (id, tenant_id, trip_id, vehicle_id, driver_id, blocked_by, reason, overridden_by, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-							fmt.Sprintf("ovr-%d", time.Now().UnixNano()), string(tenant), string(cmd.TripID), cmd.VehicleID, "", "puc_expiry", cmd.OverrideReason, overriddenBy, time.Now().UTC().Format("2006-01-02 15:04:05"))
+							newOverrideID(), string(tenant), string(cmd.TripID), cmd.VehicleID, "", "puc_expiry", cmd.OverrideReason, overriddenBy, time.Now().UTC().Format("2006-01-02 15:04:05"))
 					}
 					recordComplianceCheck(ctx, "vehicle", cmd.VehicleID, "puc", "warning", "bypassed by override")
 				} else {

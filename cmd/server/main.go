@@ -2033,7 +2033,7 @@ func main() {
 	// Nightly PNL daily snapshot (Spec 16 §2): runs every 24 h, first fires
 	// ~1 minute after startup then on a 24 h ticker. Snapshots yesterday for
 	// all active tenants. Idempotent — safe to re-run.
-	if services.PNL != nil {
+	if database != nil {
 		runLeadered("pnl_snapshot", func(ctx context.Context) {
 			// Fire once shortly after boot (catches a missed cron on restarts).
 			select {
@@ -2041,6 +2041,7 @@ func main() {
 				return
 			case <-time.After(1 * time.Minute):
 			}
+			pnlQueries := pnl.NewSnapshotQueries(database)
 			runPNLSnapshot := func() {
 				yesterday := time.Now().AddDate(0, 0, -1)
 				tenantIDs, err := service.GetActiveTenantIDs(ctx, database)
@@ -2054,7 +2055,7 @@ func main() {
 					if !app.Features.Enabled(ctx, tid, "pnl") {
 						continue
 					}
-					if _, err := services.PNL.GenerateDailySnapshot(ctx, tid, yesterday); err != nil && !errors.Is(err, context.Canceled) {
+					if _, err := pnlQueries.GenerateDailySnapshot(ctx, tid, yesterday); err != nil && !errors.Is(err, context.Canceled) {
 						logger.Error("PNL daily snapshot failed", "tenant", tid, "date", yesterday.Format("2006-01-02"), "error", err)
 					} else {
 						logger.Info("PNL daily snapshot ok", "tenant", tid, "date", yesterday.Format("2006-01-02"))
