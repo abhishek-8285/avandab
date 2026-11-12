@@ -9,11 +9,13 @@
 # ==============================================================================
 set -e
 
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 echo "=== Security Scanner Suite ==="
 
-./scripts/lint.sh
-./scripts/check-vulns.sh
-./scripts/check-npm-audit.sh
+bash "$DIR/lint.sh"
+bash "$DIR/check-vulns.sh"
+bash "$DIR/check-npm-audit.sh"
 
 # ── Hard-coded multi-tenancy scan (Prohibition #4) ──────────────────────────
 # Fail on literal tenant assignments in Go code: TenantID:"1", TenantID="1",
@@ -65,7 +67,7 @@ if [ -n "$LINT_BASE" ]; then
 fi
 
 # ── Tenant isolation lint (compile-time safety) ──────────────────────────────
-./scripts/tenant-lint.sh
+bash "$DIR/tenant-lint.sh"
 
 # ── Secret-pattern scan on changed files ─────────────────────────────────────
 if [ -n "$LINT_BASE" ]; then

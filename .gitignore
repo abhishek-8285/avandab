@@ -61,6 +61,8 @@ bin/mvtms-arm64
 
 # Dependencies
 node_modules/
+__pycache__/
+*.py[cod]
 # CCE local cache (per-machine, not for version control)
 .cce/
 # Claude Code local settings written by cce init
