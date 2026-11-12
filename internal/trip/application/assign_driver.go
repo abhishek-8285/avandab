@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	driverDomain "transport-app/internal/driver/domain"
 	driverAgg "transport-app/internal/driver/domain/aggregate"
 	maintsql "transport-app/internal/maintenance/infrastructure/sql"
@@ -78,7 +80,7 @@ func (uc *AssignDriverUseCase) Execute(ctx context.Context, cmd AssignDriverComm
 						blockedBy = "license_expiry"
 					}
 					if _, ierr := repository.ExecTx(txCtx, dbGetter.DB(), `INSERT INTO dispatch_overrides (id, tenant_id, trip_id, vehicle_id, driver_id, blocked_by, reason, overridden_by, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-						fmt.Sprintf("ovr-%d", time.Now().UnixNano()), string(tenant), string(cmd.TripID), vehicleID, cmd.DriverID, blockedBy, cmd.OverrideReason, overriddenBy, time.Now().UTC().Format("2006-01-02 15:04:05")); ierr != nil {
+						newOverrideID(), string(tenant), string(cmd.TripID), vehicleID, cmd.DriverID, blockedBy, cmd.OverrideReason, overriddenBy, time.Now().UTC().Format("2006-01-02 15:04:05")); ierr != nil {
 						return fmt.Errorf("record dispatch override audit: %w", ierr)
 					}
 				}
@@ -157,12 +159,20 @@ func isExempt(ctx ports.TxContext, entityType, entityID, docType string) bool {
 	return err == nil && id != ""
 }
 
+func newOverrideID() string {
+	return fmt.Sprintf("ovr-%s", uuid.NewString())
+}
+
+func newComplianceCheckID() string {
+	return fmt.Sprintf("chk-%s", uuid.NewString())
+}
+
 func recordComplianceCheck(ctx ports.TxContext, entityType, entityID, checkType, status, details string) {
 	dbGetter, ok := ctx.Repositories().AuditLogs().(repository.DBGetter)
 	if !ok || dbGetter == nil || dbGetter.DB() == nil {
 		return
 	}
-	id := fmt.Sprintf("chk-%d", time.Now().UnixNano())
+	id := newComplianceCheckID()
 	_, _ = repository.ExecTx(ctx, dbGetter.DB(), `
 		INSERT INTO compliance_checks (id, entity_type, entity_id, check_type, status, details, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,

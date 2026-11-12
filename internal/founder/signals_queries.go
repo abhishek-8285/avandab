@@ -105,6 +105,66 @@ func (q *SignalQueries) ListSignals(ctx context.Context, tenantID string, filter
 	return out, total, nil
 }
 
+// FindByID returns a signal by ID within the tenant, or nil if not found.
+func (q *SignalQueries) FindByID(ctx context.Context, tenantID, id string) (*Signal, error) {
+	if q == nil || q.db == nil {
+		return nil, sql.ErrNoRows
+	}
+	tid, err := shared.RequireTenantOr(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	query := `SELECT id, tenant_id, signal_type, signal_value, threshold_value, direction,
+	          metadata, acknowledged, acknowledged_by, acknowledged_at, created_at
+	          FROM founder_signals WHERE tenant_id = $1 AND id = $2`
+	row := q.db.QueryRowContext(ctx, query, string(tid), id)
+	var s Signal
+	var threshold sql.NullFloat64
+	var ackBy sql.NullString
+	var ackAt sql.NullTime
+	if err := row.Scan(&s.ID, &s.TenantID, &s.SignalType, &s.SignalValue,
+		&threshold, &s.Direction, &s.Metadata, &s.Acknowledged, &ackBy, &ackAt, &s.CreatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if threshold.Valid {
+		s.ThresholdValue = &threshold.Float64
+	}
+	if ackBy.Valid {
+		s.AcknowledgedBy = &ackBy.String
+	}
+	if ackAt.Valid {
+		s.AcknowledgedAt = &ackAt.Time
+	}
+	return &s, nil
+}
+
+// Acknowledge updates a founder_signals row as acknowledged.
+func (q *SignalQueries) Acknowledge(ctx context.Context, tenantID, signalID, userID string) error {
+	if q == nil || q.db == nil {
+		return sql.ErrNoRows
+	}
+	tid, err := shared.RequireTenantOr(ctx, tenantID)
+	if err != nil {
+		return err
+	}
+	now := time.Now().UTC()
+	result, err := q.db.ExecContext(ctx,
+		`UPDATE founder_signals SET acknowledged = 1, acknowledged_by = $1, acknowledged_at = $2
+		 WHERE id = $3 AND tenant_id = $4 AND acknowledged = 0`,
+		userID, now, signalID, string(tid))
+	if err != nil {
+		return err
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("signal %s not found or already acknowledged", signalID)
+	}
+	return nil
+}
+
 func scanSignal(rows *sql.Rows) (Signal, error) {
 	var s Signal
 	var threshold sql.NullFloat64
