@@ -56,6 +56,9 @@ func setupSettlementTestDB(t *testing.T) *sql.DB {
 		bank_name TEXT NOT NULL DEFAULT '',
 		is_primary INTEGER NOT NULL DEFAULT 1,
 		verification_status TEXT NOT NULL DEFAULT 'unverified',
+		verification_reference TEXT,
+		verified_at DATETIME,
+		rejected_reason TEXT,
 		created_at DATETIME DEFAULT (datetime('now'))
 	);
 	INSERT INTO driver_payout_accounts (id, tenant_id, driver_id, verification_status, is_primary)
@@ -128,6 +131,7 @@ func setupSettlementTestDB(t *testing.T) *sql.DB {
 	require.NoError(t, err)
 
 	t.Cleanup(func() { _ = db.Close() })
+	seedEncryptedAccount(t, db, "acc-1", "Sunil Sharma", "1122334455", "SBIN0001234")
 	return db
 }
 
@@ -135,6 +139,7 @@ func TestPhase8_SettlementCalculationAndImmutableLedger(t *testing.T) {
 	db := setupSettlementTestDB(t)
 	repo := settleSQL.NewSQLSettlementRepository(db)
 	svc := application.NewSettlementAppService(repo, "secret_key_123", 100.0)
+	enableFakePayoutRail(t, svc)
 	ctx := context.Background()
 
 	tenantID := "tenant-1"
@@ -183,7 +188,7 @@ func TestPhase8_SettlementCalculationAndImmutableLedger(t *testing.T) {
 	payoutResp, err := svc.InitiatePayout(ctx, tenantID, driverID, payoutReq)
 	require.NoError(t, err)
 	assert.NotEmpty(t, payoutResp.PayoutID)
-	assert.Equal(t, domain.PayoutInitiated, payoutResp.Status)
+	assert.Equal(t, domain.PayoutProcessing, payoutResp.Status)
 	assert.False(t, payoutResp.IsDuplicate)
 
 	// Invariant: Duplicate Payout Command is Idempotent

@@ -1,17 +1,30 @@
 package optimizer
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"strings"
 )
 
+// unknownOptimizer fails loud when an unknown provider is invoked.
+type unknownOptimizer struct {
+	name string
+}
+
+func (u *unknownOptimizer) Name() string { return u.name }
+
+func (u *unknownOptimizer) Solve(ctx context.Context, in OptimizationInput) (OptimizationOutput, error) {
+	return OptimizationOutput{}, fmt.Errorf("route optimizer provider %q is unknown or unconfigured", u.name)
+}
+
 // Get returns the optimizer for provider name.
-// Supported: "mock", "osrm", "osrm-public", "osrm-selfhost"
-// Empty or unknown falls back to mock.
+// Supported: "mock", "vrp", "osrm", "osrm-public", "osrm-selfhost", or an explicit http(s) URL.
+// Unknown or empty provider returns an unknownOptimizer that fails loud on Solve.
 func Get(provider string) Optimizer {
 	p := strings.ToLower(strings.TrimSpace(provider))
 	switch p {
-	case "mock", "":
+	case "mock":
 		return &MockOptimizer{}
 	case "vrp", "vrp-min-cost":
 		return &VRPMinCost{}
@@ -31,7 +44,7 @@ func Get(provider string) Optimizer {
 		if strings.HasPrefix(p, "http://") || strings.HasPrefix(p, "https://") {
 			return &OSRMClient{BaseURL: provider}
 		}
-		return &MockOptimizer{}
+		return &unknownOptimizer{name: provider}
 	}
 }
 

@@ -16,6 +16,10 @@ func (s *EWayBillService) SubscribeTripEvents(bus events.EventBus) {
 	if bus == nil {
 		return
 	}
+	if s.providerMock {
+		s.logger.Warn("ewaybill: mock provider — trip event auto-generation disabled (numbers would be fabricated)")
+		return
+	}
 
 	handler := func(ctx context.Context, e events.Event) error {
 		tripID := extractTripID(e.Payload)
@@ -103,7 +107,18 @@ func (s *EWayBillService) SubscribeTripEvents(bus events.EventBus) {
 		var ewbNum string
 		err = s.db.QueryRowContext(ctx, `SELECT ewb_number FROM eway_bills WHERE trip_id = $1 AND (vehicle_number IS NULL OR vehicle_number = '') AND status != 'cancelled'`, tripID).Scan(&ewbNum)
 		if err == nil && ewbNum != "" {
-			_, _ = s.AttachPartB(ctx, ewbNum, regNum, "")
+			// Attach under the owning tenant so the service tenant gate applies.
+			itemCtx := ctx
+			if tenantID := extractTenantID(e.Payload); tenantID != "" {
+				itemCtx = shared.ContextWithTenantID(ctx, shared.TenantID(tenantID))
+			} else {
+				var tid string
+				_ = s.db.QueryRowContext(ctx, `SELECT tenant_id FROM trips WHERE id = $1`, tripID).Scan(&tid)
+				if tid != "" {
+					itemCtx = shared.ContextWithTenantID(ctx, shared.TenantID(tid))
+				}
+			}
+			_, _ = s.AttachPartB(itemCtx, ewbNum, regNum, "")
 		}
 		return nil
 	})

@@ -1,13 +1,12 @@
 package handlers
 
 import (
-	"database/sql"
-	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 
 	"transport-app/internal/httpx"
+	kharchaapp "transport-app/internal/kharcha/application"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 )
@@ -35,12 +34,9 @@ func (h *KharchaVerifyHandlers) OCRExtract(w http.ResponseWriter, r *http.Reques
 		httpx.Error(w, r, err)
 		return
 	}
-	var amt, conf any
 	tenantID := string(shared.MustTenantID(r.Context()))
-	err = h.app.DB.QueryRowContext(r.Context(),
-		`SELECT ocr_amount, ocr_confidence FROM driver_expenses WHERE id = $1 AND tenant_id = $2`, expenseID, tenantID).
-		Scan(&amt, &conf)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	amt, conf, err := kharchaapp.ExpenseOCRFields(r.Context(), h.app.DB, tenantID, expenseID)
+	if err != nil {
 		httpx.Error(w, r, err)
 		return
 	}

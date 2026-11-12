@@ -52,17 +52,17 @@
                                         BLOCKER
                                     </span>
                                 {{else if eq .Severity "critical"}}
-                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-soft text-rose-strong dark:text-rose-300 border border-rose-line">
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-soft text-rose-strong border border-rose-line">
                                         <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
                                         CRITICAL
                                     </span>
                                 {{else if eq .Severity "warning"}}
-                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-soft text-amber-strong dark:text-amber-300 border border-amber-line">
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-soft text-amber-strong border border-amber-line">
                                         <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                                         WARNING
                                     </span>
                                 {{else}}
-                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-soft text-blue-strong dark:text-blue-300 border border-blue-line">
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-soft text-blue-strong border border-blue-line">
                                         <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                                         INFO
                                     </span>
@@ -110,14 +110,14 @@
                                 <div class="flex items-center justify-end gap-1.5">
                                     {{if eq .Status "open"}}
                                         <form method="POST" action="/alerts/{{.ID}}/ack">
-                                            <button type="submit" class="inline-flex px-2.5 py-1 rounded-full bg-blue-soft hover:bg-blue-500/20 text-blue-strong dark:text-blue-300 text-[11px] font-bold transition cursor-pointer border border-blue-line">
+                                            <button type="submit" class="inline-flex px-2.5 py-1 rounded-full bg-blue-soft hover:bg-blue-500/20 text-blue-strong text-[11px] font-bold transition cursor-pointer border border-blue-line">
                                                 {{t "sy.alerts.ack"}}
                                             </button>
                                         </form>
                                     {{end}}
                                     {{if or (eq .Status "open") (eq .Status "acknowledged") (eq .Status "escalated")}}
                                         <form method="POST" action="/alerts/{{.ID}}/resolve">
-                                            <button type="submit" class="inline-flex px-2.5 py-1 rounded-full bg-emerald-soft hover:bg-emerald-500/20 text-emerald-strong dark:text-emerald-300 text-[11px] font-bold transition cursor-pointer border border-emerald-line">
+                                            <button type="submit" class="inline-flex px-2.5 py-1 rounded-full bg-emerald-soft hover:bg-emerald-500/20 text-emerald-strong text-[11px] font-bold transition cursor-pointer border border-emerald-line">
                                                 {{t "sy.alerts.resolve"}}
                                             </button>
                                         </form>

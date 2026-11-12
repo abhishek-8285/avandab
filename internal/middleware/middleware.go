@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"transport-app/internal/apm"
 	"transport-app/internal/auth"
 	"transport-app/internal/domain"
 	"transport-app/internal/httpx"
@@ -22,16 +23,28 @@ import (
 	"transport-app/internal/shared"
 )
 
-// RequestID adds a unique request ID to the context and response header.
+// RequestID adds a unique request and trace ID to the context and response headers.
 func RequestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		reqID := r.Header.Get("X-Request-ID")
+		if reqID == "" {
+			reqID = r.Header.Get("X-Trace-ID")
+		}
+		if reqID == "" {
+			reqID = r.Header.Get("X-Correlation-ID")
+		}
 		if reqID == "" {
 			reqID = uuid.NewString()
 		}
 
 		ctx := context.WithValue(r.Context(), auth.ContextReqID, reqID)
+		ctx = context.WithValue(ctx, apm.TraceIDKey, reqID)
+		ctx = context.WithValue(ctx, "trace_id", reqID)
+		ctx = context.WithValue(ctx, "request_id", reqID)
+
 		w.Header().Set("X-Request-ID", reqID)
+		w.Header().Set("X-Trace-ID", reqID)
+		w.Header().Set("X-Correlation-ID", reqID)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -161,7 +174,7 @@ func RequireAuth(store *auth.SessionStore, tenantResolver TenantResolver) func(h
 // AuthRequired is a simple middleware that redirects unauthenticated users to login.
 func AuthRequired(store *auth.SessionStore, loginPath string, tenantResolver TenantResolver) func(http.Handler) http.Handler {
 	if tenantResolver == nil {
-		tenantResolver = DefaultTenantResolver
+		tenantResolver = FailClosedTenantResolver
 	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -178,12 +191,16 @@ func AuthRequired(store *auth.SessionStore, loginPath string, tenantResolver Ten
 			}
 
 			// Derive the tenant through the resolver; a failure (unknown
-			// user, suspended org, DB error) must NOT fall back to the
+			// user, suspended org, DB error, missing tenant) must NOT fall back to the
 			// bootstrap tenant — kill the session and bounce to login.
 			tenantID, err := tenantResolver(r.Context(), data.UserID)
-			if err != nil {
+			if err != nil || tenantID == "" {
 				store.ClearSession(w)
-				http.SetCookie(w, &http.Cookie{Name: "flash_error", Value: err.Error(), Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: 30})
+				errMsg := "unauthorized: missing tenant"
+				if err != nil {
+					errMsg = strings.ReplaceAll(err.Error(), "\"", "'")
+				}
+				http.SetCookie(w, &http.Cookie{Name: "flash_error", Value: errMsg, Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: 30})
 				http.Redirect(w, r, loginPath, http.StatusSeeOther)
 				return
 			}

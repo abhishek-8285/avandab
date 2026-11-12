@@ -22,7 +22,7 @@ func TestHomeRendersHonestProof(t *testing.T) {
 	})
 	require.NoError(t, err, "home.html must execute")
 	body := buf.String()
-	require.Contains(t, body, "No hardware")
+	require.Contains(t, body, "No proprietary hardware", "hardware claim must stay honest: phones + standard GPS devices")
 	require.Contains(t, body, "Illustrative math")
 	require.NotContains(t, body, "500+ Indian fleets")
 	require.NotContains(t, body, "4.9/5")

@@ -472,6 +472,61 @@ func (r *SQLSettlementRepository) GetPayoutByIDGlobal(ctx context.Context, payou
 	return &p, nil
 }
 
+// ListPayoutsByDriver returns the latest payout instructions for one driver.
+func (r *SQLSettlementRepository) ListPayoutsByDriver(ctx context.Context, tenantID, driverID string, limit int) ([]domain.PayoutInstruction, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	rows, err := r.q(ctx).QueryContext(ctx, `
+		SELECT id, tenant_id, driver_id, payout_account_id, amount, currency, idempotency_key,
+		       provider_payout_id, status, failure_reason, utr, initiated_at, completed_at, created_at, updated_at
+		FROM payout_instructions WHERE tenant_id = $1 AND driver_id = $2
+		ORDER BY created_at DESC LIMIT $3`, tenantID, driverID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []domain.PayoutInstruction
+	for rows.Next() {
+		var p domain.PayoutInstruction
+		var provID, failReason, utr sql.NullString
+		var compAt sql.NullTime
+		if err := rows.Scan(&p.ID, &p.TenantID, &p.DriverID, &p.PayoutAccountID, &p.Amount, &p.Currency, &p.IdempotencyKey, &provID, &p.Status, &failReason, &utr, &p.InitiatedAt, &compAt, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			return nil, err
+		}
+		if provID.Valid {
+			p.ProviderPayoutID = &provID.String
+		}
+		if failReason.Valid {
+			p.FailureReason = &failReason.String
+		}
+		if utr.Valid {
+			p.UTR = &utr.String
+		}
+		if compAt.Valid {
+			p.CompletedAt = &compAt.Time
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
+// GetPrimaryPayoutAccount returns the primary bank account for a driver.
+func (r *SQLSettlementRepository) GetPrimaryPayoutAccount(ctx context.Context, tenantID, driverID string) (*domain.PayoutAccount, error) {
+	var a domain.PayoutAccount
+	err := r.q(ctx).QueryRowContext(ctx, `
+		SELECT id, tenant_id, driver_id, account_holder_name, account_number_encrypted, account_number_masked, ifsc_code, bank_name, verification_status, COALESCE(verification_reference, '')
+		FROM driver_payout_accounts WHERE tenant_id = $1 AND driver_id = $2 AND is_primary = 1 LIMIT 1`, tenantID, driverID).
+		Scan(&a.ID, &a.TenantID, &a.DriverID, &a.HolderName, &a.AccountNumberEncrypted, &a.AccountNumberMasked, &a.IFSC, &a.BankName, &a.VerificationStatus, &a.VerificationReference)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &a, nil
+}
+
 func (r *SQLSettlementRepository) UpdatePayoutStatus(ctx context.Context, tenantID, payoutID string, status domain.PayoutStatus, providerPayoutID, utr, failureReason *string) error {
 	now := time.Now()
 	var completedAt *time.Time
@@ -531,6 +586,55 @@ func (r *SQLSettlementRepository) IsDriverPayoutAccountVerified(ctx context.Cont
 	return status == "verified", id, nil
 }
 
+// GetPayoutAccount loads one payout account row (account number stays encrypted).
+func (r *SQLSettlementRepository) GetPayoutAccount(ctx context.Context, tenantID, accountID string) (*domain.PayoutAccount, error) {
+	var a domain.PayoutAccount
+	err := r.q(ctx).QueryRowContext(ctx, `
+		SELECT id, tenant_id, driver_id, account_holder_name, account_number_encrypted,
+		       account_number_masked, ifsc_code, bank_name, verification_status,
+		       COALESCE(verification_reference, '')
+		FROM driver_payout_accounts
+		WHERE tenant_id = $1 AND id = $2`, tenantID, accountID).
+		Scan(&a.ID, &a.TenantID, &a.DriverID, &a.HolderName, &a.AccountNumberEncrypted,
+			&a.AccountNumberMasked, &a.IFSC, &a.BankName, &a.VerificationStatus, &a.VerificationReference)
+	if err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
+// GetPayoutAccountByVerificationReference finds the account by provider
+// fund_account id (penny-drop webhook reconciliation).
+func (r *SQLSettlementRepository) GetPayoutAccountByVerificationReference(ctx context.Context, reference string) (*domain.PayoutAccount, error) {
+	var a domain.PayoutAccount
+	err := r.q(ctx).QueryRowContext(ctx, `
+		SELECT id, tenant_id, driver_id, account_holder_name, account_number_encrypted,
+		       account_number_masked, ifsc_code, bank_name, verification_status,
+		       COALESCE(verification_reference, '')
+		FROM driver_payout_accounts
+		WHERE verification_reference = $1
+		LIMIT 1`, reference).
+		Scan(&a.ID, &a.TenantID, &a.DriverID, &a.HolderName, &a.AccountNumberEncrypted,
+			&a.AccountNumberMasked, &a.IFSC, &a.BankName, &a.VerificationStatus, &a.VerificationReference)
+	if err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
+// UpdatePayoutAccountVerification stores the penny-drop outcome. A rejected
+// account records the provider reason; a verified account stamps verified_at.
+func (r *SQLSettlementRepository) UpdatePayoutAccountVerification(ctx context.Context, tenantID, accountID, status, reference, reason string) error {
+	_, err := r.q(ctx).ExecContext(ctx, `
+		UPDATE driver_payout_accounts
+		SET verification_status = $1,
+		    verification_reference = COALESCE(NULLIF($2, ''), verification_reference),
+		    rejected_reason = NULLIF($3, ''),
+		    verified_at = CASE WHEN $1 = 'verified' THEN CURRENT_TIMESTAMP ELSE verified_at END
+		WHERE tenant_id = $4 AND id = $5`, status, reference, reason, tenantID, accountID)
+	return err
+}
+
 // HasLegacySettlementLines is the gap-2 dual-write cross-check: it SELECTs from
 // settlement_lines, a table only the legacy trip-close flow
 // (internal/service DriverSettlementService.GenerateSettlement) writes. The
@@ -549,4 +653,49 @@ func (r *SQLSettlementRepository) HasLegacySettlementLines(ctx context.Context, 
 		return false, err
 	}
 	return count > 0, nil
+}
+
+// ListPayoutsAwaitingCompletion returns non-terminal payout instructions older
+// than olderThan. The stuck-payout sweep publishes an alert per row so money
+// parked in initiated/processing cannot disappear silently when a provider
+// webhook is lost.
+func (r *SQLSettlementRepository) ListPayoutsAwaitingCompletion(ctx context.Context, olderThan time.Time, limit int) ([]domain.PayoutInstruction, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	rows, err := r.q(ctx).QueryContext(ctx, `
+		SELECT id, tenant_id, driver_id, payout_account_id, amount, currency, idempotency_key,
+		       provider_payout_id, status, failure_reason, utr, initiated_at, completed_at, created_at, updated_at
+		FROM payout_instructions
+		WHERE status IN ('initiated', 'processing')
+		  AND COALESCE(initiated_at, created_at) < $1
+		ORDER BY COALESCE(initiated_at, created_at) ASC
+		LIMIT $2`, olderThan, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []domain.PayoutInstruction
+	for rows.Next() {
+		var p domain.PayoutInstruction
+		var provID, failReason, utr sql.NullString
+		var compAt sql.NullTime
+		if err := rows.Scan(&p.ID, &p.TenantID, &p.DriverID, &p.PayoutAccountID, &p.Amount, &p.Currency, &p.IdempotencyKey, &provID, &p.Status, &failReason, &utr, &p.InitiatedAt, &compAt, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			return nil, err
+		}
+		if provID.Valid {
+			p.ProviderPayoutID = &provID.String
+		}
+		if failReason.Valid {
+			p.FailureReason = &failReason.String
+		}
+		if utr.Valid {
+			p.UTR = &utr.String
+		}
+		if compAt.Valid {
+			p.CompletedAt = &compAt.Time
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
 }

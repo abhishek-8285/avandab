@@ -14,6 +14,8 @@ type TelemetryCleaner struct {
 	db            *sql.DB
 	retentionDays int
 	interval      time.Duration
+	chunkSize     int
+	yieldInterval time.Duration
 	logger        *slog.Logger
 }
 
@@ -26,6 +28,8 @@ func NewTelemetryCleaner(db *sql.DB, retentionDays int, logger *slog.Logger) *Te
 		db:            db,
 		retentionDays: retentionDays,
 		interval:      24 * time.Hour,
+		chunkSize:     5000,
+		yieldInterval: 5 * time.Millisecond,
 		logger:        logger,
 	}
 }
@@ -112,7 +116,7 @@ func (c *TelemetryCleaner) Purge(ctx context.Context) {
 		c.logger.Info("Purged expired auth sessions", "count", n)
 	}
 
-	// 6. SQLite WAL maintenance: truncate WAL log and reclaim pages
+	// 6. Database maintenance: WAL truncate & vacuum/reclaim pages
 	var isSQLite bool
 	if err := c.db.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(new(string)); err == nil {
 		isSQLite = true
@@ -123,14 +127,32 @@ func (c *TelemetryCleaner) Purge(ctx context.Context) {
 		} else if c.logger != nil {
 			c.logger.Info("SQLite wal_checkpoint(TRUNCATE) completed")
 		}
-		if _, err := c.db.ExecContext(ctx, "PRAGMA incremental_vacuum;"); err != nil && c.logger != nil {
-			c.logger.Warn("Failed to execute incremental_vacuum", "error", err)
+		var autoVac int
+		_ = c.db.QueryRowContext(ctx, "PRAGMA auto_vacuum;").Scan(&autoVac)
+		if autoVac > 0 {
+			if _, err := c.db.ExecContext(ctx, "PRAGMA incremental_vacuum;"); err != nil && c.logger != nil {
+				c.logger.Warn("Failed to execute incremental_vacuum", "error", err)
+			}
+		}
+	} else {
+		// PostgreSQL: run vacuum on heavy telemetry tables to prevent bloat
+		for _, tbl := range []string{"telemetry_snapshots", "telemetry_positions", "telemetry_raw_events", "outbox_events"} {
+			_, _ = c.db.ExecContext(ctx, fmt.Sprintf("VACUUM (ANALYZE) %s", tbl))
 		}
 	}
 }
 
-// purgeBatch deletes up to 1000 records per iteration to avoid holding long SQLite write locks.
+// purgeBatch deletes records in chunks to avoid holding long write locks while keeping purge times fast.
 func (c *TelemetryCleaner) purgeBatch(ctx context.Context, table, condition string, cutoff time.Time) (int64, error) {
+	chunkSize := c.chunkSize
+	if chunkSize <= 0 {
+		chunkSize = 5000
+	}
+	yieldInterval := c.yieldInterval
+	if yieldInterval <= 0 {
+		yieldInterval = 5 * time.Millisecond
+	}
+
 	var totalDeleted int64
 	for {
 		select {
@@ -139,7 +161,7 @@ func (c *TelemetryCleaner) purgeBatch(ctx context.Context, table, condition stri
 		default:
 		}
 
-		query := fmt.Sprintf(`DELETE FROM %s WHERE id IN (SELECT id FROM %s WHERE %s LIMIT 1000)`, table, table, condition)
+		query := fmt.Sprintf(`DELETE FROM %s WHERE id IN (SELECT id FROM %s WHERE %s LIMIT %d)`, table, table, condition, chunkSize)
 		res, err := c.db.ExecContext(ctx, query, cutoff)
 		if err != nil {
 			return totalDeleted, err
@@ -149,10 +171,10 @@ func (c *TelemetryCleaner) purgeBatch(ctx context.Context, table, condition stri
 			return totalDeleted, err
 		}
 		totalDeleted += affected
-		if affected < 1000 {
+		if affected < int64(chunkSize) {
 			break
 		}
-		time.Sleep(50 * time.Millisecond) // Yield to ongoing concurrent read/write queries
+		time.Sleep(yieldInterval) // Yield briefly to ongoing concurrent read/write queries
 	}
 	return totalDeleted, nil
 }

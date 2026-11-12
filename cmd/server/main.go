@@ -30,6 +30,8 @@ import (
 	alertpipeline "transport-app/internal/alerts/pipeline"
 	alertsqlite "transport-app/internal/alerts/repository/sqlite"
 	"transport-app/internal/apiversion"
+	"transport-app/internal/apm"
+	"transport-app/internal/availability"
 	"transport-app/internal/shared/resilience"
 
 	dbmigr "transport-app/db"
@@ -53,6 +55,7 @@ import (
 	intOCR "transport-app/internal/integration/ocr"
 	"transport-app/internal/logging"
 	"transport-app/internal/maintenance"
+	"transport-app/internal/mcp"
 	"transport-app/internal/middleware"
 	"transport-app/internal/mqttservice"
 	fcmnotifications "transport-app/internal/notifications"
@@ -66,9 +69,13 @@ import (
 	"transport-app/internal/podsign"
 	"transport-app/internal/rag"
 	"transport-app/internal/realtime"
+	"transport-app/internal/reportbuilder"
 	"transport-app/internal/repository/sqlite"
+	"transport-app/internal/retention"
 	"transport-app/internal/safety"
 	"transport-app/internal/service"
+	settlementMonitor "transport-app/internal/settlement/monitor"
+	rzpxPayout "transport-app/internal/settlement/payout/razorpayx"
 	"transport-app/internal/telemetry"
 
 	// Vertical-slice use cases
@@ -160,6 +167,8 @@ const seoSitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://avandab.com/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
   <url><loc>https://avandab.com/contact-us</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://avandab.com/pricing</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://avandab.com/status</loc><changefreq>always</changefreq><priority>0.8</priority></url>
   <url><loc>https://avandab.com/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://avandab.com/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://avandab.com/refunds</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
@@ -183,17 +192,17 @@ const seoSitemap = `<?xml version="1.0" encoding="UTF-8"?>
   <url><loc>https://avandab.com/features/assistant</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
 </urlset>`
 
-const seoRobots = "User-agent: *\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /drivers\nDisallow: /vehicles\nDisallow: /customers\nDisallow: /routes\nDisallow: /invoices\nDisallow: /payments\nDisallow: /reports\nDisallow: /settings\nDisallow: /users\nDisallow: /login\nDisallow: /register\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /uploads/\n" +
+const seoRobots = "User-agent: *\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /drivers\nDisallow: /vehicles\nDisallow: /customers\nDisallow: /routes\nDisallow: /invoices\nDisallow: /payments\nDisallow: /reports\nDisallow: /settings\nDisallow: /users\nDisallow: /login\nDisallow: /register\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /uploads/\n" +
 	"# AI search / assistant crawlers — allowed on public pages only, same rules as (*).\n" +
-	"User-agent: GPTBot\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
-	"User-agent: ChatGPT-User\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
-	"User-agent: ClaudeBot\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
-	"User-agent: anthropic-ai\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
-	"User-agent: CCBot\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
-	"User-agent: PerplexityBot\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
-	"User-agent: Google-Extended\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
-	"User-agent: Applebot-Extended\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
-	"User-agent: Meta-ExternalAgent\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: GPTBot\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: ChatGPT-User\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: ClaudeBot\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: anthropic-ai\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: CCBot\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: PerplexityBot\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: Google-Extended\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: Applebot-Extended\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: Meta-ExternalAgent\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
 	"Sitemap: https://avandab.com/sitemap.xml\n"
 
 // seoLLMs is the /llms.txt body — a machine-readable summary so AI assistants
@@ -201,6 +210,8 @@ const seoRobots = "User-agent: *\nAllow: /$\nAllow: /contact-us\nAllow: /feature
 const seoLLMs = "# Avandab\n\n" +
 	"> Avandab replaces WhatsApp, spreadsheets and calls with one live cockpit — dispatch, track, e-POD, GST invoice and payments for Indian fleets.\n\n" +
 	"- Home: https://avandab.com/\n" +
+	"- Pricing & SLA: https://avandab.com/pricing\n" +
+	"- System Status: https://avandab.com/status\n" +
 	"- Contact & support status: https://avandab.com/contact-us\n" +
 	"- Privacy: https://avandab.com/privacy\n" +
 	"- Terms: https://avandab.com/terms\n" +
@@ -246,6 +257,15 @@ func serveLLMs(w http.ResponseWriter) {
 }
 
 func main() {
+	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-version" || os.Args[1] == "version") {
+		v := Version
+		if v == "" {
+			v = "dev"
+		}
+		fmt.Printf("avandab %s\n", v)
+		return
+	}
+
 	// Load .env (if present) before config so file-based config takes effect.
 	// Real env vars take precedence; missing file is not an error.
 	if err := godotenv.Load(); err != nil {
@@ -311,7 +331,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	provider, err := goose.NewProvider(appdb.GooseDialect(cfg.Database.Driver), database, migrations)
+	provider, err := goose.NewProvider(appdb.GooseDialect(cfg.Database.Driver), database, migrations, goose.WithAllowOutofOrder(true))
 	if err != nil {
 		logger.Error("Failed to create migration provider", "error", err)
 		os.Exit(1)
@@ -337,6 +357,17 @@ func main() {
 
 	logger.Info("Database migrated successfully")
 
+	// Fail-closed multi-tenancy rejects logins whose user has no tenants row.
+	// Legacy workspace-era users would be locked out silently after an
+	// upgrade; warn loudly with the count (remediation SQL in docs/08 §5).
+	if cfg.MultiTenant.Enabled {
+		if orphanUsers, oerr := appdb.CountOrphanTenantUsers(ctx, database); oerr == nil && orphanUsers > 0 {
+			logger.Warn("legacy users with unknown tenant_id cannot log in under fail-closed multi-tenancy",
+				"count", orphanUsers,
+				"remediation", "docs/08-DEPLOYMENT-AND-PRODUCTION-RUNBOOK.md section 5 upgrade note")
+		}
+	}
+
 	// Re-establish the SQLite posture post-migration: NO TRANSACTION
 	// migrations (00126) necessarily mutate pragma state on the handle they
 	// run on, so re-assert rather than trust it. No-op on other engines.
@@ -346,6 +377,12 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
+	// ── Uptime availability sampler (public /status measured history) ────
+	// Records one sample per UPTIME_SAMPLE_INTERVAL (migration 00180); the
+	// status page reads them back for a real 30-day uptime instead of the
+	// fabricated percentages removed in the P0 stop-fake-data pass.
+	go availability.NewSampler(database, cfg.UptimeSampleInterval, logger).Run(sigCtx)
 
 	// Initialize repository
 	repo := sqlite.NewRepository(database)
@@ -395,15 +432,41 @@ func main() {
 			Direct:   cfg.Notify.SMTPDirect,
 		})
 	}
-	smsSender := notifications.NewWebhookSMSSender(cfg.Notify.SMSWebhookURL, cfg.Notify.SMSWebhookToken)
+	// Config-driven SMS gateway (Plan P2 item 2.5): SMS_PROVIDER selects
+	// webhook (default) vs msg91 / twilio / fast2sms; unknown values fail closed. Unconfigured
+	// stays 503-fail-closed on the OTP path.
+	smsSender := notifications.NewSMSSenderFromConfig(notifications.SMSConfig{
+		Provider:         cfg.Notify.SMSProvider,
+		WebhookURL:       cfg.Notify.SMSWebhookURL,
+		WebhookToken:     cfg.Notify.SMSWebhookToken,
+		MSG91AuthKey:     cfg.Notify.SMSMSG91AuthKey,
+		MSG91SenderID:    cfg.Notify.SMSMSG91SenderID,
+		MSG91Route:       cfg.Notify.SMSMSG91Route,
+		MSG91Endpoint:    cfg.Notify.SMSMSG91Endpoint,
+		TwilioAccountSID: cfg.Notify.SMSTwilioAccountSID,
+		TwilioAuthToken:  cfg.Notify.SMSTwilioAuthToken,
+		TwilioFromNumber: cfg.Notify.SMSTwilioFromNumber,
+		TwilioEndpoint:   cfg.Notify.SMSTwilioEndpoint,
+		Fast2SMSAPIKey:   cfg.Notify.SMSFast2SMSAPIKey,
+		Fast2SMSSenderID: cfg.Notify.SMSFast2SMSSenderID,
+		Fast2SMSRoute:    cfg.Notify.SMSFast2SMSRoute,
+		Fast2SMSEndpoint: cfg.Notify.SMSFast2SMSEndpoint,
+	})
 	notifSvc := notifications.NewServiceWithChannels(emailSender, smsSender, id.NewUUIDGenerator(), clock.NewRealClock())
+
+	// Scheduled report delivery: email rides the same adapter (real sends when
+	// SMTP/pool is configured), webhook posts signed JSON to schedule URLs.
+	// The router keeps readiness honest per channel.
+	reportEmailDelivery := reportbuilder.NewEmailDelivery(emailSender, logger)
+	reportWebhookDelivery := reportbuilder.NewWebhookDelivery(nil, cfg.Notify.ReportWebhookSecret, logger)
+	reportDelivery := reportbuilder.NewChannelRouter(reportEmailDelivery, reportWebhookDelivery)
 
 	var emailChannel alertchannels.Provider = stubProviders["email"]
 	if emailSender.Configured() {
 		emailChannel = alertchannels.NewEmailBridge(notifSvc)
 	}
 	var smsChannel alertchannels.Provider = stubProviders["sms"]
-	if smsSender.Configured() {
+	if notifications.SMSConfigured(smsSender) {
 		smsChannel = alertchannels.NewSMSBridge(notifSvc)
 	}
 
@@ -593,9 +656,11 @@ func main() {
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
 
-	// DPDP privacy slice (consent ledger lives on Users; breach/recert here).
+	// DPDP privacy slice (consent ledger lives on Users; breach/recert/dsar here).
 	privacySvc := privacyApp.NewPrivacyService(database, idGen)
 	recertSvc := privacyApp.NewAccessReviewService(database, idGen)
+	dsarSvc := privacyApp.NewDSARService(database, idGen, services.Files.BlobStore())
+	dsarAPI := privacyAPIHandlers.NewDSARHandlers(dsarSvc)
 
 	// Commercial enforcement: READ_ONLY/CLOSED orgs cannot create bookings.
 	// Reused by the billing webhook mount below.
@@ -688,7 +753,40 @@ func main() {
 	customerAPIHandler := customerAPIHandlers.NewCustomerHandler(customerAppSvc)
 	settlementRepo := settlementSQL.NewSQLSettlementRepository(database)
 	settlementAppSvc := settlementApp.NewSettlementAppService(settlementRepo, cfg.RazorpayWebhook, 100.0)
+	// Payout rail: fail closed. The rail is only enabled when explicitly
+	// requested AND a fully configured provider exists — otherwise payouts stay
+	// disabled and the API answers ErrPayoutRailDisabled.
+	payoutRailReady := false
+	if cfg.PayoutProvider != "" {
+		switch strings.ToLower(cfg.PayoutProvider) {
+		case "razorpayx":
+			provider, err := rzpxPayout.New(rzpxPayout.Config{
+				KeyID:         cfg.RazorpayXKeyID,
+				KeySecret:     cfg.RazorpayXKeySecret,
+				AccountNumber: cfg.PayoutAccountNumber,
+				BaseURL:       os.Getenv("RAZORPAYX_BASE_URL"),
+			})
+			if err != nil {
+				logger.Warn("payout provider requested but not configured; payouts stay disabled", "provider", cfg.PayoutProvider, "error", err)
+			} else {
+				settlementAppSvc.SetPayoutProvider(provider)
+				settlementAppSvc.SetPayoutWebhookSecret(cfg.PayoutWebhookSecret)
+				payoutRailReady = true
+				logger.Info("payout rail ready: razorpayx")
+			}
+		default:
+			logger.Warn("unknown payout provider; payouts stay disabled", "provider", cfg.PayoutProvider)
+		}
+	}
+	settlementAppSvc.SetPayoutRailEnabled(cfg.PayoutRailEnabled && payoutRailReady)
+	if cfg.PayoutRailEnabled && !payoutRailReady {
+		logger.Warn("PAYOUT_RAIL_ENABLED=true but no payout provider is configured; driver payouts remain disabled")
+	}
 	settlementAPIHandler := settlementAPIHandlers.NewSettlementHandler(settlementAppSvc)
+	// Settlement view page shows payout history + penny-drop verification.
+	if app.Settlements != nil {
+		app.Settlements.SetPayoutService(settlementAppSvc)
+	}
 
 	// Setup router
 	r := chi.NewRouter()
@@ -709,6 +807,8 @@ func main() {
 	// Golden-signal request metrics (count, latency, status per route) for
 	// the Prometheus exposition mounted at GET /metrics below.
 	r.Use(metrics.Middleware)
+	// APM trace spans & p95 SLA latency tracking (Plan P5.2)
+	r.Use(apm.Middleware)
 	r.Use(middleware.Logger)
 	// Panic safety net: converts panics into RFC7807-style problem+json 500s
 	// and reports them as CRITICAL errors to the ops reporter (Spec 16 §5.5).
@@ -745,9 +845,9 @@ func main() {
 	r.Head("/health", healthChecker.HealthHandler)
 	r.Get("/readyz", healthChecker.ReadinessHandler)
 	r.Head("/readyz", healthChecker.ReadinessHandler)
-	// Prometheus scrape endpoint (probe-style, no auth — bind the port to an
-	// internal interface or firewall it in production if exposure is a concern).
-	r.Get("/metrics", metrics.Handler().ServeHTTP)
+	// Prometheus scrape endpoint: loopback scrapes open, remote scrapes require
+	// METRICS_TOKEN. Without a token the endpoint is not exposed publicly.
+	r.Get("/metrics", metrics.Guard(os.Getenv("METRICS_TOKEN"), metrics.Handler()).ServeHTTP)
 
 	// Direct SEO Endpoints
 	r.Get("/sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
@@ -771,20 +871,23 @@ func main() {
 	authAPIHandler := authAPIHandlers.NewAPIAuthHandler(services.Auth, services.Users, apiSecret, database).WithAuthorizer(authSvc)
 
 	// ── Tenant resolution (Spec 24) ─────────────────────────────────────
-	// Gate off (default): every request resolves to the bootstrap tenant.
-	// Gate on (MULTI_TENANT_ENABLED=true): per-user lookup of users.tenant_id
-	// joined to tenants.status; suspended orgs are rejected at the edge.
+	// Gate on (default): per-user lookup of users.tenant_id joined to
+	// tenants.status; suspended orgs are rejected at the edge. Gate off is an
+	// explicit single-org opt-out (MULTI_TENANT_ENABLED=false) and warns loudly
+	// because every request then collapses onto the bootstrap tenant.
 	tenantResolver := middleware.TenantResolver(middleware.DefaultTenantResolver)
 	if cfg.MultiTenant.Enabled {
 		logger.Info("multi-tenant mode enabled: per-user tenant resolution active")
 		tenantResolver = middleware.TenantForUserResolver(func(ctx context.Context, userID string) (string, string, error) {
 			var tenantID, status string
-			row := database.QueryRowContext(ctx, `SELECT u.tenant_id, COALESCE(t.status,'active') FROM users u LEFT JOIN tenants t ON t.id = u.tenant_id WHERE u.id = $1`, userID)
+			row := database.QueryRowContext(ctx, `SELECT u.tenant_id, CASE WHEN t.id IS NULL THEN 'inactive' ELSE COALESCE(t.status,'inactive') END FROM users u LEFT JOIN tenants t ON t.id = u.tenant_id WHERE u.id = $1`, userID)
 			if err := row.Scan(&tenantID, &status); err != nil {
 				return "", "", err
 			}
 			return tenantID, status, nil
 		}, appCache)
+	} else {
+		logger.Warn("multi-tenant mode DISABLED: every request resolves to the bootstrap tenant '1'. Set MULTI_TENANT_ENABLED=true for SaaS deployments; single-org mode is unsafe with more than one tenant.")
 	}
 
 	// ── Telemetry Ingestion Pipeline (Phase 1) ─────────────────────────
@@ -931,12 +1034,20 @@ func main() {
 	r.With(middleware.RateLimitDistributed(appCache, 5)).Post("/api/v1/auth/otp/send", app.OTP.SendOTP)
 	r.With(middleware.RateLimitDistributed(appCache, 15)).Post("/api/v1/auth/otp/verify", app.OTP.VerifyOTP)
 
+	// Public: DPDP transparency disclosures (retention schedule & sub-processors)
+	r.Get("/api/v1/privacy/retention-schedule", dsarAPI.RetentionScheduleAPI)
+	r.Get("/api/v1/privacy/sub-processors", dsarAPI.SubProcessorsAPI)
+
 	// ── AI Agent (operations assistant) — built after RAG below ─────────
 	var agentAPI *agent.Handler
 	var approvalSvc *agent.ApprovalService
 
 	// Public: Razorpay webhook — signature-verified, rate-limited against flood attacks
 	r.With(middleware.RateLimitDistributed(appCache, 30)).Post("/api/v1/payments/razorpay-webhook", paymentAPIHandler.RazorpayWebhook)
+	// Public: payout provider callbacks (payout.processed/failed/reversed and
+	// fund_account.validation.*) — signature-verified inside the service, and
+	// deliberately outside RequireAPIAuth because providers cannot authenticate.
+	r.With(middleware.RateLimitDistributed(appCache, 30)).Post("/api/v1/webhooks/payouts/razorpay", settlementAPIHandler.RazorpayPayoutWebhook)
 
 	// Public: Razorpay SUBSCRIPTION webhook — activates plan upgrades,
 	// downgrades on cancel/expiry, and PAST_DUE on payment failure. Dead
@@ -969,6 +1080,7 @@ func main() {
 		WithEwayBillAdapter(ewbClient, cfg.EWayBill.ExtendEnabled)
 	controlTowerSvc := controlTowerApp.NewService(database, etaService, time.Duration(cfg.LiveMap.TelemetryStaleMin)*time.Minute)
 	controlTowerAPIHandler := controlTowerAPIHandlers.NewHandler(controlTowerSvc, authSvc)
+	app.ControlTower = handlers.NewControlTowerHandlers(app, controlTowerSvc)
 
 	// Protected: Telemetry, and all /api/v1/* routes require a valid session or Bearer token
 	r.Group(func(r chi.Router) {
@@ -1057,6 +1169,22 @@ func main() {
 		app.FuelCards.RegisterAPIRoutes(r)
 		// ESG carbon snapshots and BRSR reporting (B11) JSON API — tenant-scoped, esg RBAC.
 		app.ESG.RegisterAPIRoutes(r)
+		// Tyre management and CPKM lifecycle (P3 3.1) JSON API — tenant-scoped, tyres RBAC.
+		app.Tyres.RegisterAPIRoutes(r)
+		// Parts and spares inventory (P3 3.2) JSON API — tenant-scoped, inventory RBAC.
+		app.Inventory.RegisterAPIRoutes(r)
+		// Freight audit and overbilling deductions (P3 3.3) JSON API — tenant-scoped, freight_audit RBAC.
+		app.FreightAudit.RegisterAPIRoutes(r)
+		// Report builder and scheduled delivery (P3 3.4) JSON API — tenant-scoped, reports RBAC.
+		app.ReportBuilder.RegisterAPIRoutes(r)
+		// RFQ lane bidding and counter-offer negotiation (P3 3.5) JSON API — tenant-scoped, rfq RBAC.
+		app.RFQ.RegisterAPIRoutes(r)
+		// EV telematics, battery management, and charging sessions (P3 3.10) JSON API — tenant-scoped, ev RBAC.
+		app.EV.RegisterAPIRoutes(r)
+		// Cold chain telematics, multi-zone probes, and excursion audits (P3 3.11) JSON API — tenant-scoped, coldchain RBAC.
+		app.ColdChain.RegisterAPIRoutes(r)
+		// Video telematics, AI Dashcam DMS/ADAS, live stream session brokering, and safety coaching (P3 3.12) JSON API — tenant-scoped, video RBAC.
+		app.Video.RegisterAPIRoutes(r)
 		// Spec 18 Wave A — route optimization API (tenant-scoped, permission-gated)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "create")).Post("/api/v1/routes/optimize", app.Routes.Optimize)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "read")).Get("/api/v1/routes/optimize/jobs", app.Routes.OptimizeJobs)
@@ -1087,6 +1215,11 @@ func main() {
 		// Driver expense claims from mobile (Spec 13) — same trips:update
 		// gate as the web /kharcha/create form.
 		r.With(middleware.ResourcePermission(authSvc, "trips", "update")).Post("/api/v1/kharcha/expense", app.Kharcha.CreateExpenseAPI)
+		// Manager/Owner Mobile App (P3.7) endpoints
+		r.With(middleware.ResourcePermission(authSvc, "trips", "read")).Get("/api/v1/manager/dashboard", app.Dashboard.SummaryAPI)
+		r.With(middleware.ResourcePermission(authSvc, "trips", "read")).Get("/api/v1/kharcha/pending", app.Kharcha.PendingAPI)
+		r.With(middleware.ResourcePermission(authSvc, "trips", "update")).Post("/api/v1/kharcha/{id}/approve", app.Kharcha.ApproveAPI)
+		r.With(middleware.ResourcePermission(authSvc, "trips", "update")).Post("/api/v1/kharcha/{id}/reject", app.Kharcha.RejectAPI)
 		r.Get("/api/v1/users/me/preferences", app.Users.GetMyPreferences)
 		r.Patch("/api/v1/users/me/preferences", app.Users.UpdateMyPreferences)
 		r.Post("/api/v1/users/me/preferences", app.Users.UpdateMyPreferences)
@@ -1095,6 +1228,9 @@ func main() {
 		r.Get("/api/v1/consent", app.Auth.ConsentStatusAPI)
 		r.Post("/api/v1/consent/grant", app.Auth.GrantConsentAPI)
 		r.Post("/api/v1/consent/withdraw", app.Auth.WithdrawConsentAPI)
+		// DPDP Act 2023 §11–15 Data Principal Rights (DSAR export & erasure, request ledger)
+		r.Post("/api/v1/privacy/dsar/export", dsarAPI.ExportDSARAPI)
+		r.Post("/api/v1/privacy/dsar/erase", dsarAPI.EraseDSARAPI)
 		// DPDP breach-notice ledger (00154) + access re-certification (00155):
 		// vertical slice (internal/privacy), org/platform admins only.
 		privacyAPI := privacyAPIHandlers.NewPrivacyHandlers(privacySvc)
@@ -1105,6 +1241,7 @@ func main() {
 		r.With(privacyGuard).Post("/api/v1/privacy/breaches/{id}/notify", privacyAPI.NotifyBreachAPI)
 		r.With(privacyGuard).Post("/api/v1/privacy/breaches/{id}/detail", privacyAPI.DetailBreachAPI)
 		r.With(privacyGuard).Post("/api/v1/privacy/breaches/{id}/close", privacyAPI.CloseBreachAPI)
+		r.With(privacyGuard).Get("/api/v1/privacy/dsar/requests", dsarAPI.ListDSARRequestsAPI)
 		// Access re-certification ledger (00155): same governance surface.
 		accessAPI := privacyAPIHandlers.NewAccessReviewHandlers(recertSvc)
 		r.With(privacyGuard).Get("/api/v1/access-reviews/due", accessAPI.ListDueReviewsAPI)
@@ -1210,7 +1347,7 @@ func main() {
 			logger.Error("AGENT_REQUIRE_APPROVAL=true but the approval gate could not be built (RL store unavailable); mutating tools are disabled — the agent is read-only")
 		}
 
-		toolEnv := &agent.ToolEnv{Services: services, Dispatch: dispatchapp.NewService(assignDriver, assignVehicle)}
+		toolEnv := &agent.ToolEnv{DB: services.DB(), Dispatch: dispatchapp.NewService(assignDriver, assignVehicle), EWayBill: services.EWayBill}
 		toolsByName := make(map[string]*agent.RegisteredTool)
 		for _, t := range agent.RegisterTools(toolEnv) {
 			toolsByName[t.Name] = t
@@ -1247,12 +1384,21 @@ func main() {
 		agentAPI.WithPermissionChecker(authSvc)
 		logger.Info("AI agent enabled", "model", cfg.Agent.Model, "sub_agents", len(orch.AgentNames()), "approval_required", cfg.Agent.RequireApproval)
 
-		// API routes (bearer/session) — approval queue + chat
+		mcpServer := mcp.NewServer(mcp.ServerConfig{
+			ToolEnv:         toolEnv,
+			ApprovalService: approvalSvc,
+			PermChecker:     authSvc,
+			RequireApproval: cfg.Agent.RequireApproval,
+		})
+		logger.Info("hosted MCP server enabled", "tools", len(mcpServer.Tools()), "approval_required", cfg.Agent.RequireApproval)
+
+		// API routes (bearer/session) — approval queue + chat + MCP
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.RequireAPIAuth(authStore, apiSecret, tenantResolver))
 			r.Use(middleware.RateLimitDistributed(appCache, 30)) // LLM cost control + flood guard
 			r.Use(agentRequestTimeout(5 * time.Minute))
 			agentAPI.RegisterAPIRoute(r)
+			mcpServer.RegisterRoutes(r)
 			if approvalSvc != nil {
 				agent.NewApprovalHandler(approvalSvc).RegisterRoutes(r)
 			}
@@ -1392,6 +1538,10 @@ func main() {
 		r.Get("/refunds", app.Refunds)
 		r.Get("/consumer-compliance", app.ConsumerCompliance)
 		r.Get("/faq", app.FAQ)
+		r.Get("/pricing", app.Pricing)
+		r.Get("/status", app.Status)
+		r.Get("/api/v1/health/status", app.StatusJSON)
+		r.Get("/api/v1/status", app.StatusJSON)
 
 		// Public feature explainer pages (login-free)
 		r.Get("/features/{slug}", app.FeaturePage)
@@ -1523,6 +1673,23 @@ func main() {
 
 			// Audit Logs
 			r.Route("/audit-logs", app.AuditLogs.Routes)
+
+			// Headless modules web UI (P3 3.9)
+			r.Route("/facilities", app.Facilities.Routes)
+			r.Route("/sto", app.STO.Routes)
+			r.Route("/loadboard", app.STO.LoadBoardRoutes)
+			r.Route("/esg", app.ESG.Routes)
+			r.Route("/fuel-cards", app.FuelCards.Routes)
+			r.Route("/backhaul", app.Backhaul.Routes)
+			r.Route("/control-tower", app.ControlTower.Routes)
+			r.Route("/ev", app.EV.Routes)
+			r.Route("/cold-chain", app.ColdChain.Routes)
+			r.Route("/video", app.Video.Routes)
+			r.Route("/tyres", app.Tyres.Routes)
+			r.Route("/inventory", app.Inventory.Routes)
+			r.Route("/freight-audit", app.FreightAudit.Routes)
+			r.Route("/report-builder", app.ReportBuilder.Routes)
+			r.Route("/rfq", app.RFQ.Routes)
 
 			// Telemetry device registry / provisioning / quarantine admin
 			if cfg.Telemetry.Enabled {
@@ -1659,7 +1826,11 @@ func main() {
 			go leaderMgr.RunAsLeader(shared.WithGlobalScope(ctx), name, fn)
 		}
 	} else {
-		logger.Warn("WORKER_LEADER_LOCK=false: background workers will duplicate across replicas")
+		if cfg.Database.Driver == "sqlite" {
+			logger.Info("WORKER_LEADER_LOCK off: single-node sqlite runs background workers in-process (no DB lease contention)")
+		} else {
+			logger.Warn("WORKER_LEADER_LOCK=false: background workers will duplicate across replicas")
+		}
 		runLeadered = func(name string, fn func(context.Context)) {
 			go func() {
 				// Mirror leader.RunAsLeader: a panicking worker must not kill the server.
@@ -1988,6 +2159,26 @@ func main() {
 	runLeadered("alerts_escalator", alertEscalator.Run)
 	runLeadered("alerts_flusher", alertFlusher.Run)
 
+	// Platform SLA monitor: when measured 30-day uptime drops below the
+	// published 99.9% target, publish availability.sla_breach per active
+	// tenant so the alert pipeline (rule_sla_breach, migration 00182) raises a
+	// real, escalating operational alert instead of only a status-page number.
+	// When uptime recovers above target it auto-resolves those open alerts.
+	slaMonitor := availability.NewSLAMonitor(database, eventBus, alertRepo, 30*24*time.Hour, cfg.UptimeSampleInterval, cfg.UptimeSLACheckInterval, logger)
+	runLeadered("availability_sla_monitor", slaMonitor.Run)
+
+	// Business-data retention: enforces the published DPDP schedule that had
+	// no automated disposal (video telematics 90d, audit/breach ledger 3y,
+	// consents/DSAR 5y). Telemetry/sessions/outbox have their own purgers.
+	if cfg.RetentionWorkerEnabled {
+		retentionWorker := retention.NewWorker(database, logger, cfg.RetentionInterval)
+		if services.Files != nil && services.Files.BlobStore() != nil {
+			retentionWorker = retention.NewWorker(database, logger, cfg.RetentionInterval, services.Files.BlobStore())
+		}
+		retentionWorker.SetKYCAfter(cfg.KYCPostTenureRetention)
+		runLeadered("business_retention", retentionWorker.Run)
+	}
+
 	// Spec 22 S1 — reopen snoozed inbox alerts whose snooze expired.
 	if app.AlertsRepo != nil {
 		inboxRepo := app.AlertsRepo
@@ -2063,6 +2254,19 @@ func main() {
 			}
 		}
 	})
+
+	// Fleet report builder scheduled delivery engine (FleetX Parity P3.4)
+	// Stuck-payout sweep: a lost provider webhook must not park money in
+	// initiated/processing forever. Publishes settlement.payout_stuck alerts
+	// (rule_payout_stuck, migration 00184) for payouts older than the threshold.
+	payoutSweeper := settlementMonitor.NewSweeper(settlementRepo, eventBus, cfg.PayoutStuckAfter, cfg.PayoutSweepInterval, logger)
+	runLeadered("payout_stuck_sweep", payoutSweeper.Run)
+
+	reportScheduler := reportbuilder.NewScheduler(
+		reportbuilder.NewServiceWithDelivery(reportbuilder.NewRepository(database), reportDelivery),
+		logger,
+	)
+	runLeadered("report_scheduler", reportScheduler.Run)
 
 	go func() {
 		logger.Info("Server listening", "address", addr)

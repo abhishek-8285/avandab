@@ -115,7 +115,7 @@ export function ForgotPasswordScreen({ onBackToLogin }: ForgotPasswordScreenProp
                 <MaterialCommunityIcons name="email-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} accessible={false} />
                 <TextInput
                   style={styles.input}
-                  placeholder="driver@avandab.com"
+                  placeholder="driver@example.com"
                   placeholderTextColor={Colors.textMuted}
                   value={email}
                   onChangeText={setEmail}

@@ -29,6 +29,9 @@ const (
 	SourceCompliance = "compliance"
 	SourceEWayBill   = "ewaybill"
 	SourceSOS        = "sos"
+	// SourceAvailability is the platform uptime sampler (migration 00180);
+	// SLA breaches are platform-wide facts published per active tenant.
+	SourceAvailability = "availability"
 )
 
 // 13 Canonical Telemetry / Alert Types (Spec 05 §12, 00059)
@@ -49,6 +52,8 @@ const (
 	AlertTypeEmergencySOS         = "emergency_sos"
 	AlertTypeComplianceBlocked    = "compliance_blocked"
 	AlertTypeEWayBillExpiring     = "ewaybill_expiring"
+	// AlertTypeSLABreach fires when measured 30-day uptime < SLA target.
+	AlertTypeSLABreach = "sla_breach"
 )
 
 // AlertSource defines a producer source in the system.
@@ -172,4 +177,11 @@ type NotificationPreference struct {
 	MinSeverity string    `json:"min_severity"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// AlertRecipient is one person an escalation step can reach.
+type AlertRecipient struct {
+	UserID string
+	Email  string
+	Phone  string
 }

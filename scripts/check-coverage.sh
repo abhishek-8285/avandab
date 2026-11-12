@@ -40,3 +40,27 @@ if awk -v cov="$coverage" -v floor="$threshold" 'BEGIN { exit (cov < floor) ? 0 
 fi
 
 echo "✅ Backend coverage ${coverage}% holds the ${threshold}% ratchet floor"
+echo ""
+
+# P5.5: Money paths coverage floor (65% on invoice, payment, settlement, fastag, freightaudit)
+echo "Checking money paths coverage (P5.5 floor: 65%)..."
+MONEY_PKGS="./internal/invoice/... ./internal/payment/... ./internal/settlement/... ./internal/fastag/... ./internal/freightaudit/..."
+# shellcheck disable=SC2086
+go test -timeout 5m -count=1 -coverprofile=coverage.money.out -covermode=atomic $MONEY_PKGS
+money_cov=$(go tool cover -func=coverage.money.out | awk '/^total:/{gsub(/%/,"",$3); print $3}')
+rm -f coverage.money.out
+
+if ! [[ "${money_cov:-}" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+  echo "❌ Could not parse money paths coverage (got '${money_cov:-<empty>}')"
+  exit 1
+fi
+
+echo "Money paths coverage: ${money_cov}%"
+money_threshold=65
+
+if awk -v cov="$money_cov" -v floor="$money_threshold" 'BEGIN { exit (cov < floor) ? 0 : 1 }'; then
+  echo "❌ Money paths coverage ${money_cov}% is below P5.5 floor ${money_threshold}%"
+  exit 1
+fi
+
+echo "✅ Money paths coverage ${money_cov}% holds the ${money_threshold}% floor"

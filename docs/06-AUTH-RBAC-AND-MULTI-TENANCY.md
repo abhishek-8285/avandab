@@ -14,6 +14,7 @@ The platform guarantees zero cross-tenant data leaks:
   ```
 - **SQL Guard**: All database queries parameterize `WHERE tenant_id = ?`.
 - **Pre-Commit Enforcement**: The repository includes automated tenant lint scripts (`scripts/tenant-lint.sh`) that fail the build if hardcoded `TenantID: "1"` literals exist in code.
+- **Fail-closed default**: `MULTI_TENANT_ENABLED` defaults to `true` — every authenticated request resolves its tenant from `users.tenant_id` and is rejected (API 401 / web login redirect) when the user has no tenant or the org is suspended. Single-org deployments must set `MULTI_TENANT_ENABLED=false` explicitly; startup then logs a warning because all requests collapse onto bootstrap tenant `1`.
 
 ---
 

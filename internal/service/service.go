@@ -7,7 +7,6 @@ import (
 	"log/slog"
 
 	"transport-app/internal/config"
-	"transport-app/internal/deviation"
 	"transport-app/internal/domain"
 	bookingevents "transport-app/internal/domain/booking"
 	tripevents "transport-app/internal/domain/trip"
@@ -97,13 +96,7 @@ type Services struct {
 	FounderSignals *FounderSignalsService
 	FounderAudit   *FounderAuditService
 	EWayBill       *ewaybill.EWayBillService
-	Deviation      *deviation.Engine
 	Events         events.EventBus
-
-	// TenantConfigs reads per-tenant settings overrides from company_config
-	// (Spec 24 §Business logic overlay). Nil when the store exposes no raw DB
-	// — every consumer nil-checks and falls through to legacy behavior.
-	TenantConfigs *TenantConfigReader
 
 	store Store
 	cfg   *config.Config
@@ -150,7 +143,6 @@ func NewServices(store Store, cfg *config.Config, log *slog.Logger, eventBus eve
 	if dbGetter, ok := store.(repository.DBGetter); ok && dbGetter != nil {
 		tenantCfg = NewTenantConfigReader(dbGetter.DB())
 	}
-	s.TenantConfigs = tenantCfg
 
 	// Publish the overlay as the invoice application layer's process-wide
 	// default. SetDefaultTenantOverlay (not constructor injection) is used
@@ -227,9 +219,6 @@ func NewServices(store Store, cfg *config.Config, log *slog.Logger, eventBus eve
 		// Founder-signal integration points (Spec 16 §6 hooks).
 		s.OpsAlerts.SetFounderSignals(s.FounderSignals)
 		s.PNL.SetFounderSignals(s.FounderSignals)
-
-		// GPS Route Deviation Engine (Spec 03 §P3C).
-		s.Deviation = deviation.NewEngine(dbGetter.DB(), s.Events, fuel.NewConfigReader(dbGetter.DB()), log)
 
 		// NOTE: no RealtimeEvaluator here — per-fix geofence evaluation runs
 		// in the DwellWorker (wired in cmd/server/main.go); the evaluator

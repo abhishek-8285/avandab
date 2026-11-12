@@ -21,6 +21,7 @@ import (
 	"transport-app/internal/auth"
 	"transport-app/internal/config"
 	"transport-app/internal/events"
+	fleetreports "transport-app/internal/fleetreports"
 	"transport-app/internal/repository/sqlite"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
@@ -192,8 +193,8 @@ INSERT INTO vehicles (
 
 	assert.Equal(t, http.StatusOK, wAPI.Code)
 	var apiResp struct {
-		Vehicles []VehicleMasterDTO `json:"vehicles"`
-		Total    int64              `json:"total"`
+		Vehicles []fleetreports.VehicleMasterRow `json:"vehicles"`
+		Total    int64                           `json:"total"`
 	}
 	err = json.NewDecoder(wAPI.Body).Decode(&apiResp)
 	require.NoError(t, err)
@@ -300,8 +301,8 @@ INSERT INTO trips (
 
 	assert.Equal(t, http.StatusOK, wAPI.Code)
 	var apiResp struct {
-		Records []GateRegisterDTO `json:"records"`
-		Total   int64             `json:"total"`
+		Records []fleetreports.GateRegisterRow `json:"records"`
+		Total   int64                          `json:"total"`
 	}
 	err = json.NewDecoder(wAPI.Body).Decode(&apiResp)
 	require.NoError(t, err)
@@ -407,8 +408,8 @@ INSERT INTO fuel_issues (
 
 	assert.Equal(t, http.StatusOK, wAPI.Code)
 	var apiResp struct {
-		Records []FuelKMPLDTO `json:"records"`
-		Total   int64         `json:"total"`
+		Records []fleetreports.FuelKMPLRow `json:"records"`
+		Total   int64                      `json:"total"`
 	}
 	err = json.NewDecoder(wAPI.Body).Decode(&apiResp)
 	require.NoError(t, err)
@@ -507,8 +508,8 @@ INSERT INTO ops_alerts (
 
 	assert.Equal(t, http.StatusOK, wAPI.Code)
 	var apiResp struct {
-		Records []BreakdownDTO `json:"records"`
-		Total   int64          `json:"total"`
+		Records []fleetreports.BreakdownRow `json:"records"`
+		Total   int64                       `json:"total"`
 	}
 	err = json.NewDecoder(wAPI.Body).Decode(&apiResp)
 	require.NoError(t, err)

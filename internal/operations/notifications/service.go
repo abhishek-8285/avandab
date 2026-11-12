@@ -2,6 +2,7 @@ package notifications
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -9,6 +10,9 @@ import (
 
 	"transport-app/internal/shared/ports"
 )
+
+// ErrPushNotConfigured reports that no push channel is wired, so nothing was sent.
+var ErrPushNotConfigured = errors.New("push notification channel not configured")
 
 type Notification struct {
 	ID        string    `json:"id"`
@@ -115,7 +119,7 @@ func (s *Service) SendSMS(ctx context.Context, msg ports.NotificationMessage) er
 }
 
 func (s *Service) SendPush(ctx context.Context, msg ports.NotificationMessage) error {
-	return fmt.Errorf("push notification channel not configured yet")
+	return ErrPushNotConfigured
 }
 
 func (s *Service) SendWebhook(ctx context.Context, msg ports.NotificationMessage) error {

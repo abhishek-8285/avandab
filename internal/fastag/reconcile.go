@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -46,6 +47,8 @@ func (s *FASTagService) Reconcile(ctx context.Context, vehicleNumber, fromDate, 
 			if txnID == "" {
 				txnID = uuid.NewString()
 			}
+			// source CHECK allows only PROVIDER/MANUAL/GPS; mock rows must stay
+			// 'PROVIDER' until a migration adds a MOCK value.
 			_, _ = s.db.ExecContext(ctx, `
 				INSERT INTO fastag_transactions (
 					id, tenant_id, tag_id, vehicle_number, plaza_id, plaza_name,
@@ -151,8 +154,8 @@ func (s *FASTagService) Reconcile(ctx context.Context, vehicleNumber, fromDate, 
 			matched++
 			var kharchaID sql.NullString
 
-			// 6. Create driver kharcha if enabled
-			if s.config.AutoKharcha {
+			// 6. Create driver kharcha if enabled for a real provider
+			if autoKharchaAllowed(s.config) {
 				kID := uuid.NewString()
 				desc := "FASTag toll at " + txn.PlazaName
 				if desc == "FASTag toll at " {
@@ -196,6 +199,14 @@ func (s *FASTagService) Reconcile(ctx context.Context, vehicleNumber, fromDate, 
 		KharchaCreated: kharchaCreated,
 		UnmatchedIDs:   unmatchedIDs,
 	}, nil
+}
+
+// autoKharchaAllowed reports whether auto-approved kharcha may be created for
+// the configured provider. A mock or unknown provider is demo data; approving
+// it would turn fabricated tolls into real spend.
+func autoKharchaAllowed(cfg Config) bool {
+	provider := strings.TrimSpace(cfg.Provider)
+	return cfg.AutoKharcha && provider != "" && !strings.EqualFold(provider, "MOCK")
 }
 
 func parseTimeFlexible(val any) time.Time {

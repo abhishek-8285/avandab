@@ -40,4 +40,15 @@ func TestNotificationService_SendEmailAndInApp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected nil error sending in-app notif, got: %v", err)
 	}
+
+	pushMsg := ports.NotificationMessage{
+		TenantID:  "tenant-1",
+		Recipient: "driver-1",
+		Subject:   "Push Test",
+		Body:      "Push body test",
+		Type:      ports.NotificationTypePush,
+	}
+	if err := svc.SendPush(ctx, pushMsg); !errors.Is(err, ErrPushNotConfigured) {
+		t.Fatalf("unconfigured push must fail honestly with ErrPushNotConfigured, got: %v", err)
+	}
 }

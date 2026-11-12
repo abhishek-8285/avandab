@@ -2,28 +2,37 @@ package agent
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
-
+	alertsapp "transport-app/internal/alerts/application"
+	bookingapp "transport-app/internal/booking/application"
+	customerapp "transport-app/internal/customer/application"
+	dashboardapp "transport-app/internal/dashboard/application"
 	dispatchapp "transport-app/internal/dispatch/application"
-	"transport-app/internal/domain"
+	driverapp "transport-app/internal/driver/application"
 	"transport-app/internal/ewaybill"
+	invoiceapp "transport-app/internal/invoice/application"
+	kharchaapp "transport-app/internal/kharcha/application"
 	"transport-app/internal/maintenance"
 	maintdomain "transport-app/internal/maintenance/domain"
-	maintsql "transport-app/internal/maintenance/infrastructure/sql"
-	"transport-app/internal/service"
+	paymentapp "transport-app/internal/payment/application"
+	routeapp "transport-app/internal/route/application"
 	"transport-app/internal/shared"
+	tripapp "transport-app/internal/trip/application"
 	tripagg "transport-app/internal/trip/domain/aggregate"
+	vehicleapp "transport-app/internal/vehicle/application"
 )
 
-// ToolEnv carries live service dependencies + the acting user.
+// ToolEnv carries the database handle + application facades + acting user.
+// Tools never read repositories/services directly (ADR Phase 3).
 type ToolEnv struct {
-	Services *service.Services
+	DB       *sql.DB
 	Dispatch *dispatchapp.Service
+	EWayBill *ewaybill.EWayBillService
 	UserID   string
 	UserName string
 }
@@ -65,26 +74,18 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if err := json.Unmarshal(args, &in); err != nil {
 					return "", err
 				}
-				routes, _, err := env.Services.Routes.ListRoutes(ctx, in.Query, 20, 0)
+				db, err := toolDB(env)
 				if err != nil {
 					return "", err
 				}
-				type row struct {
-					ID             string  `json:"id"`
-					Source         string  `json:"source"`
-					Destination    string  `json:"destination"`
-					DistanceKM     float64 `json:"distance_km"`
-					EstimatedHours float64 `json:"estimated_hours"`
-					StandardFare   float64 `json:"standard_fare"`
+				routes, err := routeapp.NewAgentRouteQueries(db).Search(ctx, shared.TenantIDFromContext(ctx), in.Query, 20)
+				if err != nil {
+					return "", err
 				}
-				out := make([]row, 0, len(routes))
-				for _, r := range routes {
-					out = append(out, row{r.ID.String(), r.Source, r.Destination, r.Distance, r.EstimatedHours, r.StandardFare})
-				}
-				if len(out) == 0 {
+				if len(routes) == 0 {
 					return "No routes found matching: " + in.Query, nil
 				}
-				return jsonString(out)
+				return jsonString(routes)
 			},
 		},
 		{
@@ -110,45 +111,18 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if err := json.Unmarshal(args, &in); err != nil {
 					return "", err
 				}
-				routes, _, err := env.Services.Routes.ListRoutes(ctx, in.From, 50, 0)
+				db, err := toolDB(env)
 				if err != nil {
 					return "", err
 				}
-				var match *domain.Route
-				for i := range routes {
-					d, f, rev := routes[i].GetDistanceAndFare(in.From, in.To)
-					if d > 0 && f >= 0 {
-						r := routes[i]
-						r.Distance = d
-						if rev && r.ReverseStandardFare != nil {
-							r.StandardFare = *r.ReverseStandardFare
-						} else {
-							r.StandardFare = f
-						}
-						match = &r
-						break
-					}
+				quote, err := routeapp.NewAgentRouteQueries(db).Quote(ctx, shared.TenantIDFromContext(ctx), in.From, in.To)
+				if err != nil {
+					return "", err
 				}
-				if match == nil {
+				if quote == nil {
 					return fmt.Sprintf("No route found between %s and %s. Suggest: 'search_routes' to see available routes.", in.From, in.To), nil
 				}
-				settings, err := env.Services.Settings.GetSettings(ctx)
-				if err != nil {
-					return "", fmt.Errorf("settings unavailable: %w", err)
-				}
-				rate := settings.GSTRate
-				tax := match.StandardFare * rate / 100
-				return jsonString(map[string]any{
-					"route_id":        match.ID.String(),
-					"from":            match.Source,
-					"to":              match.Destination,
-					"distance_km":     match.Distance,
-					"estimated_hours": match.EstimatedHours,
-					"base_fare":       match.StandardFare,
-					"gst_rate_pct":    rate,
-					"gst_amount":      tax,
-					"total_with_gst":  match.StandardFare + tax,
-				})
+				return jsonString(quote)
 			},
 		},
 		{
@@ -186,22 +160,21 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if err != nil {
 					return "", fmt.Errorf("pickup_date must be 'YYYY-MM-DD HH:MM', got %q", in.PickupDate)
 				}
-				vt := domain.VehicleType(strings.ToLower(in.VehicleType))
-				b, err := env.Services.Bookings.CreateBooking(ctx, service.CreateBookingRequest{
-					CustomerID:  domain.CustomerID(in.CustomerID),
-					RouteID:     domain.RouteID(in.RouteID),
-					PickupDate:  t.Format(time.RFC3339),
-					VehicleType: vt,
-					Passengers:  in.Passengers,
-					Price:       in.Price,
-					Notes:       in.Notes,
+				db, err := toolDB(env)
+				if err != nil {
+					return "", err
+				}
+				b, err := bookingapp.NewAgentBookingService(db).Create(ctx, shared.TenantIDFromContext(ctx), bookingapp.AgentCreateBookingInput{
+					CustomerID: in.CustomerID, RouteID: in.RouteID, PickupDate: t.Format(time.RFC3339),
+					VehicleType: strings.ToLower(in.VehicleType), Passengers: in.Passengers,
+					Price: in.Price, Notes: in.Notes,
 				})
 				if err != nil {
 					return "", err
 				}
 				return jsonString(map[string]any{
-					"booking_id":     b.ID.String(),
-					"booking_number": b.BookingNumber,
+					"booking_id":     b.ID,
+					"booking_number": b.Number,
 					"status":         b.Status,
 					"pickup_date":    b.PickupDate.Format(time.RFC3339),
 					"price":          b.Price,
@@ -227,29 +200,18 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if err := json.Unmarshal(args, &in); err != nil {
 					return "", err
 				}
-				customers, _, err := env.Services.Customers.ListCustomers(ctx, in.Query, 10, 0)
+				db, err := toolDB(env)
 				if err != nil {
 					return "", err
 				}
-				type row struct {
-					ID           string `json:"id"`
-					Name         string `json:"name"`
-					Company      string `json:"company"`
-					Phone        string `json:"phone"`
-					CustomerCode string `json:"customer_code"`
+				customers, err := customerapp.NewAgentCustomerQueries(db).Search(ctx, shared.TenantIDFromContext(ctx), in.Query, 10)
+				if err != nil {
+					return "", err
 				}
-				out := make([]row, 0, len(customers))
-				for _, c := range customers {
-					comp := ""
-					if c.Company != nil {
-						comp = *c.Company
-					}
-					out = append(out, row{c.ID.String(), c.Name, comp, c.Phone, c.CustomerCode})
-				}
-				if len(out) == 0 {
+				if len(customers) == 0 {
 					return "No customers found matching: " + in.Query, nil
 				}
-				return jsonString(out)
+				return jsonString(customers)
 			},
 		},
 		{
@@ -271,15 +233,19 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if err := json.Unmarshal(args, &in); err != nil {
 					return "", err
 				}
-				b, err := env.Services.Bookings.GetBookingByNumber(ctx, in.Number)
+				db, err := toolDB(env)
+				if err != nil {
+					return "", err
+				}
+				b, err := bookingapp.NewAgentBookingService(db).GetByNumber(ctx, shared.TenantIDFromContext(ctx), in.Number)
 				if err != nil {
 					return "", fmt.Errorf("booking not found: %v", err)
 				}
 				return jsonString(map[string]any{
-					"id":           b.ID.String(),
-					"number":       b.BookingNumber,
-					"customer":     b.CustomerName,
-					"route":        b.RouteSource + " -> " + b.RouteDestination,
+					"id":           b.ID,
+					"number":       b.Number,
+					"customer":     b.Customer,
+					"route":        b.Route,
 					"pickup_date":  b.PickupDate.Format(time.RFC3339),
 					"vehicle_type": b.VehicleType,
 					"passengers":   b.Passengers,
@@ -313,35 +279,18 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if in.Limit <= 0 {
 					in.Limit = 20
 				}
-				trips, _, err := env.Services.Trips.ListTrips(ctx, in.Query, in.Status, in.Limit, 0)
+				db, err := toolDB(env)
 				if err != nil {
 					return "", err
 				}
-				type row struct {
-					ID        string `json:"id"`
-					Number    string `json:"number"`
-					Route     string `json:"route"`
-					Driver    string `json:"driver"`
-					Vehicle   string `json:"vehicle"`
-					Departure string `json:"departure_time"`
-					Status    string `json:"status"`
+				trips, err := tripapp.NewAgentTripService(db).List(ctx, shared.TenantIDFromContext(ctx), in.Query, in.Status, in.Limit)
+				if err != nil {
+					return "", err
 				}
-				out := make([]row, 0, len(trips))
-				for _, t := range trips {
-					drv := ""
-					if t.DriverFirstName != nil {
-						drv = *t.DriverFirstName + " " + derefStr(t.DriverLastName)
-					}
-					veh := ""
-					if t.VehicleNumber != nil {
-						veh = *t.VehicleNumber
-					}
-					out = append(out, row{t.ID.String(), t.TripNumber, t.RouteSource + " -> " + t.RouteDestination, strings.TrimSpace(drv), veh, t.DepartureTime.Format("2006-01-02 15:04"), string(t.Status)})
-				}
-				if len(out) == 0 {
+				if len(trips) == 0 {
 					return "No trips found" + statusClause(in.Status), nil
 				}
-				return jsonString(out)
+				return jsonString(trips)
 			},
 		},
 		{
@@ -363,24 +312,15 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if err := json.Unmarshal(args, &in); err != nil {
 					return "", err
 				}
-				t, err := env.Services.Trips.GetTripByNumber(ctx, in.Number)
+				db, err := toolDB(env)
+				if err != nil {
+					return "", err
+				}
+				t, err := tripapp.NewAgentTripService(db).GetByNumber(ctx, shared.TenantIDFromContext(ctx), in.Number)
 				if err != nil {
 					return "", fmt.Errorf("trip not found: %v", err)
 				}
-				drv := ""
-				if t.DriverFirstName != nil {
-					drv = *t.DriverFirstName + " " + derefStr(t.DriverLastName)
-				}
-				return jsonString(map[string]any{
-					"id":         t.ID.String(),
-					"number":     t.TripNumber,
-					"route":      t.RouteSource + " -> " + t.RouteDestination,
-					"driver":     strings.TrimSpace(drv),
-					"vehicle":    derefStr(t.VehicleNumber),
-					"departure":  t.DepartureTime.Format("2006-01-02 15:04"),
-					"status":     string(t.Status),
-					"booking_id": bookingIDStr(t.BookingID),
-				})
+				return jsonString(t)
 			},
 		},
 		{
@@ -393,24 +333,18 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				"properties": map[string]any{},
 			},
 			Handler: func(ctx context.Context, args json.RawMessage) (string, error) {
-				drivers, err := env.Services.Drivers.GetAvailableDrivers(ctx)
+				db, err := toolDB(env)
 				if err != nil {
 					return "", err
 				}
-				type row struct {
-					ID      string `json:"id"`
-					Name    string `json:"name"`
-					Phone   string `json:"phone"`
-					License string `json:"license_number"`
+				drivers, err := driverapp.NewAgentDriverQueries(db).Available(ctx, shared.TenantIDFromContext(ctx))
+				if err != nil {
+					return "", err
 				}
-				out := make([]row, 0, len(drivers))
-				for _, d := range drivers {
-					out = append(out, row{d.ID.String(), d.FirstName + " " + d.LastName, d.Phone, d.LicenseNumber})
-				}
-				if len(out) == 0 {
+				if len(drivers) == 0 {
 					return "No drivers available right now.", nil
 				}
-				return jsonString(out)
+				return jsonString(drivers)
 			},
 		},
 		{
@@ -423,29 +357,18 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				"properties": map[string]any{},
 			},
 			Handler: func(ctx context.Context, args json.RawMessage) (string, error) {
-				vehicles, err := env.Services.Vehicles.GetAvailableVehicles(ctx)
+				db, err := toolDB(env)
 				if err != nil {
 					return "", err
 				}
-				type row struct {
-					ID       string `json:"id"`
-					Number   string `json:"registration_number"`
-					Type     string `json:"type"`
-					Capacity int64  `json:"capacity"`
+				vehicles, err := vehicleapp.NewAgentVehicleQueries(db).Available(ctx, shared.TenantIDFromContext(ctx))
+				if err != nil {
+					return "", err
 				}
-				out := make([]row, 0, len(vehicles))
-				for _, v := range vehicles {
-					if env.Services != nil && env.Services.Vehicles != nil {
-						if blocked, _, err := env.Services.Vehicles.IsMaintenanceBlocked(ctx, v.ID.String()); err == nil && blocked {
-							continue
-						}
-					}
-					out = append(out, row{v.ID.String(), v.RegistrationNumber, string(v.VehicleType), v.Capacity})
-				}
-				if len(out) == 0 {
+				if len(vehicles) == 0 {
 					return "No vehicles available right now.", nil
 				}
-				return jsonString(out)
+				return jsonString(vehicles)
 			},
 		},
 		{
@@ -469,21 +392,21 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if err := json.Unmarshal(args, &in); err != nil {
 					return "", err
 				}
-				if env.Dispatch != nil {
-					err := env.Dispatch.AssignDriver(ctx, dispatchapp.AssignDriverCommand{
-						TenantID: shared.TenantIDFromContext(ctx), ActorID: env.UserID,
-						TripID: tripagg.TripID(in.TripID), DriverID: string(in.DriverID),
-					})
+				dispatcher := env.Dispatch
+				if dispatcher == nil {
+					db, err := toolDB(env)
 					if err != nil {
 						return "", err
 					}
-					return fmt.Sprintf("Driver %s assigned to trip %s.", in.DriverID, in.TripID), nil
+					dispatcher = dispatchapp.NewAgentDispatcher(db)
 				}
-				t, err := env.Services.Trips.AssignDriver(ctx, domain.TripID(in.TripID), domain.DriverID(in.DriverID))
-				if err != nil {
+				if err := dispatcher.AssignDriver(ctx, dispatchapp.AssignDriverCommand{
+					TenantID: shared.TenantIDFromContext(ctx), ActorID: env.UserID,
+					TripID: tripagg.TripID(in.TripID), DriverID: string(in.DriverID),
+				}); err != nil {
 					return "", err
 				}
-				return fmt.Sprintf("Driver %s assigned to trip %s. Status: %s", in.DriverID, in.TripID, t.Status), nil
+				return fmt.Sprintf("Driver %s assigned to trip %s.", in.DriverID, in.TripID), nil
 			},
 		},
 		{
@@ -507,21 +430,21 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if err := json.Unmarshal(args, &in); err != nil {
 					return "", err
 				}
-				if env.Dispatch != nil {
-					err := env.Dispatch.AssignVehicle(ctx, dispatchapp.AssignVehicleCommand{
-						TenantID: shared.TenantIDFromContext(ctx), ActorID: env.UserID,
-						TripID: tripagg.TripID(in.TripID), VehicleID: string(in.VehicleID),
-					})
+				dispatcher := env.Dispatch
+				if dispatcher == nil {
+					db, err := toolDB(env)
 					if err != nil {
 						return "", err
 					}
-					return fmt.Sprintf("Vehicle %s assigned to trip %s.", in.VehicleID, in.TripID), nil
+					dispatcher = dispatchapp.NewAgentDispatcher(db)
 				}
-				t, err := env.Services.Trips.AssignVehicle(ctx, domain.TripID(in.TripID), domain.VehicleID(in.VehicleID))
-				if err != nil {
+				if err := dispatcher.AssignVehicle(ctx, dispatchapp.AssignVehicleCommand{
+					TenantID: shared.TenantIDFromContext(ctx), ActorID: env.UserID,
+					TripID: tripagg.TripID(in.TripID), VehicleID: string(in.VehicleID),
+				}); err != nil {
 					return "", err
 				}
-				return fmt.Sprintf("Vehicle %s assigned to trip %s. Status: %s", in.VehicleID, in.TripID, t.Status), nil
+				return fmt.Sprintf("Vehicle %s assigned to trip %s.", in.VehicleID, in.TripID), nil
 			},
 		},
 		{
@@ -543,24 +466,15 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if err := json.Unmarshal(args, &in); err != nil {
 					return "", err
 				}
-				inv, err := env.Services.Invoices.GetInvoiceByNumber(ctx, in.Number)
+				db, err := toolDB(env)
+				if err != nil {
+					return "", err
+				}
+				inv, err := invoiceapp.NewAgentInvoiceQueries(db).GetByNumber(ctx, shared.TenantIDFromContext(ctx), in.Number)
 				if err != nil {
 					return "", fmt.Errorf("invoice not found: %v", err)
 				}
-				balance, err := env.Services.Invoices.GetBalance(ctx, inv.ID)
-				if err != nil {
-					return "", fmt.Errorf("balance unavailable: %w", err)
-				}
-				return jsonString(map[string]any{
-					"id":          inv.ID.String(),
-					"number":      inv.InvoiceNumber,
-					"customer":    inv.CustomerName,
-					"total":       inv.Total,
-					"paid":        inv.PaidAmount,
-					"outstanding": balance,
-					"status":      inv.Status,
-					"due_date":    inv.DueDate,
-				})
+				return jsonString(map[string]any{"id": inv.ID, "number": inv.Number, "customer": inv.Customer, "total": inv.Total, "paid": inv.Paid, "outstanding": inv.Outstanding, "status": inv.Status, "due_date": inv.DueDate})
 			},
 		},
 		{
@@ -573,33 +487,18 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				"properties": map[string]any{},
 			},
 			Handler: func(ctx context.Context, args json.RawMessage) (string, error) {
-				invs, _, err := env.Services.Invoices.ListInvoices(ctx, "", "", 50, 0)
+				db, err := toolDB(env)
 				if err != nil {
 					return "", err
 				}
-				type row struct {
-					ID          string  `json:"id"`
-					Number      string  `json:"number"`
-					Customer    string  `json:"customer"`
-					Total       float64 `json:"total"`
-					Paid        float64 `json:"paid"`
-					Outstanding float64 `json:"outstanding"`
+				invs, err := invoiceapp.NewAgentInvoiceQueries(db).ListUnpaid(ctx, shared.TenantIDFromContext(ctx), 50)
+				if err != nil {
+					return "", err
 				}
-				var out []row
-				for _, inv := range invs {
-					if inv.PaymentStatus == "paid" {
-						continue
-					}
-					balance, err := env.Services.Invoices.GetBalance(ctx, inv.ID)
-					if err != nil {
-						return "", fmt.Errorf("balance unavailable: %w", err)
-					}
-					out = append(out, row{inv.ID.String(), inv.InvoiceNumber, inv.CustomerName, inv.Total, inv.PaidAmount, balance})
-				}
-				if len(out) == 0 {
+				if len(invs) == 0 {
 					return "No unpaid invoices. All invoices are settled.", nil
 				}
-				return jsonString(out)
+				return jsonString(invs)
 			},
 		},
 		{
@@ -632,24 +531,24 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if in.Amount <= 0 {
 					return "", fmt.Errorf("amount must be greater than zero, got %.2f", in.Amount)
 				}
-				balance, err := env.Services.Invoices.GetBalance(ctx, domain.InvoiceID(in.InvoiceID))
-				if err != nil {
-					return "", fmt.Errorf("balance unavailable: %w", err)
-				}
-				if in.Amount > balance {
-					return "", fmt.Errorf("payment amount %.2f exceeds outstanding balance %.2f; record only up to the outstanding amount", in.Amount, balance)
-				}
-				p, err := env.Services.Payments.RecordPayment(ctx, domain.InvoiceID(in.InvoiceID), in.Amount, domain.PaymentMethod(strings.ToLower(in.Method)), in.Reference, in.Remarks, "")
+				db, err := toolDB(env)
 				if err != nil {
 					return "", err
 				}
-				return jsonString(map[string]any{
-					"payment_id": p.ID.String(),
-					"invoice_id": in.InvoiceID,
-					"amount":     p.Amount,
-					"method":     p.Method,
-					"status":     "recorded",
-				})
+				tenant := shared.TenantIDFromContext(ctx)
+				inv, err := invoiceapp.NewAgentInvoiceQueries(db).GetByID(ctx, tenant, in.InvoiceID)
+				if err != nil {
+					return "", fmt.Errorf("balance unavailable: %w", err)
+				}
+				if in.Amount > inv.Outstanding {
+					return "", fmt.Errorf("payment amount %.2f exceeds outstanding balance %.2f; record only up to the outstanding amount", in.Amount, inv.Outstanding)
+				}
+				method := strings.ToLower(in.Method)
+				pid, err := paymentapp.NewAgentMoneyService(db).RecordPayment(ctx, tenant, in.InvoiceID, in.Amount, method, in.Reference, in.Remarks)
+				if err != nil {
+					return "", err
+				}
+				return jsonString(map[string]any{"payment_id": pid, "invoice_id": in.InvoiceID, "amount": in.Amount, "method": method, "status": "recorded"})
 			},
 		},
 		{
@@ -662,19 +561,15 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				"properties": map[string]any{},
 			},
 			Handler: func(ctx context.Context, args json.RawMessage) (string, error) {
-				total, err := env.Services.Payments.GetTotalRevenue(ctx)
+				db, err := toolDB(env)
+				if err != nil {
+					return "", err
+				}
+				total, monthly, err := paymentapp.NewAgentMoneyService(db).Revenue(ctx, shared.TenantIDFromContext(ctx))
 				if err != nil {
 					return "", fmt.Errorf("revenue unavailable: %w", err)
 				}
-				monthly, err := env.Services.Payments.GetMonthlyRevenue(ctx)
-				if err != nil {
-					return "", fmt.Errorf("revenue unavailable: %w", err)
-				}
-				rows := make([]map[string]any, 0, len(monthly))
-				for _, m := range monthly {
-					rows = append(rows, map[string]any{"month": m.Month, "total": m.Total})
-				}
-				return jsonString(map[string]any{"total_revenue": total, "monthly": rows})
+				return jsonString(map[string]any{"total_revenue": total, "monthly": monthly})
 			},
 		},
 		{
@@ -687,26 +582,18 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				"properties": map[string]any{},
 			},
 			Handler: func(ctx context.Context, args json.RawMessage) (string, error) {
-				expenses, err := env.Services.Kharcha.ListPendingExpenses(ctx)
+				db, err := toolDB(env)
 				if err != nil {
 					return "", err
 				}
-				type row struct {
-					ID       string  `json:"id"`
-					Trip     string  `json:"trip_number"`
-					Driver   string  `json:"driver"`
-					Category string  `json:"category"`
-					Amount   float64 `json:"amount"`
-					Desc     string  `json:"description"`
+				expenses, err := kharchaapp.NewAgentExpenseStore(db).ListPending(ctx, shared.TenantIDFromContext(ctx))
+				if err != nil {
+					return "", err
 				}
-				out := make([]row, 0, len(expenses))
-				for _, e := range expenses {
-					out = append(out, row{e.ID, e.TripNumber, e.DriverName, e.Category, e.Amount, e.Description})
-				}
-				if len(out) == 0 {
+				if len(expenses) == 0 {
 					return "No pending kharcha expenses.", nil
 				}
-				return jsonString(out)
+				return jsonString(expenses)
 			},
 		},
 		{
@@ -732,7 +619,11 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if actor == "" {
 					actor = env.UserID
 				}
-				if err := env.Services.Kharcha.ApproveExpense(ctx, in.ExpenseID, actor); err != nil {
+				db, err := toolDB(env)
+				if err != nil {
+					return "", err
+				}
+				if err := kharchaapp.NewAgentExpenseStore(db).Approve(ctx, shared.TenantIDFromContext(ctx), in.ExpenseID, actor); err != nil {
 					return "", err
 				}
 				return fmt.Sprintf("Expense %s approved.", in.ExpenseID), nil
@@ -763,7 +654,11 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if actor == "" {
 					actor = env.UserID
 				}
-				if err := env.Services.Kharcha.RejectExpense(ctx, in.ExpenseID, actor, in.Reason); err != nil {
+				db, err := toolDB(env)
+				if err != nil {
+					return "", err
+				}
+				if err := kharchaapp.NewAgentExpenseStore(db).Reject(ctx, shared.TenantIDFromContext(ctx), in.ExpenseID, actor, in.Reason); err != nil {
 					return "", err
 				}
 				return fmt.Sprintf("Expense %s rejected: %s", in.ExpenseID, in.Reason), nil
@@ -777,20 +672,15 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				"properties": map[string]any{},
 			},
 			Handler: func(ctx context.Context, args json.RawMessage) (string, error) {
-				data, err := env.Services.Dashboard.GetDashboardData(ctx)
+				db, err := toolDB(env)
 				if err != nil {
 					return "", err
 				}
-				return jsonString(map[string]any{
-					"today_trips_count":  data.TodaysTripsCount,
-					"active_trips":       data.ActiveTripsCount,
-					"completed_trips":    data.CompletedTripsCount,
-					"cancelled_trips":    data.CancelledTripsCount,
-					"available_drivers":  data.AvailableDriversCount,
-					"available_vehicles": data.AvailableVehiclesCount,
-					"pending_payments":   data.PendingPaymentsCount,
-					"monthly_revenue":    data.MonthlyRevenue,
-				})
+				snap, err := dashboardapp.NewAgentDashboardQueries(db).Snapshot(ctx, shared.TenantIDFromContext(ctx))
+				if err != nil {
+					return "", err
+				}
+				return jsonString(snap)
 			},
 		},
 		{
@@ -811,56 +701,21 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if len(args) > 0 {
 					_ = json.Unmarshal(args, &in)
 				}
-				db := env.Services.DB()
+				db := env.DB
 				if db == nil {
 					return "database not available", nil
 				}
-				// Tenant isolation: alerts are multi-tenant data. Every sibling
-				// tool resolves the tenant from the request context; this query
-				// previously had no tenant_id filter, leaking every tenant's
-				// open alerts to any authenticated caller (audit 2026-09-17).
-				tenantID := string(shared.TenantIDFromContext(ctx))
-				query := `SELECT id, source, alert_type, severity, entity_type, entity_id, title, message, status, created_at FROM alerts WHERE status = 'open' AND tenant_id = ?`
-				var queryArgs []any
-				queryArgs = append(queryArgs, tenantID)
-				if in.Severity != "" {
-					query += ` AND severity = ?`
-					queryArgs = append(queryArgs, in.Severity)
-				}
-				query += ` ORDER BY created_at DESC LIMIT 20`
-
-				rows, err := db.QueryContext(ctx, query, queryArgs...)
+				// Tenant isolation + wire shape live in the owning alerts read
+				// model (audit 2026-09-17 regression is pinned there and in
+				// TestGetOpenAlerts_TenantIsolation below).
+				alerts, err := alertsapp.NewOpenAlertQueries(db).List(ctx, string(shared.TenantIDFromContext(ctx)), in.Severity, 20)
 				if err != nil {
 					return "No alerts found: " + err.Error(), nil
 				}
-				defer func() { _ = rows.Close() }()
-
-				type alertRow struct {
-					ID         string  `json:"id"`
-					Source     string  `json:"source"`
-					AlertType  string  `json:"alert_type"`
-					Severity   string  `json:"severity"`
-					EntityType *string `json:"entity_type"`
-					EntityID   *string `json:"entity_id"`
-					Title      string  `json:"title"`
-					Message    string  `json:"message"`
-					Status     string  `json:"status"`
-					CreatedAt  string  `json:"created_at"`
-				}
-				var list []alertRow
-				for rows.Next() {
-					var a alertRow
-					// entity_type/entity_id are nullable columns; scanning into
-					// non-pointer strings errors on NULL and silently drops the
-					// row from the tool output entirely.
-					if err := rows.Scan(&a.ID, &a.Source, &a.AlertType, &a.Severity, &a.EntityType, &a.EntityID, &a.Title, &a.Message, &a.Status, &a.CreatedAt); err == nil {
-						list = append(list, a)
-					}
-				}
-				if len(list) == 0 {
+				if len(alerts) == 0 {
 					return "No open alerts found.", nil
 				}
-				return jsonString(list)
+				return jsonString(alerts)
 			},
 		},
 		{
@@ -885,11 +740,11 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if in.TripID == "" {
 					return "", fmt.Errorf("trip_id is required")
 				}
-				svc := env.Services.EWayBill
+				svc := env.EWayBill
 				if svc == nil {
 					return "eway bill service not available", nil
 				}
-				rec, err := svc.GetByTrip(ctx, in.TripID)
+				rec, err := svc.GetByTripForTenant(ctx, in.TripID, string(shared.TenantIDFromContext(ctx)))
 				if err != nil {
 					return fmt.Sprintf("no eway bill found for trip %s", in.TripID), nil
 				}
@@ -932,11 +787,11 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if in.Limit > 50 {
 					in.Limit = 50
 				}
-				repo, err := maintenanceRepo(env)
+				facade, err := workOrderFacade(env)
 				if err != nil {
 					return "", err
 				}
-				orders, err := repo.ListWorkOrders(ctx, string(shared.TenantIDFromContext(ctx)), in.Status, in.Limit)
+				orders, err := facade.List(ctx, in.Status, in.Limit)
 				if err != nil {
 					return "", err
 				}
@@ -976,11 +831,11 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if err := json.Unmarshal(args, &in); err != nil {
 					return "", err
 				}
-				repo, err := maintenanceRepo(env)
+				facade, err := workOrderFacade(env)
 				if err != nil {
 					return "", err
 				}
-				wo, err := repo.FindWorkOrder(ctx, string(shared.TenantIDFromContext(ctx)), in.ID)
+				wo, err := facade.Get(ctx, in.ID)
 				if err != nil {
 					return "", err
 				}
@@ -1026,17 +881,14 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if strings.TrimSpace(in.VehicleID) == "" || strings.TrimSpace(in.Title) == "" {
 					return "", fmt.Errorf("vehicle_id and title are required")
 				}
-				wo := maintdomain.WorkOrder{
-					ID:           uuid.NewString(),
-					TenantID:     string(shared.TenantIDFromContext(ctx)),
+				input := maintenance.CreateWorkOrderInput{
 					VehicleID:    strings.TrimSpace(in.VehicleID),
-					ScheduleID:   in.ScheduleID,
 					Title:        strings.TrimSpace(in.Title),
 					Description:  in.Description,
 					Assignee:     in.Assignee,
 					Vendor:       in.Vendor,
 					CostEstimate: in.CostEstimate,
-					Status:       maintdomain.WorkOrderOpen,
+					ScheduleID:   in.ScheduleID,
 				}
 				if in.DueAt != "" {
 					due, err := time.Parse(time.RFC3339, in.DueAt)
@@ -1044,13 +896,14 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 						return "", fmt.Errorf("due_at must be RFC3339, got %q", in.DueAt)
 					}
 					dueUTC := due.UTC()
-					wo.DueAt = &dueUTC
+					input.DueAt = &dueUTC
 				}
-				repo, err := maintenanceRepo(env)
+				facade, err := workOrderFacade(env)
 				if err != nil {
 					return "", err
 				}
-				if err := repo.CreateWorkOrder(ctx, wo); err != nil {
+				wo, err := facade.Create(ctx, input)
+				if err != nil {
 					return "", err
 				}
 				return jsonString(map[string]any{
@@ -1091,32 +944,22 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				default:
 					return "", fmt.Errorf("unknown job card status %q", in.Status)
 				}
-				repo, err := maintenanceRepo(env)
+				facade, err := workOrderFacade(env)
 				if err != nil {
 					return "", err
 				}
-				tenant := string(shared.TenantIDFromContext(ctx))
-				if in.Assignee != "" || in.Vendor != "" {
-					if err := repo.AssignWorkOrder(ctx, tenant, in.ID, in.Assignee, in.Vendor); err != nil {
-						return "", err
-					}
+				actor := userIDFrom(ctx)
+				if actor == "" {
+					actor = env.UserID
 				}
-				if in.Status == maintdomain.WorkOrderDone {
-					actor := userIDFrom(ctx)
-					if actor == "" {
-						actor = env.UserID
-					}
-					done, err := repo.CompleteWorkOrder(ctx, tenant, in.ID, actor)
-					if err != nil {
-						return "", err
-					}
-					if db := env.Services.DB(); db != nil {
-						maintenance.NewWorker(db, nil, nil, 0, "").EvaluateResolution(ctx, done.VehicleID)
-					}
-					return fmt.Sprintf("Job card %s closed as done; service record written.", done.ID), nil
-				}
-				if err := repo.TransitionWorkOrder(ctx, tenant, in.ID, in.Status); err != nil {
+				result, err := facade.Transition(ctx, maintenance.TransitionWorkOrderInput{
+					ID: in.ID, Status: in.Status, Assignee: in.Assignee, Vendor: in.Vendor, Actor: actor,
+				})
+				if err != nil {
 					return "", err
+				}
+				if result.Completed {
+					return fmt.Sprintf("Job card %s closed as done; service record written.", result.ID), nil
 				}
 				return fmt.Sprintf("Job card %s moved to %s.", in.ID, in.Status), nil
 			},
@@ -1124,20 +967,26 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 	}
 }
 
-func derefStr(s *string) string {
-	if s == nil {
-		return ""
+// workOrderFacade binds the maintenance application facade to the service DB.
+// Tools fail closed when the DB is unavailable (legacy model-facing string).
+func workOrderFacade(env *ToolEnv) (*maintenance.WorkOrderFacade, error) {
+	if env == nil || env.DB == nil {
+		return nil, maintenance.ErrStoreUnavailable
 	}
-	return *s
+	f := maintenance.NewWorkOrderFacade(env.DB)
+	if f == nil {
+		return nil, maintenance.ErrStoreUnavailable
+	}
+	return f, nil
 }
 
-// maintenanceRepo binds the job-card repository to the service database.
-// Tools fail closed when the DB is unavailable.
-func maintenanceRepo(env *ToolEnv) (*maintsql.MaintenanceRepository, error) {
-	if env == nil || env.Services == nil || env.Services.DB() == nil {
-		return nil, fmt.Errorf("maintenance store unavailable")
+// toolDB returns the service database for the domain application facades.
+// Tools fail closed when it is unavailable.
+func toolDB(env *ToolEnv) (*sql.DB, error) {
+	if env == nil || env.DB == nil {
+		return nil, fmt.Errorf("database unavailable")
 	}
-	return maintsql.NewMaintenanceRepository(env.Services.DB()), nil
+	return env.DB, nil
 }
 
 // workOrderJSON renders one job card for the assistant.
@@ -1168,13 +1017,6 @@ func workOrderJSON(w *maintdomain.WorkOrder) map[string]any {
 		out["closed_at"] = w.ClosedAt.Format(time.RFC3339)
 	}
 	return out
-}
-
-func bookingIDStr(id *domain.BookingID) string {
-	if id == nil {
-		return ""
-	}
-	return id.String()
 }
 
 func statusClause(status string) string {

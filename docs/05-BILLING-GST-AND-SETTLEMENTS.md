@@ -50,6 +50,17 @@ $$\text{Net Driver Payout} = \text{Agreed Driver Rate} + \text{Approved Tolls/Kh
 3. **Manager Approval Gate**: Accountant approves or rejects expense at `/kharcha`.
 4. **Settlement Slip**: Final approved amount is automatically added to driver's balance ledger.
 
+### Payout Rail (RazorpayX, fail-closed)
+
+Wallet debits only become real money through the payout rail; without it, `InitiatePayout` fails closed and writes nothing.
+
+- **Dispatch** (`internal/settlement/application/payout_rail.go`, `internal/settlement/payout/razorpayx`): after the payout instruction + ledger debit commit, the instruction is sent to RazorpayX (`POST /v1/payouts`, IMPS, paise, `reference_id` = payout id). Provider `processing/paid/failed/reversed` is persisted on `payout_instructions`; provider failure or reversal credits the wallet back **exactly once** (compensating `PAYOUT_REVERSAL` entry).
+- **Penny-drop verification**: `POST /api/v1/drivers/me/payout-account/verify` (driver) or the admin settlement view starts `POST /v1/fund_accounts/validations`; the `fund_account.validation.*` webhook flips `driver_payout_accounts.verification_status` to `verified`/`rejected`.
+- **Webhook reconciliation**: `POST /api/v1/webhooks/payouts/razorpay` is public but signature-verified (HMAC-SHA256, mandatory), idempotent by `X-Razorpay-Event-Id`, and derives tenancy from the stored payout — never from the callback. Amount/currency are checked against the local instruction before any status change.
+- **Enablement**: `PAYOUT_RAIL_ENABLED=true` **and** `PAYOUT_PROVIDER=razorpayx` with account + keys; otherwise startup warns and payouts stay disabled. Bank account numbers are AES-256-GCM encrypted at rest and decrypted only for the provider call (`PAYOUT_ENCRYPTION_KEY`).
+- **UI**: admin settlement view shows account status, recent payouts (amount/status/UTR) and a penny-drop button.
+- **Stuck-payout safety**: a leadered sweep alerts (settlement.payout_stuck, rule_payout_stuck) when a payout stays in initiated/processing past `PAYOUT_STUCK_AFTER` (default 24h) so a lost provider webhook cannot park money silently.
+
 ---
 
 ## 4. Razorpay Payment Gateway Integration (`internal/payment/razorpay/`)

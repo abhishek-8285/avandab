@@ -3,11 +3,12 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
+
+	outboxapp "transport-app/internal/outbox/application"
 )
 
 // OutboxBatchHandler handles durable mobile outbox batch — POST /api/v1/outbox/batch
@@ -40,37 +41,20 @@ func (h *OutboxBatchHandler) HandleBatch(w http.ResponseWriter, r *http.Request)
 	// Every step is checked: a failed Tx must surface as 5xx so the mobile client
 	// retries instead of assuming the batch was durably queued (no silent loss).
 	if h.db != nil && len(req.Commands) > 0 {
-		tx, err := h.db.BeginTx(r.Context(), nil)
-		if err != nil {
-			http.Error(w, "outbox unavailable; retry", http.StatusServiceUnavailable)
-			return
-		}
-		stmt, err := tx.PrepareContext(r.Context(), `INSERT INTO outbox_events (id, aggregate_id, aggregate_type, event_type, payload, created_at) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING`)
-		if err != nil {
-			_ = tx.Rollback()
-			http.Error(w, "outbox unavailable; retry", http.StatusServiceUnavailable)
-			return
-		}
-		defer func() { _ = stmt.Close() }()
-		var execErr error
+		commands := make([]outboxapp.Command, 0, len(req.Commands))
 		for _, c := range req.Commands {
-			id := c.IdempotencyKey
-			if id == "" {
-				id = uuid.NewString()
-			}
-			if _, err := stmt.ExecContext(r.Context(), id, id, "mobile_outbox", c.Command, c.Payload, time.Now().UTC()); err != nil {
-				execErr = err
-				break
-			}
+			commands = append(commands, outboxapp.Command{
+				IdempotencyKey: c.IdempotencyKey,
+				Command:        c.Command,
+				Payload:        c.Payload,
+			})
 		}
-		if execErr == nil {
-			if err := tx.Commit(); err != nil {
-				execErr = err
+		if err := outboxapp.Enqueue(r.Context(), h.db, commands); err != nil {
+			if errors.Is(err, outboxapp.ErrOutboxUnavailable) {
+				http.Error(w, "outbox unavailable; retry", http.StatusServiceUnavailable)
+			} else {
+				http.Error(w, "outbox write failed; retry", http.StatusServiceUnavailable)
 			}
-		}
-		if execErr != nil {
-			_ = tx.Rollback()
-			http.Error(w, "outbox write failed; retry", http.StatusServiceUnavailable)
 			return
 		}
 	}

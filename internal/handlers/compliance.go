@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"transport-app/internal/apperr"
+	complianceapp "transport-app/internal/compliance/application"
 	"transport-app/internal/domain"
 	"transport-app/internal/httpx"
 	"transport-app/internal/middleware"
@@ -77,27 +77,14 @@ func (h *ComplianceHandlers) Radar(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, out)
 }
 
-// BlockedEntity represents a blocked driver or vehicle.
-type BlockedEntity struct {
-	ID     string `json:"id"`
-	Reason string `json:"reason"`
-}
-
-// ComplianceEntityMetrics represents aggregate statistics for drivers or vehicles.
-type ComplianceEntityMetrics struct {
-	Total        int `json:"total"`
-	Blocked      int `json:"blocked"`
-	ExpiringSoon int `json:"expiring_soon"`
-}
-
-// ComplianceDashboardData represents overview metrics across drivers, vehicles, and documents.
-type ComplianceDashboardData struct {
-	Drivers          ComplianceEntityMetrics `json:"drivers"`
-	Vehicles         ComplianceEntityMetrics `json:"vehicles"`
-	BlockedDrivers   []BlockedEntity         `json:"blocked_drivers"`
-	BlockedVehicles  []BlockedEntity         `json:"blocked_vehicles"`
-	DocumentsPending int                     `json:"documents_pending"`
-}
+// Compliance dashboard types live in internal/compliance/application
+// (handlers-end-state ADR, Phase 2); the aliases keep template/test
+// references unchanged.
+type (
+	BlockedEntity           = complianceapp.BlockedEntity
+	ComplianceEntityMetrics = complianceapp.EntityMetrics
+	ComplianceDashboardData = complianceapp.DashboardData
+)
 
 // DashboardJSON returns JSON compliance overview metrics.
 func (h *ComplianceHandlers) DashboardJSON(w http.ResponseWriter, r *http.Request) {
@@ -132,130 +119,7 @@ func (h *ComplianceHandlers) DashboardPage(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *ComplianceHandlers) getDashboardData(r *http.Request) (ComplianceDashboardData, error) {
-	db := h.DB
-	if db == nil {
-		return ComplianceDashboardData{}, fmt.Errorf("database unavailable")
-	}
-	ctx := r.Context()
-	now := time.Now().Truncate(24 * time.Hour)
-	soon := now.Add(7 * 24 * time.Hour)
-
-	var data ComplianceDashboardData
-	data.BlockedDrivers = []BlockedEntity{}
-	data.BlockedVehicles = []BlockedEntity{}
-
-	// Tenant isolation: org callers see only their own fleet. Bootstrap
-	// ('1'/empty: single-tenant deploys + platform views) keeps global.
-	tid := shared.TenantIDFromContext(ctx)
-	scoped := tid != "" && tid != shared.DefaultTenant //nolint:tenant-default // bootstrap-vs-org branching, not a data fallback
-	var tArg []any
-	if scoped {
-		tArg = append(tArg, string(tid))
-	}
-
-	// Drivers metrics
-	driversQ := `SELECT id, license_expiry, status, blocked, COALESCE(blocked_reason,'') FROM drivers`
-	if scoped {
-		driversQ += ` WHERE tenant_id = $1`
-	}
-	rows, err := db.QueryContext(ctx, driversQ, tArg...)
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var id, status, bReason string
-			var lExp sql.NullString
-			var blocked int
-			if err := rows.Scan(&id, &lExp, &status, &blocked, &bReason); err == nil {
-				data.Drivers.Total++
-				isBlocked := blocked == 1 || status == "blocked"
-				reason := bReason
-				if reason == "" {
-					reason = "driver blocked"
-				}
-
-				if lExp.Valid && lExp.String != "" {
-					if t, err := time.Parse("2006-01-02", lExp.String); err == nil {
-						if t.Before(now) {
-							isBlocked = true
-							reason = fmt.Sprintf("License expired %s", lExp.String)
-						} else if t.Before(soon) {
-							data.Drivers.ExpiringSoon++
-						}
-					}
-				}
-
-				if isBlocked {
-					data.Drivers.Blocked++
-					data.BlockedDrivers = append(data.BlockedDrivers, BlockedEntity{ID: id, Reason: reason})
-				}
-			}
-		}
-	}
-
-	// Vehicles metrics
-	vehiclesQ := `SELECT id, insurance_expiry, fitness_expiry, permit_expiry, COALESCE(CAST(puc_expiry AS TEXT), ''), status, blocked, COALESCE(blocked_reason,'') FROM vehicles`
-	if scoped {
-		vehiclesQ += ` WHERE tenant_id = $1`
-	}
-	vRows, err := db.QueryContext(ctx, vehiclesQ, tArg...)
-	if err == nil {
-		defer vRows.Close()
-		for vRows.Next() {
-			var id, status, bReason string
-			var insExp, fitExp, perExp, pucExp sql.NullString
-			var blocked int
-			if err := vRows.Scan(&id, &insExp, &fitExp, &perExp, &pucExp, &status, &blocked, &bReason); err == nil {
-				data.Vehicles.Total++
-				isBlocked := blocked == 1 || status == "blocked"
-				reason := bReason
-				if reason == "" {
-					reason = "vehicle blocked"
-				}
-
-				for _, item := range []struct {
-					name string
-					exp  sql.NullString
-				}{
-					{"Insurance", insExp},
-					{"Fitness", fitExp},
-					{"Permit", perExp},
-					{"PUC", pucExp},
-				} {
-					if item.exp.Valid && item.exp.String != "" {
-						if t, err := time.Parse("2006-01-02", item.exp.String); err == nil {
-							if t.Before(now) {
-								isBlocked = true
-								reason = fmt.Sprintf("%s expired %s", item.name, item.exp.String)
-								break
-							} else if t.Before(soon) {
-								data.Vehicles.ExpiringSoon++
-							}
-						}
-					}
-				}
-
-				if isBlocked {
-					data.Vehicles.Blocked++
-					data.BlockedVehicles = append(data.BlockedVehicles, BlockedEntity{ID: id, Reason: reason})
-				}
-			}
-		}
-	}
-
-	// Pending documents count (tenant-scoped via owner entity: the vault
-	// tables carry no tenant_id of their own).
-	ddocQ := `SELECT count(*) FROM driver_documents WHERE status = 'pending_review'`
-	vdocQ := `SELECT count(*) FROM vehicle_documents WHERE status = 'pending_review'`
-	if scoped {
-		ddocQ += ` AND driver_id IN (SELECT id FROM drivers WHERE tenant_id = $1)`
-		vdocQ += ` AND vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = $1)`
-	}
-	var dPending, vPending int
-	_ = db.QueryRowContext(ctx, ddocQ, tArg...).Scan(&dPending)
-	_ = db.QueryRowContext(ctx, vdocQ, tArg...).Scan(&vPending)
-	data.DocumentsPending = dPending + vPending
-
-	return data, nil
+	return complianceapp.NewDashboardQueries(h.DB).Overview(r.Context(), string(shared.TenantIDFromContext(r.Context())))
 }
 
 // CreateExemption creates a temporary exemption for a compliance document.

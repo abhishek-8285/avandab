@@ -17,6 +17,93 @@ type FacilityHandlers struct {
 	*App
 }
 
+// Routes registers web UI routes for facilities under /facilities.
+func (h *FacilityHandlers) Routes(r chi.Router) {
+	r.With(middleware.RequirePermission(h.AuthSrv, "facilities", "read")).Get("/", h.WebListFacilities)
+	r.With(middleware.RequirePermission(h.AuthSrv, "facilities", "write")).Post("/", h.WebCreateFacility)
+}
+
+// WebListFacilities renders the facilities management page.
+func (h *FacilityHandlers) WebListFacilities(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+	repo := facility.NewSQLRepository(h.DB)
+
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	facType := strings.TrimSpace(r.URL.Query().Get("type"))
+
+	limit := 100
+	filter := facility.FacilityFilter{
+		Search:       q,
+		FacilityType: facType,
+		Limit:        limit,
+		Offset:       0,
+	}
+
+	list, total, err := repo.List(r.Context(), tenantID, filter)
+	if err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to load facilities", err.Error(), user)
+		return
+	}
+
+	data := PageData{
+		Title: "Facilities",
+		User:  user,
+		Extra: map[string]interface{}{
+			"Facilities": list,
+			"Total":      total,
+			"Query":      q,
+			"TypeFilter": facType,
+		},
+	}
+	h.renderPage(w, r, "facilities_list.html", data)
+}
+
+// WebCreateFacility handles the creation form submission for a new facility.
+func (h *FacilityHandlers) WebCreateFacility(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	repo := facility.NewSQLRepository(h.DB)
+
+	code := strings.TrimSpace(r.PostFormValue("facility_code"))
+	name := strings.TrimSpace(r.PostFormValue("name"))
+	facType := strings.TrimSpace(r.PostFormValue("facility_type"))
+	if code == "" || name == "" {
+		http.Redirect(w, r, "/facilities?error=missing_fields", http.StatusSeeOther)
+		return
+	}
+
+	var latPtr, lngPtr *float64
+	if latStr := strings.TrimSpace(r.PostFormValue("latitude")); latStr != "" {
+		if lat, err := strconv.ParseFloat(latStr, 64); err == nil {
+			latPtr = &lat
+		}
+	}
+	if lngStr := strings.TrimSpace(r.PostFormValue("longitude")); lngStr != "" {
+		if lng, err := strconv.ParseFloat(lngStr, 64); err == nil {
+			lngPtr = &lng
+		}
+	}
+
+	input := facility.CreateFacilityInput{
+		FacilityCode: code,
+		Name:         name,
+		FacilityType: facility.FacilityType(facType),
+		Address:      strings.TrimSpace(r.PostFormValue("address")),
+		City:         strings.TrimSpace(r.PostFormValue("city")),
+		State:        strings.TrimSpace(r.PostFormValue("state")),
+		Pincode:      strings.TrimSpace(r.PostFormValue("pincode")),
+		Latitude:     latPtr,
+		Longitude:    lngPtr,
+	}
+
+	if _, err := repo.Create(r.Context(), tenantID, input); err != nil {
+		http.Redirect(w, r, "/facilities?error="+err.Error(), http.StatusSeeOther)
+		return
+	}
+
+	http.Redirect(w, r, "/facilities", http.StatusSeeOther)
+}
+
 func (h *FacilityHandlers) RegisterAPIRoutes(r chi.Router) {
 	r.Route("/api/v1/facilities", func(r chi.Router) {
 		r.With(middleware.RequirePermission(h.AuthSrv, "facilities", "read")).Get("/", h.APIListFacilities)

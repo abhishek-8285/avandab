@@ -1,13 +1,14 @@
 // Package ocr provides receipt amount extraction (Spec 22 §2.7, §6).
-// Provider is selected by OCR_PROVIDER: mock (default, canned fixture),
-// http (POST image ref to OCR_HTTP_URL), tesseract falls back to mock
-// until a local binary integration is justified — no external calls
-// unless explicitly configured.
+// Provider is selected by OCR_PROVIDER: mock (default, non-verifying
+// placeholder), http (POST image ref to OCR_HTTP_URL), tesseract falls
+// back to mock until a local binary integration is justified — no external
+// calls unless explicitly configured.
 package ocr
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -42,28 +43,30 @@ func NewClient(cfg Config, logger *slog.Logger) Client {
 	switch strings.ToLower(cfg.Provider) {
 	case "http":
 		if cfg.HTTPURL == "" {
-			logger.Warn("OCR_PROVIDER=http but OCR_HTTP_URL empty — falling back to mock")
+			logger.Warn("OCR_PROVIDER=http but OCR_HTTP_URL empty — using mock, which cannot verify expenses")
 			return NewMockClient()
 		}
 		return &httpClient{cfg: cfg, client: &http.Client{Timeout: 15 * time.Second}}
 	case "tesseract":
-		logger.Warn("tesseract provider not implemented yet — using mock (Spec 22 §11 open item)")
+		logger.Warn("tesseract provider not implemented yet — using mock, which cannot verify expenses (Spec 22 §11 open item)")
 		return NewMockClient()
 	default:
+		logger.Warn("no OCR provider configured — mock cannot verify expenses; set OCR_PROVIDER=http")
 		return NewMockClient()
 	}
 }
 
-// MockClient returns the spec's canned fixture: ₹3000.00 at 0.94 confidence.
+// ErrMockNoExtraction is returned by the mock provider: it has no receipt
+// text, so it must never produce an amount that could verify a claim.
+var ErrMockNoExtraction = errors.New("ocr mock provider: no extraction")
+
+// MockClient is a non-verifying placeholder; Extract always fails.
 type MockClient struct{}
 
 func NewMockClient() *MockClient { return &MockClient{} }
 
 func (m *MockClient) Extract(ctx context.Context, imageRef string) (Result, error) {
-	if imageRef == "" {
-		return Result{}, fmt.Errorf("no receipt on file")
-	}
-	return Result{Amount: 3000.00, Confidence: 0.94}, nil
+	return Result{}, ErrMockNoExtraction
 }
 
 // httpClient posts {image_ref} and expects {"amount":…,"confidence":…}.

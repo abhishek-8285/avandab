@@ -1,16 +1,15 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 
 	"transport-app/internal/domain"
 	"transport-app/internal/middleware"
+	routeapp "transport-app/internal/route/application"
 	"transport-app/internal/route/optimizer"
 	"transport-app/internal/shared"
 )
@@ -40,24 +39,7 @@ func (h *RouteHandlers) OptimizePage(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
 	tenantID := string(shared.TenantIDFromContext(r.Context()))
 
-	type optVehicle struct {
-		ID, RegistrationNumber, VehicleNumber, Model string
-		Capacity                                     int64
-	}
-	vehs := []optVehicle{}
-	if rows, err := h.DB.QueryContext(r.Context(), `
-		SELECT id, registration_number, vehicle_number, COALESCE(model, ''), capacity
-		FROM vehicles
-		WHERE tenant_id = $1 AND status != 'blocked'
-		ORDER BY registration_number ASC LIMIT 50`, tenantID); err == nil {
-		defer func() { _ = rows.Close() }()
-		for rows.Next() {
-			var v optVehicle
-			if rows.Scan(&v.ID, &v.RegistrationNumber, &v.VehicleNumber, &v.Model, &v.Capacity) == nil {
-				vehs = append(vehs, v)
-			}
-		}
-	}
+	vehs := routeapp.NewRouteOptimizationService(h.DB).VehiclesForOptimization(r.Context(), tenantID)
 
 	h.renderPage(w, r, "route_optimize.html", PageData{
 		Title: "Route Optimization",
@@ -106,7 +88,6 @@ func (h *RouteHandlers) Optimize(w http.ResponseWriter, r *http.Request) {
 		createdBy = user.UserID
 	}
 
-	jobID := uuid.NewString()
 	inputJSON, _ := json.Marshal(in)
 	prov := req.Provider
 	if prov == "" {
@@ -116,17 +97,16 @@ func (h *RouteHandlers) Optimize(w http.ResponseWriter, r *http.Request) {
 		prov = "mock"
 	}
 
-	// Insert pending job
-	_, err := h.DB.ExecContext(r.Context(),
-		`INSERT INTO route_optimization_jobs (id, tenant_id, input_json, status, provider, created_by) VALUES ($1, $2, $3, 'pending', $4, $5)`,
-		jobID, tenantID, string(inputJSON), prov, createdBy)
+	// Insert pending job, then solve synchronously (providers are fast).
+	svc := routeapp.NewRouteOptimizationService(h.DB)
+	jobID, err := svc.CreateJob(r.Context(), tenantID, string(inputJSON), prov, createdBy)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create job"})
 		return
 	}
 
 	// Solve synchronously — providers are fast (mock <10ms, OSRM <2s with fallback). Mark processing first.
-	_, _ = h.DB.ExecContext(r.Context(), `UPDATE route_optimization_jobs SET status='processing' WHERE id=$1`, jobID)
+	_ = svc.MarkProcessing(r.Context(), jobID)
 
 	opt := optimizer.Get(prov)
 	// If OSRM self-host URL configured, prefer it
@@ -135,16 +115,12 @@ func (h *RouteHandlers) Optimize(w http.ResponseWriter, r *http.Request) {
 	}
 	result, solveErr := opt.Solve(r.Context(), in)
 	if solveErr != nil {
-		_, _ = h.DB.ExecContext(r.Context(),
-			`UPDATE route_optimization_jobs SET status='failed', error_message=$1, completed_at=CURRENT_TIMESTAMP WHERE id=$2`,
-			solveErr.Error(), jobID)
+		_ = svc.MarkFailed(r.Context(), jobID, solveErr.Error())
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": solveErr.Error(), "job_id": jobID})
 		return
 	}
 	resJSON, _ := json.Marshal(result)
-	_, _ = h.DB.ExecContext(r.Context(),
-		`UPDATE route_optimization_jobs SET status='completed', result_json=$1, completed_at=CURRENT_TIMESTAMP WHERE id=$2`,
-		string(resJSON), jobID)
+	_ = svc.MarkCompleted(r.Context(), jobID, string(resJSON))
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -159,30 +135,10 @@ func (h *RouteHandlers) Optimize(w http.ResponseWriter, r *http.Request) {
 // OptimizeJobs lists recent jobs for current tenant (web fragment + JSON).
 func (h *RouteHandlers) OptimizeJobs(w http.ResponseWriter, r *http.Request) {
 	tenantID := string(shared.MustTenantID(r.Context()))
-	rows, err := h.DB.QueryContext(r.Context(),
-		`SELECT id, status, provider, created_at, completed_at FROM route_optimization_jobs WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT 20`, tenantID)
+	jobs, err := routeapp.NewRouteOptimizationService(h.DB).RecentJobs(r.Context(), tenantID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "query failed"})
 		return
-	}
-	defer rows.Close()
-	type jobRow struct {
-		ID          string  `json:"id"`
-		Status      string  `json:"status"`
-		Provider    string  `json:"provider"`
-		CreatedAt   string  `json:"created_at"`
-		CompletedAt *string `json:"completed_at,omitempty"`
-	}
-	var jobs []jobRow
-	for rows.Next() {
-		var j jobRow
-		var ca, comp sql.NullString
-		_ = rows.Scan(&j.ID, &j.Status, &j.Provider, &ca, &comp)
-		j.CreatedAt = ca.String
-		if comp.Valid {
-			j.CompletedAt = &comp.String
-		}
-		jobs = append(jobs, j)
 	}
 	if isDatastarRequest(r) {
 		h.renderFragment(w, r, "route_optimize_jobs.html", map[string]interface{}{"Jobs": jobs})
@@ -195,31 +151,27 @@ func (h *RouteHandlers) OptimizeJobs(w http.ResponseWriter, r *http.Request) {
 func (h *RouteHandlers) OptimizeJobStatus(w http.ResponseWriter, r *http.Request) {
 	jobID := chi.URLParam(r, "jobID")
 	tenantID := string(shared.MustTenantID(r.Context()))
-	var id, status, provider, inputJSON, resultJSON sql.NullString
-	var errMsg sql.NullString
-	var createdAt, completedAt sql.NullString
-	err := h.DB.QueryRowContext(r.Context(),
-		`SELECT id, status, provider, input_json, result_json, error_message, created_at, completed_at FROM route_optimization_jobs WHERE id=$1 AND tenant_id=$2`, jobID, tenantID).Scan(&id, &status, &provider, &inputJSON, &resultJSON, &errMsg, &createdAt, &completedAt)
+	job, err := routeapp.NewRouteOptimizationService(h.DB).Job(r.Context(), jobID, tenantID)
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "job not found"})
 		return
 	}
 	resp := map[string]interface{}{
-		"id":         id.String,
-		"status":     status.String,
-		"provider":   provider.String,
-		"created_at": createdAt.String,
+		"id":         job.ID,
+		"status":     job.Status,
+		"provider":   job.Provider,
+		"created_at": job.CreatedAt,
 	}
-	if resultJSON.Valid && resultJSON.String != "" {
+	if job.ResultJSON.Valid && job.ResultJSON.String != "" {
 		var res optimizer.OptimizationOutput
-		_ = json.Unmarshal([]byte(resultJSON.String), &res)
+		_ = json.Unmarshal([]byte(job.ResultJSON.String), &res)
 		resp["result"] = res
 	}
-	if errMsg.Valid {
-		resp["error"] = errMsg.String
+	if job.ErrorMessage.Valid {
+		resp["error"] = job.ErrorMessage.String
 	}
-	if completedAt.Valid {
-		resp["completed_at"] = completedAt.String
+	if job.CompletedAt.Valid {
+		resp["completed_at"] = job.CompletedAt.String
 	}
 	writeJSON(w, http.StatusOK, resp)
 }

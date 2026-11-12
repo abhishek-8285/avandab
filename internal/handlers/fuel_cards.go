@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -25,6 +26,107 @@ func NewFuelCardHandlers(app *App, useCase *fuelapp.FuelCardUseCase) *FuelCardHa
 		App:     app,
 		useCase: useCase,
 	}
+}
+
+// Routes registers web UI routes for fuel cards under /fuel-cards.
+func (h *FuelCardHandlers) Routes(r chi.Router) {
+	r.With(middleware.RequirePermission(h.AuthSrv, "fuel", "read")).Get("/", h.WebListFuelCards)
+	r.With(middleware.RequirePermission(h.AuthSrv, "fuel", "write")).Post("/", h.WebRegisterCard)
+	r.With(middleware.RequirePermission(h.AuthSrv, "fuel", "write")).Post("/sync", h.WebSyncTransactions)
+}
+
+// WebListFuelCards renders the fuel cards management screen.
+func (h *FuelCardHandlers) WebListFuelCards(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+	cards, err := h.useCase.ListCards(r.Context(), tenantID)
+	if err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to load fuel cards", err.Error(), user)
+		return
+	}
+
+	activeCount := 0
+	var totalSpendToday float64
+	for _, c := range cards {
+		if strings.EqualFold(string(c.Status), "active") {
+			activeCount++
+		}
+		totalSpendToday += c.SpendToday
+	}
+
+	data := PageData{
+		Title: "Fuel Cards",
+		User:  user,
+		Extra: map[string]interface{}{
+			"Cards":           cards,
+			"ActiveCount":     activeCount,
+			"TotalSpendToday": totalSpendToday,
+		},
+	}
+	h.renderPage(w, r, "fuel_cards_list.html", data)
+}
+
+// WebRegisterCard handles registration form submissions for new commercial fuel cards.
+func (h *FuelCardHandlers) WebRegisterCard(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+
+	cardNumber := strings.TrimSpace(r.PostFormValue("card_number"))
+	provider := strings.TrimSpace(r.PostFormValue("provider"))
+	vehicleID := strings.TrimSpace(r.PostFormValue("vehicle_id"))
+	driverID := strings.TrimSpace(r.PostFormValue("driver_id"))
+	dailyLimitStr := strings.TrimSpace(r.PostFormValue("daily_spend_limit"))
+
+	if cardNumber == "" || provider == "" {
+		http.Redirect(w, r, "/fuel-cards?error=missing_fields", http.StatusSeeOther)
+		return
+	}
+
+	var dailyLimit float64
+	if dailyLimitStr != "" {
+		if f, err := strconv.ParseFloat(dailyLimitStr, 64); err == nil {
+			dailyLimit = f
+		}
+	}
+
+	var vehPtr *string
+	if vehicleID != "" {
+		vehPtr = &vehicleID
+	}
+	var drvPtr *string
+	if driverID != "" {
+		drvPtr = &driverID
+	}
+
+	req := fuel.RegisterFuelCardRequest{
+		CardNumber:        cardNumber,
+		Provider:          provider,
+		AssignedVehicleID: vehPtr,
+		AssignedDriverID:  drvPtr,
+		DailySpendLimit:   dailyLimit,
+	}
+
+	_, err := h.useCase.RegisterCard(r.Context(), tenantID, req)
+	if err != nil {
+		h.renderError(w, http.StatusBadRequest, "Failed to register fuel card", err.Error(), user)
+		return
+	}
+
+	http.Redirect(w, r, "/fuel-cards?registered=1", http.StatusSeeOther)
+}
+
+// WebSyncTransactions triggers OMC settlement ingest and reconciliation from the web UI.
+func (h *FuelCardHandlers) WebSyncTransactions(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+
+	_, err := h.useCase.SyncTransactions(r.Context(), tenantID, fuel.SyncFuelTransactionsRequest{})
+	if err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Sync Failed", err.Error(), user)
+		return
+	}
+
+	http.Redirect(w, r, "/fuel-cards?synced=1", http.StatusSeeOther)
 }
 
 // RegisterAPIRoutes registers /api/v1/fuel-cards/* REST endpoints.

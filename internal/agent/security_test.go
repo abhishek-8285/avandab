@@ -84,7 +84,7 @@ func TestHandleChatRequiresAuth(t *testing.T) {
 }
 
 func TestBuildAgentSetFailsClosedWithoutApprovalService(t *testing.T) {
-	env := &ToolEnv{Services: nil}
+	env := &ToolEnv{DB: nil}
 	toolsByName := make(map[string]*RegisteredTool)
 	for _, tl := range RegisterTools(env) {
 		toolsByName[tl.Name] = tl

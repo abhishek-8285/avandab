@@ -105,7 +105,7 @@
                     <div id="radius-control" class="{{if .Zone}}{{if eq .Zone.Shape "polygon"}}hidden{{end}}{{end}} space-y-2.5 pt-1">
                         <div class="flex items-center justify-between">
                             <label for="radius-slider" class="text-xs font-bold text-on-surface">{{t "fl.circle_radius"}}</label>
-                            <span id="radius-value" class="text-xs font-data-mono font-bold tabular-nums px-2 py-0.5 rounded-full bg-blue-soft text-blue-strong dark:text-blue-300 border border-blue-line" data-numeric>
+                            <span id="radius-value" class="text-xs font-data-mono font-bold tabular-nums px-2 py-0.5 rounded-full bg-blue-soft text-blue-strong border border-blue-line" data-numeric>
                                 {{if .Zone}}{{.Zone.RadiusM}}{{else}}500{{end}} m
                             </span>
                         </div>
@@ -177,7 +177,7 @@
                     <div class="flex items-center gap-2">
                         <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
                         <span class="font-bold text-on-surface uppercase tracking-wider text-[11px]">{{t "fl.map_canvas"}}</span>
-                        <span id="map-mode-badge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-soft text-blue-strong dark:text-blue-300 border border-blue-line">
+                        <span id="map-mode-badge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-soft text-blue-strong border border-blue-line">
                             {{t "fl.circle_mode"}}
                         </span>
                     </div>

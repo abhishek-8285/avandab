@@ -109,6 +109,69 @@ func TestInvoiceHandlers_LineItemGSTFailClosed(t *testing.T) {
 	assert.InDelta(t, 2100.0, invTotal, 0.001, "header totals recalculated in same tx")
 }
 
+// TestInvoiceHandlers_LineItemTaxRoundedToPaise proves the live add-line path
+// persists tax rounded to paise. Pre-fix it stored taxable*cgstRate/100 raw,
+// so sub-paise tax leaked into stored lines and the printed PDF totals.
+func TestInvoiceHandlers_LineItemTaxRoundedToPaise(t *testing.T) {
+	cases := []struct {
+		name               string
+		qty, rate          string
+		wantTaxable        float64
+		wantCGST, wantSGST float64
+	}{
+		{name: "sub_paise_component_rounds_up", qty: "10", rate: "9.9995", wantTaxable: 99.995, wantCGST: 2.50, wantSGST: 2.50},
+		{name: "tiny_line_tax_rounds_to_zero", qty: "1", rate: "0.01", wantTaxable: 0.01, wantCGST: 0, wantSGST: 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			db := newInvoiceLineTestDB(t)
+			app := newMaintHandlerApp(t, db, maintAllowAuthSvc{})
+			app.Services = service.NewServices(
+				repoSQLite.NewRepository(db),
+				&config.Config{AppEnv: "testing", CookieSecret: "test-cookie-secret-32-chars-long!"},
+				slog.New(slog.NewTextHandler(io.Discard, nil)),
+				events.NewInMemoryBus(),
+			)
+			app.Invoices = &InvoiceHandlers{App: app}
+
+			_, err := db.Exec(`INSERT INTO customers (id, name, phone, gst) VALUES ('cust-round', 'Round Buyer', '+91-9000000001', '27ABCDE1234F1Z5')`)
+			require.NoError(t, err)
+			_, err = db.Exec(`INSERT INTO routes (id, tenant_id, source, destination, distance, estimated_hours, standard_fare) VALUES ('rt-round', '1', 'Mumbai', 'Pune', 150, 3, 5000)`)
+			require.NoError(t, err)
+			_, err = db.Exec(`INSERT INTO bookings (id, tenant_id, booking_number, customer_id, pickup_date, route_id, vehicle_type, price) VALUES ('bk-round', '1', 'BK-ROUND', 'cust-round', date('now','+1 day'), 'rt-round', 'truck', 20000)`)
+			require.NoError(t, err)
+			_, err = db.Exec(`INSERT INTO invoices (id, invoice_number, booking_id, customer_id, subtotal, total, tenant_id) VALUES ('inv-round', 'INV-ROUND', 'bk-round', 'cust-round', 0, 0, '1')`)
+			require.NoError(t, err)
+
+			r := chi.NewRouter()
+			r.With(func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+					ctx := shared.ContextWithTenantID(req.Context(), shared.DefaultTenant)
+					next.ServeHTTP(w, req.WithContext(ctx))
+				})
+			}).Post("/invoices/{id}/line-items", app.Invoices.AddLineItem)
+
+			// hsn_sac_master code 996511 (SAC, 5%) is pre-seeded by migration 00048.
+			form := strings.NewReader("hsn_sac_code=996511&description=Freight&quantity=" + tc.qty + "&rate=" + tc.rate)
+			req := withSession(httptest.NewRequest("POST", "/invoices/inv-round/line-items", form), "user-1", "admin")
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+			require.Equal(t, http.StatusSeeOther, w.Code, w.Body.String())
+
+			var taxable, cgstAmt, sgstAmt, igstAmt, lineTotal float64
+			err = db.QueryRow(`SELECT taxable_value, cgst_amount, sgst_amount, igst_amount, total FROM invoice_line_items WHERE invoice_id = 'inv-round'`).
+				Scan(&taxable, &cgstAmt, &sgstAmt, &igstAmt, &lineTotal)
+			require.NoError(t, err)
+			assert.InDelta(t, tc.wantTaxable, taxable, 1e-9)
+			assert.Equal(t, tc.wantCGST, cgstAmt)
+			assert.Equal(t, tc.wantSGST, sgstAmt)
+			assert.Equal(t, 0.0, igstAmt)
+			assert.Equal(t, taxable+tc.wantCGST+tc.wantSGST, lineTotal, "line total must use the rounded tax")
+		})
+	}
+}
+
 // TestInvoiceHandlers_LineItemsEditorLockState verifies the editor renders
 // read-only for locked invoices (IRN set or payment status != pending) and
 // keeps the delete form only for editable ones.

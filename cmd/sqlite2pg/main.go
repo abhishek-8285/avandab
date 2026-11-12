@@ -69,6 +69,12 @@ func main() {
 		fatal("version mismatch — sqlite=%d pg=%d", pre.SQLiteVersion, pre.PGVersion)
 	}
 	if *checkOnly {
+		// Tenant-isolation triggers hide orphan rows from pragma_foreign_key_check;
+		// the live copy would quarantine them. Fail the gate so cutover stops.
+		if pre.TenantOrphans.Blocking() {
+			fmt.Fprintln(os.Stderr, "sqlite2pg: --check failed: tenant orphans would be quarantined (see report above)")
+			os.Exit(1)
+		}
 		return
 	}
 

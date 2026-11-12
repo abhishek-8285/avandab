@@ -19,6 +19,9 @@ import {
   getDriverBalance,
   getDriverSettlements,
   requestAdvance,
+  DriverPayouts,
+  getDriverPayouts,
+  verifyPayoutAccount,
 } from '../services/driverMoney';
 import { useLanguageStore } from '../stores/languageStore';
 import { t } from '../i18n';
@@ -34,32 +37,28 @@ async function fetchPaisaData(): Promise<{
   bal: DriverBalance | null;
   stl: DriverSettlement[];
   adv: AdvanceRequest[];
-} | null> {
-  try {
-    const [bal, stl, adv] = await Promise.all([
-      getDriverBalance(),
-      getDriverSettlements(),
-      getAdvanceRequests(),
-    ]);
-    return { bal, stl, adv };
-  } catch (e: any) {
-    // Retain standard local preview state
-    return null;
-  }
+  payout: DriverPayouts | null;
+}> {
+  const [bal, stl, adv, payout] = await Promise.all([
+    getDriverBalance(),
+    getDriverSettlements(),
+    getAdvanceRequests(),
+    getDriverPayouts(),
+  ]);
+  return { bal, stl, adv, payout };
 }
 
 export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
   const { locale } = useLanguageStore();
-  const [balance, setBalance] = useState<DriverBalance | null>({
-    driver_id: 'default',
-    running_balance: 4250,
-    pending_advances: 1,
-    total_settled: 18500,
-  } as any);
+  // No preview/fabricated money: null means "not loaded yet", and a failed
+  // fetch renders an explicit error + em dash, never invented balances.
+  const [balance, setBalance] = useState<DriverBalance | null>(null);
   const [settlements, setSettlements] = useState<DriverSettlement[]>([]);
   const [advances, setAdvances] = useState<AdvanceRequest[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [payouts, setPayouts] = useState<DriverPayouts | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -67,28 +66,49 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
 
   const refresh = useCallback(async () => {
     setError(null);
-    const data = await fetchPaisaData();
-    if (data) {
-      if (data.bal !== null) {
-        setBalance(data.bal);
-      }
+    setLoading(true);
+    try {
+      const data = await fetchPaisaData();
+      setBalance(data.bal);
       setSettlements(data.stl || []);
       setAdvances(data.adv || []);
+      setPayouts(data.payout);
+    } catch {
+      // Fail honest: clear everything rather than render preview money.
+      setBalance(null);
+      setSettlements([]);
+      setAdvances([]);
+      setPayouts(null);
+      setError(t('paisa.load_error', 'Could not load wallet data. Pull to refresh.', locale));
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
+    let cancelled = false;
     void (async () => {
-      const data = await fetchPaisaData();
-      if (data) {
-        if (data.bal !== null) {
-          setBalance(data.bal);
-        }
-        setSettlements(data.stl || []);
-        setAdvances(data.adv || []);
-      }
+      // Microtask hop keeps the effect free of synchronous setState (lint
+      // rule react-hooks/set-state-in-effect); refresh still runs immediately.
+      await Promise.resolve();
+      if (!cancelled) await refresh();
     })();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [refresh]);
+
+  const startVerification = useCallback(async () => {
+    setVerifying(true);
+    try {
+      await verifyPayoutAccount();
+      await refresh();
+    } catch (e: any) {
+      Alert.alert(t('paisa.verify_failed', 'Verification could not start', locale), String(e?.message ?? e));
+    } finally {
+      setVerifying(false);
+    }
+  }, [refresh, locale]);
 
   const submitAdvance = async () => {
     const amt = Number(amount);
@@ -105,8 +125,7 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
       Alert.alert(t('paisa.btn_submit', 'Request Sent', locale), `₹${amt}`);
       await refresh();
     } catch (e: any) {
-      Alert.alert(t('paisa.btn_submit', 'Request Recorded', locale), `₹${amt}`);
-      setShowAdvanceForm(false);
+      Alert.alert(t('paisa.request_failed', 'Advance request failed', locale), String(e?.message ?? e));
     } finally {
       setSubmitting(false);
     }
@@ -121,16 +140,33 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
     processing: { bg: Colors.infoBg, text: Colors.info, label: 'PROCESSING' },
   } as const;
 
+  // Payout-rail status chips (bank disbursements, distinct from advances).
+  const payoutChip: Record<string, { bg: string; text: string; label: string }> = {
+    initiated: { bg: Colors.infoBg, text: Colors.info, label: 'INITIATED' },
+    processing: { bg: Colors.infoBg, text: Colors.info, label: 'PROCESSING' },
+    paid: { bg: Colors.primarySubtle, text: Colors.primary, label: 'PAID' },
+    failed: { bg: Colors.dangerBg, text: Colors.danger, label: 'FAILED' },
+    reversed: { bg: Colors.warningBg, text: Colors.warningText, label: 'REVERSED' },
+    cancelled: { bg: Colors.warningBg, text: Colors.warningText, label: 'CANCELLED' },
+  };
+
+  const accountStatus = payouts?.account?.verification_status;
+  const payoutBadge = !payouts || !payouts.rail_enabled
+    ? t('paisa.payouts_off', 'PAYOUTS OFF', locale)
+    : accountStatus === 'verified'
+      ? t('paisa.payout_verified', 'PAYOUT VERIFIED', locale)
+      : accountStatus
+        ? t('paisa.payout_unverified', 'PAYOUT UNVERIFIED', locale)
+        : t('paisa.no_payout_account', 'NO BANK ACCOUNT', locale);
+
   const quickAmounts = [500, 1000, 2000, 5000];
 
   return (
     <FlatList
       style={styles.screen}
       contentContainerStyle={{ paddingBottom: 90 }}
-      data={settlements.length > 0 ? settlements : [
-        { id: 'STL-9842', gross: 6500, tds: 65, net: 6435, status: 'paid' },
-        { id: 'STL-9811', gross: 4200, tds: 42, net: 4158, status: 'paid' },
-      ] as any}
+      // Real rows only: an empty wallet renders the honest empty state.
+      data={settlements}
       keyExtractor={(s) => s.id}
       ListHeaderComponent={
         <View style={{ marginBottom: Spacing.sm }}>
@@ -142,16 +178,24 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
                 <Text style={styles.walletLabel}>{t('paisa.wallet_title', 'DRIVER WALLET', locale)}</Text>
               </View>
               <View style={styles.walletBadge}>
-                <Text style={styles.walletBadgeText}>{t('paisa.wallet_badge', 'UPI / AUTO-PAY', locale)}</Text>
+                <Text style={styles.walletBadgeText}>{payoutBadge}</Text>
               </View>
             </View>
 
             <Text style={styles.walletBalanceText}>
-              {balance ? money(balance.running_balance) : '₹4,250'}
+              {balance ? money(balance.running_balance) : '—'}
             </Text>
             <Text style={styles.walletSubText}>
               {t('paisa.available_balance', 'Available Balance for Withdrawal & Bhatta', locale)}
             </Text>
+            {loading && !balance && (
+              <Text style={styles.walletSubText}>
+                {t('paisa.loading', 'Loading wallet…', locale)}
+              </Text>
+            )}
+            {error && (
+              <Text style={[styles.walletSubText, { color: Colors.danger }]}>{error}</Text>
+            )}
 
             {/* Quick Action Buttons */}
             <View style={styles.walletActionRow}>
@@ -234,6 +278,90 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
               </TouchableOpacity>
             </View>
           )}
+
+          {/* Payout rail: real bank + disbursement state, never fabricated. */}
+          <View style={styles.sectionHeaderRow}>
+            <MaterialCommunityIcons name="bank-transfer" size={16} color={Colors.textSecondary} />
+            <Text style={styles.sectionTitle}>{t('paisa.payouts', 'PAYOUTS TO BANK', locale)}</Text>
+          </View>
+
+          {payouts?.account ? (
+            <View style={styles.passbookRow}>
+              <View style={[styles.passbookIcon, { backgroundColor: Colors.infoBg }]}>
+                <MaterialCommunityIcons name="bank" size={18} color={Colors.info} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.passbookTitle}>{payouts.account.bank_name || 'Bank account'}</Text>
+                <Text style={styles.passbookSub}>
+                  {payouts.account.masked} · {payouts.account.ifsc}
+                </Text>
+              </View>
+              <View style={[styles.statusBadge, { backgroundColor: accountStatus === 'verified' ? Colors.primarySubtle : Colors.warningBg }]}>
+                <Text style={[styles.statusBadgeText, { color: accountStatus === 'verified' ? Colors.primary : Colors.warningText }]}>
+                  {accountStatus === 'verified' ? 'VERIFIED' : (accountStatus || 'UNVERIFIED').toUpperCase()}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.passbookRow}>
+              <View style={[styles.passbookIcon, { backgroundColor: Colors.primarySubtle }]}>
+                <MaterialCommunityIcons name="bank-off" size={18} color={Colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.passbookTitle}>{t('paisa.no_payout_account', 'No payout account on file', locale)}</Text>
+                <Text style={styles.passbookSub}>{t('paisa.no_payout_account_sub', 'Add a bank account in onboarding to receive payouts.', locale)}</Text>
+              </View>
+            </View>
+          )}
+
+          {payouts?.account && accountStatus !== 'verified' && payouts.rail_enabled && (
+            <TouchableOpacity
+              style={[styles.submitBtn, verifying && { opacity: 0.6 }]}
+              onPress={startVerification}
+              disabled={verifying}
+            >
+              <MaterialCommunityIcons name="shield-check" size={16} color={Colors.textOnPrimary} />
+              <Text style={styles.submitBtnText}>
+                {verifying ? '…' : t('paisa.verify_account', 'START PENNY-DROP VERIFICATION', locale)}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {payouts && !payouts.rail_enabled && (
+            <Text style={styles.passbookSub}>{t('paisa.payouts_disabled', 'Payout rail is not enabled; settlements are paid manually.', locale)}</Text>
+          )}
+
+          {payouts && payouts.payouts.length === 0 && (
+            <View style={styles.passbookRow}>
+              <View style={[styles.passbookIcon, { backgroundColor: Colors.primarySubtle }]}>
+                <MaterialCommunityIcons name="bank-transfer-out" size={18} color={Colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.passbookTitle}>{t('paisa.no_payouts', 'No payouts yet', locale)}</Text>
+                <Text style={styles.passbookSub}>{t('paisa.no_payouts_sub', 'Payouts to your bank account will appear here.', locale)}</Text>
+              </View>
+            </View>
+          )}
+
+          {(payouts?.payouts ?? []).slice(0, 5).map((p) => {
+            const chip = payoutChip[p.status] ?? payoutChip.processing;
+            return (
+              <View key={p.id} style={styles.passbookRow}>
+                <View style={[styles.passbookIcon, { backgroundColor: Colors.infoBg }]}>
+                  <MaterialCommunityIcons name="cash-fast" size={18} color={Colors.info} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.passbookTitle}>{money(p.amount)}</Text>
+                  <Text style={styles.passbookSub}>
+                    {p.utr ? `UTR ${p.utr}` : (p.failure_reason || p.initiated_at.slice(0, 10))}
+                  </Text>
+                </View>
+                <View style={[styles.statusBadge, { backgroundColor: chip.bg }]}>
+                  <Text style={[styles.statusBadgeText, { color: chip.text }]}>{chip.label}</Text>
+                </View>
+              </View>
+            );
+          })}
 
           {/* Advances List */}
           <View style={styles.sectionHeaderRow}>

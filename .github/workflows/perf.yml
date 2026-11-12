@@ -24,17 +24,19 @@ permissions:
   contents: read
 
 env:
-  GO_VERSION: '1.26'
+  GO_VERSION: '1.26.11'
 
 jobs:
   perf-sla:
-    name: Control Tower Latency SLA (isolated)
+    name: Latency SLA (isolated)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       # P95 budget for the Control Tower perf assertions. Isolated runs measure
       # ~2-8ms, so 25ms keeps the original intent with headroom.
       CONTROLTOWER_P95_MS: '25'
+      # p95 batch budget for the 10k-vehicle ingest soak (batches of 100).
+      SOAK_P95_MS: '250'
     steps:
       - uses: actions/checkout@v4
 
@@ -46,3 +48,6 @@ jobs:
 
       - name: Perf-sensitive tests in isolation (-p 1)
         run: go test -p 1 -count=1 -v ./internal/controltower/application/ -run 'TestP6_'
+
+      - name: 10k ingest soak in isolation (-p 1)
+        run: go test -p 1 -count=1 -v ./internal/telemetry/ -run 'TestIngestSoak_10kScale'

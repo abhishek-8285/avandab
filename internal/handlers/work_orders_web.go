@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"transport-app/internal/maintenance"
 	"transport-app/internal/maintenance/domain"
 	"transport-app/internal/shared"
 )
@@ -88,10 +89,7 @@ func (h *MaintenanceHandlers) ViewWorkOrder(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	user, _ := h.getUserFromContext(r)
-	vehicleLabel := ""
-	_ = h.DB.QueryRowContext(r.Context(),
-		`SELECT COALESCE(NULLIF(registration_number,''), vehicle_number, id) FROM vehicles WHERE id = $1`,
-		wo.VehicleID).Scan(&vehicleLabel)
+	vehicleLabel := maintenance.VehicleLabel(r.Context(), h.DB, wo.VehicleID)
 	h.renderPage(w, r, "maintenance_work_order.html", PageData{
 		Title: "Job Card",
 		User:  user,

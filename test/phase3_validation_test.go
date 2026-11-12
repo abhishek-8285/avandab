@@ -117,6 +117,16 @@ func TestPhase3_3A_MarkerStatesAndPriority(t *testing.T) {
 		recentTs, recentTs, staleTs, recentTs)
 	require.NoError(t, err)
 
+	_, err = db.Exec(`INSERT INTO vehicle_latest_position
+		(vehicle_id, tenant_id, device_time, latitude, longitude, speed, odometer, ignition)
+		VALUES
+		('v-run', '1', ?, 18.5, 73.8, 60.0, 1000.0, 1),
+		('v-stop', '1', ?, 18.5, 73.8, 0.0, 1000.0, 0),
+		('v-stale', '1', ?, 18.5, 73.8, 50.0, 1000.0, 1),
+		('v-maint', '1', ?, 18.5, 73.8, 80.0, 1000.0, 1)`,
+		recentTs, recentTs, staleTs, recentTs)
+	require.NoError(t, err)
+
 	liveStore := telemetry.NewLiveStore(db, 15*time.Minute)
 	vehicles, err := liveStore.Live(shared.ContextWithTenantID(context.Background(), "1"), "1", "", time.Now())
 	require.NoError(t, err)

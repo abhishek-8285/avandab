@@ -57,11 +57,13 @@ func TestRegistry_Get(t *testing.T) {
 	if Get("mock").Name() != "mock" {
 		t.Fatalf("mock failed")
 	}
-	if Get("").Name() != "mock" {
-		t.Fatalf("empty should fallback to mock")
+	// Unknown provider fails loud on solve
+	in := OptimizationInput{
+		Shipments: []Shipment{{ID: "s1", Latitude: 19.0760, Longitude: 72.8777}},
+		Vehicles:  []Vehicle{{ID: "v1", StartLat: 19.0760, StartLng: 72.8777, Capacity: 10}},
 	}
-	if Get("unknown-xyz").Name() != "mock" {
-		t.Fatalf("unknown should fallback to mock")
+	if _, err := Get("unknown-xyz").Solve(context.Background(), in); err == nil {
+		t.Fatalf("unknown should fail on Solve")
 	}
 	// OSRM variants return osrm-* but still implement Optimizer
 	if Get("osrm-public").Name() == "" {
@@ -85,21 +87,5 @@ func TestMockOptimizer_Deterministic(t *testing.T) {
 	out2, _ := m.Solve(context.Background(), in)
 	if out1.TotalKM != out2.TotalKM {
 		t.Fatalf("not deterministic")
-	}
-}
-
-func TestOSRMClient_Fallback(t *testing.T) {
-	// Invalid URL should fallback to mock logic without error
-	o := &OSRMClient{BaseURL: "http://127.0.0.1:1"} // no server
-	in := OptimizationInput{
-		Shipments: []Shipment{{ID: "s1", Latitude: 19.0760, Longitude: 72.8777}},
-		Vehicles:  []Vehicle{{ID: "v1", StartLat: 19.0760, StartLng: 72.8777}},
-	}
-	out, err := o.Solve(context.Background(), in)
-	if err != nil {
-		t.Fatalf("OSRM fallback should not error: %v", err)
-	}
-	if len(out.Routes) == 0 {
-		t.Fatalf("expected fallback routes")
 	}
 }

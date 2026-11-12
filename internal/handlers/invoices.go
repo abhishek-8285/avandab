@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 
 	"transport-app/internal/domain"
 	"transport-app/internal/integration"
@@ -39,6 +38,9 @@ type InvoiceHandlers struct {
 	getUC      *invoiceapp.GetInvoiceUseCase
 	listUC     *invoiceapp.ListInvoicesUseCase
 	generateUC *invoiceapp.GenerateInvoiceUseCase
+	docQ       *invoiceapp.InvoiceDocumentQueries
+	lineItems  *invoiceapp.LineItemService
+	irnUC      *invoiceapp.GenerateIRNUseCase
 }
 
 func (h *InvoiceHandlers) init() {
@@ -54,6 +56,11 @@ func (h *InvoiceHandlers) init() {
 		h.getUC = invoiceapp.NewGetInvoiceUseCase(uowImpl)
 		h.listUC = invoiceapp.NewListInvoicesUseCase(uowImpl)
 		h.generateUC = invoiceapp.NewGenerateInvoiceUseCase(uowImpl, idGenImpl, clockImpl)
+	}
+	if h.docQ == nil {
+		h.docQ = invoiceapp.NewInvoiceDocumentQueries(h.DB)
+		h.lineItems = invoiceapp.NewLineItemService(h.DB)
+		h.irnUC = invoiceapp.NewGenerateIRNUseCase(h.DB)
 	}
 }
 
@@ -205,20 +212,18 @@ func (h *InvoiceHandlers) invoiceViewExtra(r *http.Request, invoiceID string, in
 	custPhone := ""
 	cust, errCust := h.Services.Customers.GetCustomer(r.Context(), domain.CustomerID(invoice.CustomerID))
 	if errCust == nil {
-		custPhone = cleanPhoneForWhatsApp(cust.Phone)
+		custPhone = invoiceapp.CleanPhoneForWhatsApp(cust.Phone)
 	}
 
 	dueDateStr := ""
-	var d sql.NullString
 	tenantID := shared.TenantIDFromContext(r.Context())
-	if err := h.DB.QueryRowContext(r.Context(), `SELECT COALESCE(CAST(due_date AS TEXT), '') FROM invoices WHERE id = $1 AND tenant_id = $2`, invoiceID, string(tenantID)).Scan(&d); err == nil && d.String != "" {
-		if t, err := time.Parse("2006-01-02 15:04:05", d.String); err == nil {
+	if raw, err := h.docQ.DueDate(r.Context(), invoiceapp.InvoiceDocumentKey{InvoiceID: invoiceID, TenantID: tenantID}); err == nil && raw != "" {
+		if t, err := time.Parse("2006-01-02 15:04:05", raw); err == nil {
 			dueDateStr = t.Format("02 Jan 2006")
-		} else if len(d.String) >= 10 {
-			dueDateStr = d.String[:10]
+		} else if len(raw) >= 10 {
+			dueDateStr = raw[:10]
 		}
 	}
-
 	scheme := "http"
 	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
 		scheme = "https"
@@ -487,154 +492,70 @@ func (h *InvoiceHandlers) buildInvoicePDFData(ctx context.Context,
 	}, nil
 }
 
-// loadInvoiceExtras reads due_date + ewb_number straight from the
-// invoices table (not surfaced on the read-model DTO).
+// loadInvoiceExtras formats due_date + ewb_number for the invoice PDF.
 func (h *InvoiceHandlers) loadInvoiceExtras(ctx context.Context, invoiceID string) (dueDate, ewb string) {
-	var d sql.NullString
-	var e sql.NullString
 	tenantID := shared.TenantIDFromContext(ctx)
-	if err := h.DB.QueryRowContext(ctx,
-		`SELECT COALESCE(CAST(due_date AS TEXT), ''), COALESCE(ewb_number, '')
-		 FROM invoices WHERE id = $1 AND tenant_id = $2`, invoiceID, string(tenantID)).Scan(&d, &e); err != nil {
+	dueRaw, ewbNumber, err := h.docQ.Extras(ctx, invoiceapp.InvoiceDocumentKey{InvoiceID: invoiceID, TenantID: tenantID})
+	if err != nil {
 		slog.Warn("invoice extras lookup failed", "invoice_id", invoiceID, "error", err)
 		return "", ""
 	}
-	if t, err := time.Parse("2006-01-02 15:04:05.999999999-07:00", d.String); err == nil && d.String != "" {
-		return t.Format("02 Jan 2006"), e.String
+	if t, err := time.Parse("2006-01-02 15:04:05.999999999-07:00", dueRaw); err == nil && dueRaw != "" {
+		return t.Format("02 Jan 2006"), ewbNumber
 	}
-	if d.String != "" {
-		return d.String[:10], e.String // ISO date prefix fallback
+	if dueRaw != "" {
+		return dueRaw[:10], ewbNumber // ISO date prefix fallback
 	}
-	return "", e.String
+	return "", ewbNumber
 }
 
-// companyProfile mirrors the tenant's company_settings row.
-type companyProfile struct {
-	Name      string
-	Address   string
-	GSTNumber string
-	PanNumber string
-	StateCode string
-	Phone     string
-	Email     string
-}
-
-func (p companyProfile) TaxTier() int {
-	if p.GSTNumber != "" && validGSTINFormat(p.GSTNumber) {
-		return 1
-	}
-	if p.PanNumber != "" && validPANFormat(p.PanNumber) {
-		return 2
-	}
-	return 3
-}
-
-func (p companyProfile) LegalTitle() string {
-	switch p.TaxTier() {
-	case 1:
-		return "TAX INVOICE"
-	case 2:
-		return "BILL OF SUPPLY / FREIGHT BILL"
-	default:
-		return "CONSIGNMENT FREIGHT BILL"
-	}
-}
-
-// tenantProfileColumns selects the seller-block columns shared by the
-// per-tenant profile table and the global singleton (same column order).
-const tenantProfileColumns = `COALESCE(company_name, ''), COALESCE(address, ''),
-       COALESCE(gst_number, ''), COALESCE(pan_number, ''), COALESCE(state_code, '27'),
-       COALESCE(phone, ''), COALESCE(email, '')`
-
-func (h *InvoiceHandlers) scanCompanyProfile(row *sql.Row) (companyProfile, error) {
-	var p companyProfile
-	err := row.Scan(&p.Name, &p.Address, &p.GSTNumber, &p.PanNumber, &p.StateCode,
-		&p.Phone, &p.Email)
-	return p, err
-}
-
-func finalizeCompanyProfile(p companyProfile) companyProfile {
-	if p.StateCode == "" {
-		p.StateCode = "27"
-	}
-	if p.GSTNumber != "" && len(p.GSTNumber) == 15 && p.PanNumber == "" {
-		p.PanNumber = p.GSTNumber[2:12]
-	}
-	return p
-}
-
-// loadCompanyProfile reads the tenant's profile for the seller block. The
-// global singleton is the fallback for the bootstrap tenant and tenant-less
-// contexts only; rowless org tenants render blank (placeholder) instead of
-// another org's identity.
-// Name is empty when unset — the renderer prints a placeholder rather
-// than any hardcoded company name.
-func (h *InvoiceHandlers) loadCompanyProfile(ctx context.Context) companyProfile {
-	if tid := string(shared.TenantIDFromContext(ctx)); tid != "" && tid != string(shared.DefaultTenant) { //nolint:tenant-default // bootstrap-vs-org identity branching, not a data fallback
-		p, err := h.scanCompanyProfile(h.DB.QueryRowContext(ctx, `
-			SELECT `+tenantProfileColumns+`
-			FROM tenant_company_profiles WHERE tenant_id = ?`, tid))
-		if err == nil {
-			return finalizeCompanyProfile(p)
-		}
-		if !errors.Is(err, sql.ErrNoRows) {
-			slog.Warn("tenant company profile unavailable for invoice PDF", "error", err)
-		}
-		return finalizeCompanyProfile(companyProfile{})
-	}
-	p, err := h.scanCompanyProfile(h.DB.QueryRowContext(ctx,
-		`SELECT `+tenantProfileColumns+` FROM company_settings WHERE id = 1`))
-	if err != nil {
-		slog.Warn("company_settings unavailable for invoice PDF", "error", err)
-	}
-	return finalizeCompanyProfile(p)
+// loadCompanyProfile reads the tenant's seller profile for the invoice
+// document (tenant profile first, bootstrap singleton fallback).
+func (h *InvoiceHandlers) loadCompanyProfile(ctx context.Context) invoiceapp.CompanyProfile {
+	return h.docQ.CompanyProfile(ctx, shared.TenantIDFromContext(ctx))
 }
 
 // loadCustomerBillTo reads the buyer identity for the Bill To block.
-func (h *InvoiceHandlers) loadCustomerBillTo(ctx context.Context, customerID string) (name, gstin, address string) {
-	tenantID := shared.TenantIDFromContext(ctx)
-	err := h.DB.QueryRowContext(ctx, `
-		SELECT name, COALESCE(gst, ''), COALESCE(address, '')
-		FROM customers WHERE id = $1 AND tenant_id = $2`, customerID, string(tenantID)).
-		Scan(&name, &gstin, &address)
+func (h *InvoiceHandlers) loadCustomerBillTo(ctx context.Context, customerID string) (name, gstNumber, address string) {
+	name, gstNumber, address, err := h.docQ.CustomerBillTo(ctx, shared.TenantIDFromContext(ctx), customerID)
 	if err != nil {
 		slog.Warn("customer lookup failed for invoice PDF", "customer_id", customerID, "error", err)
 	}
-	return name, gstin, address
+	return name, gstNumber, address
 }
 
 // loadLineItems reads the itemized rows with per-line GST data.
 func (h *InvoiceHandlers) loadLineItems(ctx context.Context, invoiceID string) []LineItemRecord {
-	tenantID := shared.TenantIDFromContext(ctx)
-	rows, err := h.DB.QueryContext(ctx, `
-		SELECT id, invoice_id, COALESCE(hsn_sac_code, ''), description, COALESCE(unit, 'NOS'),
-		       quantity, COALESCE(rate, unit_price), COALESCE(taxable_value, amount),
-		       COALESCE(cgst_rate, 0), COALESCE(sgst_rate, 0), COALESCE(igst_rate, 0),
-		       COALESCE(cgst_amount, 0), COALESCE(sgst_amount, 0), COALESCE(igst_amount, 0),
-		       COALESCE(total, amount)
-		FROM invoice_line_items
-		WHERE invoice_id = $1 AND tenant_id = $2
-		ORDER BY created_at ASC
-	`, invoiceID, string(tenantID))
+	items, err := h.docQ.InvoiceLineItems(ctx, invoiceapp.InvoiceDocumentKey{InvoiceID: invoiceID, TenantID: shared.TenantIDFromContext(ctx)})
 	if err != nil {
 		slog.Warn("line items query failed for invoice PDF", "invoice_id", invoiceID, "error", err)
 		return nil
 	}
-	defer func() { _ = rows.Close() }()
-	var items []LineItemRecord
-	for rows.Next() {
-		var it LineItemRecord
-		if err := rows.Scan(
-			&it.ID, &it.InvoiceID, &it.HSNSACCode, &it.Description, &it.Unit,
-			&it.Quantity, &it.Rate, &it.TaxableValue,
-			&it.CGSTRate, &it.SGSTRate, &it.IGSTRate,
-			&it.CGSTAmount, &it.SGSTAmount, &it.IGSTAmount,
-			&it.Total,
-		); err == nil {
-			items = append(items, it)
-		}
+	var records []LineItemRecord
+	for _, it := range items {
+		records = append(records, LineItemRecord{
+			ID: it.ID, InvoiceID: it.InvoiceID, HSNSACCode: it.HSNSACCode,
+			Description: it.Description, Unit: it.Unit, Quantity: it.Quantity,
+			Rate: it.Rate, TaxableValue: it.TaxableValue,
+			CGSTRate: it.CGSTRate, SGSTRate: it.SGSTRate, IGSTRate: it.IGSTRate,
+			CGSTAmount: it.CGSTAmount, SGSTAmount: it.SGSTAmount, IGSTAmount: it.IGSTAmount,
+			Total: it.Total,
+		})
 	}
-	return items
+	return records
+}
+
+// loadHSNRecords lists the active HSN/SAC master rows for the editor datalist.
+func (h *InvoiceHandlers) loadHSNRecords(ctx context.Context) []HSNSACRecord {
+	records, err := h.docQ.ActiveHSNRecords(ctx)
+	if err != nil {
+		return nil
+	}
+	var out []HSNSACRecord
+	for _, rec := range records {
+		out = append(out, HSNSACRecord{Code: rec.Code, Description: rec.Description, Type: rec.Type, Rate: rec.Rate})
+	}
+	return out
 }
 
 func sanitizeHeaderFilename(name string) string {
@@ -714,19 +635,7 @@ func (h *InvoiceHandlers) LineItemsEditor(w http.ResponseWriter, r *http.Request
 
 	items := h.loadLineItems(r.Context(), idParam)
 
-	// Fetch HSN master for datalist
-	var hsnList []HSNSACRecord
-	hRows, err := h.DB.QueryContext(r.Context(), `SELECT code, description, type, rate FROM hsn_sac_master WHERE active = 1 ORDER BY code ASC`)
-	if err == nil {
-		defer hRows.Close()
-		for hRows.Next() {
-			var hrec HSNSACRecord
-			if err := hRows.Scan(&hrec.Code, &hrec.Description, &hrec.Type, &hrec.Rate); err == nil {
-				hsnList = append(hsnList, hrec)
-			}
-		}
-	}
-
+	hsnList := h.loadHSNRecords(r.Context())
 	// Calculate totals
 	var sumTaxable, sumCGST, sumSGST, sumIGST, sumTotal float64
 	for _, it := range items {
@@ -802,61 +711,29 @@ func (h *InvoiceHandlers) AddLineItem(w http.ResponseWriter, r *http.Request) {
 		qty = 1
 	}
 	rate, _ := strconv.ParseFloat(r.FormValue("rate"), 64)
-
 	if rate <= 0 {
 		rate = 1000.0
 	}
 
-	_, cgstRate, sgstRate, igstRate, err := h.resolveLineGST(r.Context(), h.DB, tenantID, invoiceID, hsnCode)
+	err := h.lineItems.AddLineItem(r.Context(), invoiceapp.AddLineItemCommand{
+		TenantID:    tenantID,
+		InvoiceID:   invoiceID,
+		HSNSACCode:  hsnCode,
+		Description: description,
+		Unit:        unit,
+		Quantity:    qty,
+		Rate:        rate,
+	})
 	if err != nil {
-		if errors.Is(err, errUnknownHSN) {
+		if errors.Is(err, invoiceapp.ErrUnknownHSN) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
-		} else {
-			slog.Error("invoice line GST resolution failed", "invoice_id", invoiceID, "error", err)
-			http.Error(w, "Failed to determine tax configuration", http.StatusInternalServerError)
+			return
 		}
-		return
-	}
-
-	taxable := qty * rate
-	var cgstAmt, sgstAmt, igstAmt float64
-	if cgstRate > 0 || sgstRate > 0 {
-		cgstAmt = taxable * (cgstRate / 100.0)
-		sgstAmt = taxable * (sgstRate / 100.0)
-	} else if igstRate > 0 {
-		igstAmt = taxable * (igstRate / 100.0)
-	}
-	lineTotal := taxable + cgstAmt + sgstAmt + igstAmt
-
-	lineID := uuid.NewString()
-
-	tx, err := h.DB.BeginTx(r.Context(), nil)
-	if err != nil {
-		http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
-		return
-	}
-	defer tx.Rollback() //nolint:errcheck // no-op after commit
-
-	_, err = tx.ExecContext(r.Context(), `
-		INSERT INTO invoice_line_items (
-			id, tenant_id, invoice_id, line_type, description, quantity, unit_price, amount,
-			hsn_sac_code, unit, rate, taxable_value, cgst_rate, sgst_rate, igst_rate,
-			cgst_amount, sgst_amount, igst_amount, total, created_at
-		) VALUES ($1, $2, $3, 'freight', $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, CURRENT_TIMESTAMP)
-	`, lineID, string(tenantID), invoiceID, description, qty, rate, taxable,
-		hsnCode, unit, rate, taxable, cgstRate, sgstRate, igstRate,
-		cgstAmt, sgstAmt, igstAmt, lineTotal)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to add line item: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	if !h.recalculateInvoiceTotalsTx(r.Context(), tx, tenantID, invoiceID) {
-		http.Error(w, "Failed to recalculate invoice totals", http.StatusInternalServerError)
-		return
-	}
-	if err := tx.Commit(); err != nil {
-		http.Error(w, fmt.Sprintf("Failed to save line item: %v", err), http.StatusInternalServerError)
+		if writeLineItemFailure(w, err) {
+			return
+		}
+		slog.Error("invoice line GST resolution failed", "invoice_id", invoiceID, "error", err)
+		http.Error(w, "Failed to determine tax configuration", http.StatusInternalServerError)
 		return
 	}
 	http.Redirect(w, r, fmt.Sprintf("/invoices/%s/line-items", invoiceID), http.StatusSeeOther)
@@ -885,54 +762,26 @@ func (h *InvoiceHandlers) EditLineItem(w http.ResponseWriter, r *http.Request) {
 	}
 	rate, _ := strconv.ParseFloat(r.FormValue("rate"), 64)
 
-	_, cgstRate, sgstRate, igstRate, err := h.resolveLineGST(r.Context(), h.DB, tenantID, invoiceID, hsnCode)
+	err := h.lineItems.EditLineItem(r.Context(), invoiceapp.EditLineItemCommand{
+		TenantID:    tenantID,
+		InvoiceID:   invoiceID,
+		LineID:      lineID,
+		HSNSACCode:  hsnCode,
+		Description: description,
+		Unit:        unit,
+		Quantity:    qty,
+		Rate:        rate,
+	})
 	if err != nil {
-		if errors.Is(err, errUnknownHSN) {
+		if errors.Is(err, invoiceapp.ErrUnknownHSN) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
-		} else {
-			slog.Error("invoice line GST resolution failed", "invoice_id", invoiceID, "error", err)
-			http.Error(w, "Failed to determine tax configuration", http.StatusInternalServerError)
+			return
 		}
-		return
-	}
-
-	taxable := qty * rate
-	var cgstAmt, sgstAmt, igstAmt float64
-	if cgstRate > 0 || sgstRate > 0 {
-		cgstAmt = taxable * (cgstRate / 100.0)
-		sgstAmt = taxable * (sgstRate / 100.0)
-	} else if igstRate > 0 {
-		igstAmt = taxable * (igstRate / 100.0)
-	}
-	lineTotal := taxable + cgstAmt + sgstAmt + igstAmt
-
-	tx, err := h.DB.BeginTx(r.Context(), nil)
-	if err != nil {
-		http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
-		return
-	}
-	defer tx.Rollback() //nolint:errcheck // no-op after commit
-
-	_, err = tx.ExecContext(r.Context(), `
-		UPDATE invoice_line_items
-		SET hsn_sac_code = $1, description = $2, unit = $3, quantity = $4, rate = $5, unit_price = $6,
-		    taxable_value = $7, amount = $8, cgst_rate = $9, sgst_rate = $10, igst_rate = $11,
-		    cgst_amount = $12, sgst_amount = $13, igst_amount = $14, total = $15
-		WHERE id = $16 AND invoice_id = $17 AND tenant_id = $18
-	`, hsnCode, description, unit, qty, rate, rate, taxable, taxable,
-		cgstRate, sgstRate, igstRate, cgstAmt, sgstAmt, igstAmt, lineTotal,
-		lineID, invoiceID, string(tenantID))
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to update line item: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	if !h.recalculateInvoiceTotalsTx(r.Context(), tx, tenantID, invoiceID) {
-		http.Error(w, "Failed to recalculate invoice totals", http.StatusInternalServerError)
-		return
-	}
-	if err := tx.Commit(); err != nil {
-		http.Error(w, fmt.Sprintf("Failed to save line item: %v", err), http.StatusInternalServerError)
+		if writeLineItemFailure(w, err) {
+			return
+		}
+		slog.Error("invoice line GST resolution failed", "invoice_id", invoiceID, "error", err)
+		http.Error(w, "Failed to determine tax configuration", http.StatusInternalServerError)
 		return
 	}
 	http.Redirect(w, r, fmt.Sprintf("/invoices/%s/line-items", invoiceID), http.StatusSeeOther)
@@ -953,108 +802,45 @@ func (h *InvoiceHandlers) DeleteLineItem(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	tx, err := h.DB.BeginTx(r.Context(), nil)
+	err := h.lineItems.DeleteLineItem(r.Context(), invoiceapp.DeleteLineItemCommand{
+		TenantID:  tenantID,
+		InvoiceID: invoiceID,
+		LineID:    lineID,
+	})
 	if err != nil {
-		http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
-		return
-	}
-	defer tx.Rollback() //nolint:errcheck // no-op after commit
-
-	_, err = tx.ExecContext(r.Context(), `DELETE FROM invoice_line_items WHERE id = $1 AND invoice_id = $2 AND tenant_id = $3`, lineID, invoiceID, string(tenantID))
-	if err != nil {
+		if writeLineItemFailure(w, err) {
+			return
+		}
 		http.Error(w, "Failed to delete line item", http.StatusInternalServerError)
-		return
-	}
-
-	if !h.recalculateInvoiceTotalsTx(r.Context(), tx, tenantID, invoiceID) {
-		http.Error(w, "Failed to recalculate invoice totals", http.StatusInternalServerError)
-		return
-	}
-	if err := tx.Commit(); err != nil {
-		http.Error(w, fmt.Sprintf("Failed to save line item: %v", err), http.StatusInternalServerError)
 		return
 	}
 	http.Redirect(w, r, fmt.Sprintf("/invoices/%s/line-items", invoiceID), http.StatusSeeOther)
 }
 
-// dbtx is satisfied by both *sql.DB and *sql.Tx.
-type dbtx interface {
-	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
-	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
-}
-
-var errUnknownHSN = errors.New("unknown HSN/SAC code")
-
-// resolveLineGST determines the GST rate and intra/inter-state split for a
-// new or edited invoice line item. It FAILS CLOSED: an unknown HSN code or
-// an unreadable tax configuration is an error — never a silent default that
-// could misfile taxes on a legal invoice. Every lookup is tenant-scoped.
-func (h *InvoiceHandlers) resolveLineGST(ctx context.Context, q dbtx, tenantID shared.TenantID, invoiceID, hsnCode string) (gstRate, cgstRate, sgstRate, igstRate float64, err error) {
-	gstRate = 18.0 // default only when no HSN code supplied
-	if hsnCode != "" {
-		switch err := q.QueryRowContext(ctx, `SELECT rate FROM hsn_sac_master WHERE code = $1`, hsnCode).Scan(&gstRate); {
-		case errors.Is(err, sql.ErrNoRows):
-			return 0, 0, 0, 0, fmt.Errorf("%w %q", errUnknownHSN, hsnCode)
-		case err != nil:
-			return 0, 0, 0, 0, fmt.Errorf("lookup HSN rate: %w", err)
-		}
-	}
-
-	var custGST string
-	var compState sql.NullString
-	err = q.QueryRowContext(ctx, `
-		SELECT COALESCE(c.gst, ''), COALESCE(
-			(SELECT state_code FROM tenant_company_profiles WHERE tenant_id = inv.tenant_id),
-			CASE WHEN inv.tenant_id IS NULL OR inv.tenant_id IN ('', '1')
-				THEN (SELECT state_code FROM company_settings WHERE id = 1) END, '27')
-		FROM invoices inv
-		JOIN customers c ON inv.customer_id = c.id
-		WHERE inv.id = $1 AND inv.tenant_id = $2
-	`, invoiceID, string(tenantID)).Scan(&custGST, &compState)
-	if err != nil {
-		return 0, 0, 0, 0, fmt.Errorf("lookup invoice tax context: %w", err)
-	}
-
-	supplierState := "27"
-	if compState.Valid && compState.String != "" {
-		supplierState = compState.String
-	}
-	custState := ""
-	if len(custGST) >= 2 {
-		custState = custGST[:2]
-	}
-	if custState == "" || custState == supplierState {
-		cgstRate = gstRate / 2.0
-		sgstRate = gstRate / 2.0
-	} else {
-		igstRate = gstRate
-	}
-	return gstRate, cgstRate, sgstRate, igstRate, nil
-}
-
-// recalculateInvoiceTotalsTx re-aggregates line items and updates the invoice
-// header inside the caller's transaction. Every statement is tenant-scoped.
-// Returns false when the recalculation failed (tx should be rolled back).
-func (h *InvoiceHandlers) recalculateInvoiceTotalsTx(ctx context.Context, q dbtx, tenantID shared.TenantID, invoiceID string) bool {
-	var sumTaxable, sumCGST, sumSGST, sumIGST, sumTotal float64
-	err := q.QueryRowContext(ctx, `
-		SELECT COALESCE(SUM(taxable_value), 0), COALESCE(SUM(cgst_amount), 0),
-		       COALESCE(SUM(sgst_amount), 0), COALESCE(SUM(igst_amount), 0),
-		       COALESCE(SUM(total), 0)
-		FROM invoice_line_items
-		WHERE invoice_id = $1 AND tenant_id = $2
-	`, invoiceID, string(tenantID)).Scan(&sumTaxable, &sumCGST, &sumSGST, &sumIGST, &sumTotal)
-	if err != nil {
+// writeLineItemFailure maps a line-item write stage failure to the legacy
+// HTTP status/message pair and reports whether it handled the error.
+func writeLineItemFailure(w http.ResponseWriter, err error) bool {
+	var writeErr *invoiceapp.LineItemWriteError
+	if !errors.As(err, &writeErr) {
 		return false
 	}
-
-	totalTax := sumCGST + sumSGST + sumIGST
-	_, err = q.ExecContext(ctx, `
-		UPDATE invoices
-		SET subtotal = $1, tax = $2, cgst = $3, sgst = $4, igst = $5, total = $6, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $7 AND tenant_id = $8
-	`, sumTaxable, totalTax, sumCGST, sumSGST, sumIGST, sumTotal, invoiceID, string(tenantID))
-	return err == nil
+	switch writeErr.Stage {
+	case invoiceapp.LineItemStageTxBegin:
+		http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
+	case invoiceapp.LineItemStageInsert:
+		http.Error(w, fmt.Sprintf("Failed to add line item: %v", writeErr.Err), http.StatusInternalServerError)
+	case invoiceapp.LineItemStageUpdate:
+		http.Error(w, fmt.Sprintf("Failed to update line item: %v", writeErr.Err), http.StatusInternalServerError)
+	case invoiceapp.LineItemStageDelete:
+		http.Error(w, "Failed to delete line item", http.StatusInternalServerError)
+	case invoiceapp.LineItemStageRecalculate:
+		http.Error(w, "Failed to recalculate invoice totals", http.StatusInternalServerError)
+	case invoiceapp.LineItemStageCommit:
+		http.Error(w, fmt.Sprintf("Failed to save line item: %v", writeErr.Err), http.StatusInternalServerError)
+	default:
+		http.Error(w, "Failed to save line item", http.StatusInternalServerError)
+	}
+	return true
 }
 
 func (h *InvoiceHandlers) GenerateIRN(w http.ResponseWriter, r *http.Request) {
@@ -1062,125 +848,33 @@ func (h *InvoiceHandlers) GenerateIRN(w http.ResponseWriter, r *http.Request) {
 	invoiceID := chi.URLParam(r, "id")
 	tenantID := shared.TenantIDFromContext(r.Context())
 
-	// 1. Fetch invoice and status
-	var invNum, custID, invStatus, existingIRN, invDate sql.NullString
-	var totalVal, cgstVal, sgstVal, igstVal float64
-	err := h.DB.QueryRowContext(r.Context(), `
-		SELECT invoice_number, customer_id, status, irn, substr(CAST(created_at AS TEXT), 1, 10), total, cgst, sgst, igst
-		FROM invoices
-		WHERE id = $1 AND tenant_id = $2
-	`, invoiceID, string(tenantID)).Scan(&invNum, &custID, &invStatus, &existingIRN, &invDate, &totalVal, &cgstVal, &sgstVal, &igstVal)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			http.Error(w, "Invoice not found", http.StatusNotFound)
-			return
-		}
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-
-	// 2. Block on paid / partially paid invoices per Spec 07 §5.3
-	statusStr := strings.ToLower(invStatus.String)
-	if statusStr == "paid" || statusStr == "partially_paid" {
-		http.Error(w, "Cannot generate IRN for paid/partially paid invoices", http.StatusConflict)
-		return
-	}
-
-	// 3. Block if IRN already generated
-	if existingIRN.Valid && existingIRN.String != "" {
-		http.Error(w, "IRN already generated for this invoice", http.StatusConflict)
-		return
-	}
-
-	// 4. Fetch customer & company GSTIN (tenant profile first; the global
-	// singleton is the fallback for the bootstrap tenant and tenant-less
-	// contexts only, never for rowless org tenants).
-	var custGST string
-	var compGST sql.NullString
-	_ = h.DB.QueryRowContext(r.Context(), `
-		SELECT COALESCE(c.gst, ''), COALESCE(
-			(SELECT gst_number FROM tenant_company_profiles WHERE tenant_id = $1),
-			CASE WHEN $2 IN ('', '1') THEN (SELECT gst_number FROM company_settings WHERE id = 1) END)
-		FROM customers c
-		WHERE c.id = $3 AND c.tenant_id = $4
-	`, string(tenantID), string(tenantID), custID.String, string(tenantID)).Scan(&custGST, &compGST)
-
-	supplierGST := "27AABCU9603R1ZX"
-	if compGST.Valid && compGST.String != "" {
-		supplierGST = compGST.String
-	}
-
-	// 5. Fetch line items
-	rows, err := h.DB.QueryContext(r.Context(), `
-		SELECT COALESCE(hsn_sac_code, '996511'), description, COALESCE(unit, 'NOS'),
-		       quantity, COALESCE(rate, unit_price), COALESCE(taxable_value, amount),
-		       COALESCE(cgst_rate, 0), COALESCE(sgst_rate, 0), COALESCE(igst_rate, 0),
-		       COALESCE(cgst_amount, 0), COALESCE(sgst_amount, 0), COALESCE(igst_amount, 0),
-		       COALESCE(total, amount)
-		FROM invoice_line_items
-		WHERE invoice_id = $1 AND tenant_id = $2
-	`, invoiceID, string(tenantID))
-	var lineViews []gstn.LineItemView
-	if err == nil {
-		defer func() { _ = rows.Close() }()
-		for rows.Next() {
-			var lv gstn.LineItemView
-			if err := rows.Scan(
-				&lv.HSNSACCode, &lv.Description, &lv.Unit,
-				&lv.Quantity, &lv.Rate, &lv.TaxableValue,
-				&lv.CGSTRate, &lv.SGSTRate, &lv.IGSTRate,
-				&lv.CGSTAmount, &lv.SGSTAmount, &lv.IGSTAmount,
-				&lv.Total,
-			); err == nil {
-				lineViews = append(lineViews, lv)
-			}
-		}
-	}
-
-	// Fallback single line item if none entered
-	if len(lineViews) == 0 {
-		lineViews = append(lineViews, gstn.LineItemView{
-			HSNSACCode:   "996511",
-			Description:  "Freight Services",
-			Unit:         "NOS",
-			Quantity:     1,
-			Rate:         totalVal,
-			TaxableValue: totalVal,
-			Total:        totalVal,
-		})
-	}
-
-	invView := gstn.InvoiceView{
-		InvoiceID:      invoiceID,
-		InvoiceNumber:  invNum.String,
-		InvoiceDate:    invDate.String,
-		SupplierGSTIN:  supplierGST,
-		RecipientGSTIN: custGST,
-		TotalValue:     totalVal,
-		CGST:           cgstVal,
-		SGST:           sgstVal,
-		IGST:           igstVal,
-		LineItems:      lineViews,
-	}
-
 	// Use factory to respect INTEGRATION_GSTN_USE_MOCK && APIKey (Spec 21 §5)
 	integCfg := integration.LoadConfig()
 	integCfg.GSTN.Enabled = true
 	client := gstn.NewClient(integCfg.GSTN)
-	res, err := client.GenerateIRN(r.Context(), invView)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("GSTN IRN generation failed: %v", err), http.StatusBadGateway)
-		return
-	}
 
-	// 6. Update invoices row
-	_, err = h.DB.ExecContext(r.Context(), `
-		UPDATE invoices
-		SET irn = $1, irn_ack_no = $2, irn_ack_date = $3, signed_qr = $4, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $5 AND tenant_id = $6
-	`, res.IRN, res.AckNo, res.AckDate, res.SignedQR, invoiceID, string(tenantID))
+	res, err := h.irnUC.Execute(r.Context(), invoiceapp.GenerateIRNCommand{
+		TenantID:  tenantID,
+		InvoiceID: invoiceID,
+		Generator: client,
+	})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to save IRN: %v", err), http.StatusInternalServerError)
+		var loadErr *invoiceapp.IRNQueryError
+		var storeErr *invoiceapp.IRNStoreError
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			http.Error(w, "Invoice not found", http.StatusNotFound)
+		case errors.Is(err, invoiceapp.ErrIRNPaymentStatus):
+			http.Error(w, err.Error(), http.StatusConflict)
+		case errors.Is(err, invoiceapp.ErrIRNAlreadyGenerated):
+			http.Error(w, err.Error(), http.StatusConflict)
+		case errors.As(err, &loadErr):
+			http.Error(w, "Database error", http.StatusInternalServerError)
+		case errors.As(err, &storeErr):
+			http.Error(w, fmt.Sprintf("Failed to save IRN: %v", storeErr.Err), http.StatusInternalServerError)
+		default:
+			http.Error(w, fmt.Sprintf("GSTN IRN generation failed: %v", err), http.StatusBadGateway)
+		}
 		return
 	}
 
@@ -1229,26 +923,17 @@ func (h *InvoiceHandlers) GetIRNFragment(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *InvoiceHandlers) SearchHSNSAC(w http.ResponseWriter, r *http.Request) {
+	h.init()
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
-	pattern := "%" + q + "%"
-	rows, err := h.DB.QueryContext(r.Context(), `
-		SELECT code, description, type, rate
-		FROM hsn_sac_master
-		WHERE active = 1 AND (code LIKE $1 OR description LIKE $2)
-		ORDER BY code ASC LIMIT 10
-	`, pattern, pattern)
+	records, err := h.docQ.SearchHSNRecords(r.Context(), q)
 	if err != nil {
 		http.Error(w, "Failed to query HSN master", http.StatusInternalServerError)
 		return
 	}
-	defer func() { _ = rows.Close() }()
 
 	var results []HSNSACRecord
-	for rows.Next() {
-		var rec HSNSACRecord
-		if err := rows.Scan(&rec.Code, &rec.Description, &rec.Type, &rec.Rate); err == nil {
-			results = append(results, rec)
-		}
+	for _, rec := range records {
+		results = append(results, HSNSACRecord{Code: rec.Code, Description: rec.Description, Type: rec.Type, Rate: rec.Rate})
 	}
 
 	w.Header().Set("Content-Type", "application/json")

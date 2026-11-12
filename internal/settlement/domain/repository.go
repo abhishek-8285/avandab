@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"time"
 )
 
 type SettlementRepository interface {
@@ -36,6 +37,13 @@ type SettlementRepository interface {
 	GetPayoutByID(ctx context.Context, tenantID, payoutID string) (*PayoutInstruction, error)
 	GetPayoutByIDGlobal(ctx context.Context, payoutID string) (*PayoutInstruction, error)
 	UpdatePayoutStatus(ctx context.Context, tenantID, payoutID string, status PayoutStatus, providerPayoutID, utr, failureReason *string) error
+	// ListPayoutsByDriver returns the latest payout instructions for one driver.
+	ListPayoutsByDriver(ctx context.Context, tenantID, driverID string, limit int) ([]PayoutInstruction, error)
+	// ListPayoutsAwaitingCompletion returns non-terminal payouts older than a cutoff
+	// (stuck-payout sweep: provider webhook may never arrive).
+	ListPayoutsAwaitingCompletion(ctx context.Context, olderThan time.Time, limit int) ([]PayoutInstruction, error)
+	// GetPrimaryPayoutAccount returns the driver primary account, nil when absent.
+	GetPrimaryPayoutAccount(ctx context.Context, tenantID, driverID string) (*PayoutAccount, error)
 
 	// Webhook / Provider Events
 	RecordProviderEvent(ctx context.Context, tenantID, provider, eventID, eventType, payload string) error
@@ -43,6 +51,13 @@ type SettlementRepository interface {
 
 	// Bank Account Verification lookup
 	IsDriverPayoutAccountVerified(ctx context.Context, tenantID, driverID string) (bool, string, error)
+	// GetPayoutAccount returns one driver payout account (number encrypted).
+	GetPayoutAccount(ctx context.Context, tenantID, accountID string) (*PayoutAccount, error)
+	// GetPayoutAccountByVerificationReference finds the account by the provider
+	// fund_account id stored at penny-drop initiation (webhook reconciliation).
+	GetPayoutAccountByVerificationReference(ctx context.Context, reference string) (*PayoutAccount, error)
+	// UpdatePayoutAccountVerification stores the penny-drop outcome.
+	UpdatePayoutAccountVerification(ctx context.Context, tenantID, accountID, status, reference, reason string) error
 
 	// Dual-write guard (gap 2): reports whether the legacy trip-close accounting
 	// flow (internal/service DriverSettlementService.GenerateSettlement) already

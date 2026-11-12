@@ -25,6 +25,17 @@ func NewClient(cfg Config) Client {
 	return &stubClient{cfg: cfg}
 }
 
+// IsMockClient reports whether c is the demo stub (nil counts as mock: callers
+// that omitted a client get one). Background writers must use this to avoid
+// persisting fabricated EWB numbers as government documents.
+func IsMockClient(c Client) bool {
+	if c == nil {
+		return true
+	}
+	_, isStub := c.(*stubClient)
+	return isStub
+}
+
 func (c *realHttpClient) Generate(ctx context.Context, req GenerateRequest) (EWayBill, error) {
 	if !c.cfg.Enabled {
 		return EWayBill{}, fmt.Errorf("ewaybill integration disabled")

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -13,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"transport-app/internal/domain"
+	kharchaapp "transport-app/internal/kharcha/application"
 	"transport-app/internal/middleware"
 	"transport-app/internal/service"
 )
@@ -159,21 +159,15 @@ func (h *KharchaHandlers) CreateExpenseAPI(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Resolve the acting driver from the authenticated user (same mapping
-	// as DeliverWithPOD): drivers.id or drivers.driver_id via user email.
+	// as DeliverWithPOD): drivers.id or drivers.email via the users table.
 	driverID := session.UserID
 	if h.DB != nil {
-		var dID string
-		if qErr := h.DB.QueryRowContext(ctx, `
-			SELECT id FROM drivers
-			WHERE id = $1 OR email = (SELECT email FROM users WHERE id = $2)
-			LIMIT 1
-		`, session.UserID, session.UserID).Scan(&dID); qErr != nil && qErr != sql.ErrNoRows {
+		if ref, qErr := kharchaapp.LookupUserDriver(ctx, h.DB, session.UserID); qErr != nil {
 			// Handled fallback: the expense stays under the auth user id, but
 			// the lookup must not fail silently (AGENTS.md no-silent-failures).
 			slog.WarnContext(ctx, "driver resolution from auth user failed", slog.Any("error", qErr))
-		}
-		if dID != "" {
-			driverID = dID
+		} else if ref != nil && ref.ID != "" {
+			driverID = ref.ID
 		}
 	}
 
@@ -365,18 +359,14 @@ func (h *KharchaHandlers) DeliverWithPOD(w http.ResponseWriter, r *http.Request)
 	assignedDriverID := string(*trip.DriverID)
 	driverMatches := assignedDriverID == session.UserID
 	if !driverMatches && h.DB != nil {
-		var dID, dCode string
-		if qErr := h.DB.QueryRowContext(ctx, `
-			SELECT id, driver_id FROM drivers
-			WHERE id = $1 OR email = (SELECT email FROM users WHERE id = $2)
-			LIMIT 1
-		`, session.UserID, session.UserID).Scan(&dID, &dCode); qErr != nil && qErr != sql.ErrNoRows {
+		if ref, qErr := kharchaapp.LookupUserDriver(ctx, h.DB, session.UserID); qErr != nil {
 			// No driver row is a valid state (falls through to the 403); real
 			// DB errors must surface in logs, not vanish.
 			slog.WarnContext(ctx, "driver resolution from auth user failed", slog.Any("error", qErr))
-		}
-		if (dID != "" && assignedDriverID == dID) || (dCode != "" && assignedDriverID == dCode) {
-			driverMatches = true
+		} else if ref != nil {
+			if (ref.ID != "" && assignedDriverID == ref.ID) || (ref.DriverCode != "" && assignedDriverID == ref.DriverCode) {
+				driverMatches = true
+			}
 		}
 	}
 	if !driverMatches && session.Role != "admin" && session.Role != "dispatcher" {
@@ -426,16 +416,15 @@ func (h *KharchaHandlers) DeliverWithPOD(w http.ResponseWriter, r *http.Request)
 	// Persist ePOD signature + delivery discrepancies (Spec 21 §3 00073) — best-effort, never fails delivery
 	scanValue := strings.TrimSpace(r.FormValue("pod_scan_value"))
 	if h.DB != nil && (signatureData != "" || quantityShort != 0 || damageQty != 0 || refusalReason != "" || scanValue != "") {
-		_, _ = h.DB.ExecContext(ctx,
-			`UPDATE trips SET pod_signature_data = COALESCE(NULLIF($1,''), pod_signature_data),
-			 pod_quantity_short = CASE WHEN $2 != 0 THEN $3 ELSE pod_quantity_short END,
-			 pod_damage_qty = CASE WHEN $4 != 0 THEN $5 ELSE pod_damage_qty END,
-			 pod_refusal_reason = COALESCE(NULLIF($6,''), pod_refusal_reason),
-			 pod_consignee_name = COALESCE(NULLIF($7,''), pod_consignee_name),
-			 pod_consignee_phone = COALESCE(NULLIF($8,''), pod_consignee_phone),
-			 pod_scan_value = CASE WHEN $9 != '' THEN $10 ELSE pod_scan_value END
-			 WHERE id = $11`,
-			signatureData, quantityShort, quantityShort, damageQty, damageQty, refusalReason, consigneeName, consigneePhone, scanValue, scanValue, tripID)
+		_ = kharchaapp.UpdateTripPODArtifacts(ctx, h.DB, tripID, kharchaapp.PODArtifacts{
+			SignatureData:  signatureData,
+			QuantityShort:  quantityShort,
+			DamageQty:      damageQty,
+			RefusalReason:  refusalReason,
+			ConsigneeName:  consigneeName,
+			ConsigneePhone: consigneePhone,
+			ScanValue:      scanValue,
+		})
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -444,5 +433,72 @@ func (h *KharchaHandlers) DeliverWithPOD(w http.ResponseWriter, r *http.Request)
 		"trip_number": tripNum,
 		"status":      "delivered",
 		"pod_url":     h.PODSigner.SignURLOrRaw(podPhotoURL),
+	})
+}
+
+// PendingAPI handles GET /api/v1/kharcha/pending (P3.7) for mobile manager approvals.
+func (h *KharchaHandlers) PendingAPI(w http.ResponseWriter, r *http.Request) {
+	pending, err := h.Services.Kharcha.ListPendingExpenses(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if pending == nil {
+		pending = []service.KharchaExpense{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(pending)
+}
+
+// ApproveAPI handles POST /api/v1/kharcha/{id}/approve with JSON response.
+func (h *KharchaHandlers) ApproveAPI(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	expenseID := chi.URLParam(r, "id")
+	session, ok := h.getUserFromContext(r)
+	userID := "system"
+	if ok && session != nil {
+		userID = session.UserID
+	}
+
+	if err := h.Services.Kharcha.ApproveExpense(ctx, expenseID, userID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":     "approved",
+		"expense_id": expenseID,
+	})
+}
+
+// RejectAPI handles POST /api/v1/kharcha/{id}/reject with JSON response.
+func (h *KharchaHandlers) RejectAPI(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	expenseID := chi.URLParam(r, "id")
+	session, ok := h.getUserFromContext(r)
+	userID := "system"
+	if ok && session != nil {
+		userID = session.UserID
+	}
+
+	var body struct {
+		Reason string `json:"reason"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&body)
+	if body.Reason == "" {
+		body.Reason = r.FormValue("reason")
+	}
+
+	if err := h.Services.Kharcha.RejectExpense(ctx, expenseID, userID, body.Reason); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":     "rejected",
+		"expense_id": expenseID,
+		"reason":     body.Reason,
 	})
 }

@@ -240,7 +240,7 @@ func TestPhase6_3_EWB_AutoGenerate_And_Lifecycle(t *testing.T) {
 		ExtensionLeadSeconds: 28800,
 		MinInvoiceValue:      50000.0,
 	}
-	ewbClient := intEWB.NewClient(intEWB.Config{Enabled: true, UseMock: true})
+	ewbClient := &fakeEWBProvider{}
 	svc := ewaybill.NewEWayBillService(db, bus, ewbClient, nil, cfg)
 	svc.SubscribeTripEvents(bus)
 
@@ -379,7 +379,7 @@ func TestPhase6_6_FASTag_Reconciliation_Greedy_And_AutoKharcha(t *testing.T) {
 	_, _ = db.Exec(`INSERT INTO fastag_transactions (id, tenant_id, tag_id, vehicle_number, plaza_id, plaza_name, amount, txn_timestamp, status, source, reconciled) VALUES ('tx-2', '1', 'TAG-MH12-001', 'MH12AB1234', 'PLZ-2', 'Talegaon Plaza', 180.0, ?, 'SUCCESS', 'PROVIDER', 0)`, depTime.Add(2*time.Hour))
 
 	client := intFastag.NewClient(intFastag.Config{Enabled: true, UseMock: true}, db)
-	svc := fastag.NewFASTagService(db, client, fastag.Config{AutoKharcha: true})
+	svc := fastag.NewFASTagService(db, client, fastag.Config{AutoKharcha: true, Provider: "NETC"})
 
 	res, err := svc.Reconcile(ctx, "MH12AB1234", "", "")
 	require.NoError(t, err)
@@ -409,7 +409,7 @@ func TestPhase6_7_FASTag_DB_Balance_And_Deduct(t *testing.T) {
 	_, _ = db.Exec(`INSERT INTO fastag_tags (id, tenant_id, tag_id, vehicle_number, issuer, tag_class, balance, status, last_sync) VALUES ('tag-deduct', '1', 'TAG-MH12-DED', 'MH12AB1234', 'ICICI', 'VC4', 1000.0, 'ACTIVE', datetime('now'))`)
 
 	client := intFastag.NewClient(intFastag.Config{Enabled: true, UseMock: true}, db)
-	svc := fastag.NewFASTagService(db, client, fastag.Config{AutoKharcha: true})
+	svc := fastag.NewFASTagService(db, client, fastag.Config{AutoKharcha: true, Provider: "NETC"})
 
 	txn, err := svc.DeductToll(ctx, intFastag.DeductTollRequest{
 		VehicleNumber: "MH12AB1234",
@@ -445,7 +445,7 @@ func TestPhase6_8_FASTag_Reconciliation_Idempotency(t *testing.T) {
 	_, _ = db.Exec(`INSERT INTO fastag_transactions (id, tenant_id, tag_id, vehicle_number, plaza_id, plaza_name, amount, txn_timestamp, status, source, reconciled) VALUES ('tx-idem-1', '1', 'TAG-IDEM-1', 'MH12AB1234', 'PLZ-A', 'Plaza A', 200.0, ?, 'SUCCESS', 'PROVIDER', 0)`, depTime.Add(1*time.Hour))
 
 	client := intFastag.NewClient(intFastag.Config{Enabled: true, UseMock: true}, db)
-	svc := fastag.NewFASTagService(db, client, fastag.Config{AutoKharcha: true})
+	svc := fastag.NewFASTagService(db, client, fastag.Config{AutoKharcha: true, Provider: "NETC"})
 
 	// First run
 	res1, err := svc.Reconcile(ctx, "MH12AB1234", "", "")

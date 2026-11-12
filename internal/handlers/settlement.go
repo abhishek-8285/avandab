@@ -14,6 +14,9 @@ import (
 	"transport-app/internal/auth"
 	"transport-app/internal/middleware"
 	"transport-app/internal/service"
+	settlementApp "transport-app/internal/settlement/application"
+	settlementDomain "transport-app/internal/settlement/domain"
+	"transport-app/internal/shared"
 )
 
 // SettlementHandlers exposes REST APIs and Web UI for driver settlements, rate calculations, TDS, and dispute workflows.
@@ -21,6 +24,13 @@ type SettlementHandlers struct {
 	*App
 	settleSvc *service.DriverSettlementService
 	authSrv   auth.AuthorizationService
+	payoutSvc *settlementApp.SettlementAppService
+}
+
+// SetPayoutService attaches the payout rail service used by the settlement
+// view page (payout history + penny-drop verification).
+func (h *SettlementHandlers) SetPayoutService(svc *settlementApp.SettlementAppService) {
+	h.payoutSvc = svc
 }
 
 // NewSettlementHandlers constructs a new SettlementHandlers instance.
@@ -54,6 +64,7 @@ func (h *SettlementHandlers) Mount(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.authSrv, "settlements", "approve")).Post("/settlements/{id}/mark-paid", h.MarkPaid)
 	r.With(middleware.ResourcePermission(h.authSrv, "settlements", "write")).Post("/settlements/{id}/confirm", h.Confirm)
 	r.With(middleware.ResourcePermission(h.authSrv, "settlements", "write")).Post("/settlements/{id}/dispute", h.Dispute)
+	r.With(middleware.ResourcePermission(h.authSrv, "settlements", "write")).Post("/settlements/payouts/verify-account", h.VerifyPayoutAccountWeb)
 }
 
 // ListPage renders the driver settlements dashboard list page (Spec 12 §4.5).
@@ -128,14 +139,46 @@ func (h *SettlementHandlers) ViewPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Payout rail state for the driver (history + account verification).
+	var payouts []settlementDomain.PayoutInstruction
+	var payoutAccount *settlementDomain.PayoutAccount
+	if h.payoutSvc != nil {
+		tenantID := string(shared.TenantIDFromContext(r.Context()))
+		if sum, perr := h.payoutSvc.ListDriverPayouts(r.Context(), tenantID, string(rec.DriverID), 20); perr == nil && sum != nil {
+			payouts = sum.Payouts
+			payoutAccount = sum.Account
+		}
+	}
+
 	h.renderPage(w, r, "settlement_view.html", PageData{
 		Title: fmt.Sprintf("Settlement #%s", id),
 		User:  session,
 		Extra: map[string]interface{}{
-			"Settlement": rec,
-			"Lines":      rec.Lines,
+			"Settlement":         rec,
+			"Lines":              rec.Lines,
+			"Payouts":            payouts,
+			"PayoutAccount":      payoutAccount,
+			"PayoutServiceReady": h.payoutSvc != nil,
 		},
 	})
+}
+
+// VerifyPayoutAccountWeb starts penny-drop validation for a driver account
+// from the admin settlement view. The final result arrives via webhook.
+func (h *SettlementHandlers) VerifyPayoutAccountWeb(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	driverID := r.FormValue("driver_id")
+	// Fixed redirect target: never build a URL from request/form input
+	// (open-redirect surface, gosec G710).
+	if tenantID == "" || driverID == "" || h.payoutSvc == nil {
+		http.Redirect(w, r, "/settlements?error=payout_service_unavailable", http.StatusSeeOther)
+		return
+	}
+	if _, err := h.payoutSvc.VerifyPayoutAccount(r.Context(), tenantID, driverID); err != nil {
+		http.Redirect(w, r, "/settlements?error=payout_verification_failed", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/settlements?verified=pending", http.StatusSeeOther)
 }
 
 // Generate handles settlement generation (and recalculation if force_recompute=true).

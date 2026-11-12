@@ -1,13 +1,11 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -17,6 +15,7 @@ import (
 	"transport-app/internal/middleware"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
+	tenantapp "transport-app/internal/tenant/application"
 )
 
 // tenantSlugPattern keeps slugs URL/DNS-label safe: lowercase alphanumerics
@@ -31,7 +30,10 @@ const maxTenantSlugLen = 40
 const bootstrapTenantID = string(shared.DefaultTenant) //nolint:tenant-default // seed-org guard: suspending it locks out every legacy account
 
 // TenantsHandlers powers /tenants — super-admin provisioning of customer
-// organizations and their first org admins (Spec 24 §Tenants management).
+// organizations and their first org admins (Spec 24 §Tenants management). The
+// tenant-admin SQL reads/writes live in internal/tenant/application
+// (handlers-end-state ADR Phase 2); this file keeps RBAC gating, form
+// validation, the bootstrap-tenant guard, audit logging and rendering.
 type TenantsHandlers struct {
 	*App
 }
@@ -103,6 +105,7 @@ func (h *TenantsHandlers) List(w http.ResponseWriter, r *http.Request) {
 
 	commercialList := make([]TenantCommercialItem, 0, len(list))
 
+	queries := tenantapp.NewTenantAdminQueries(h.DB)
 	for _, t := range list {
 		item := TenantCommercialItem{
 			ID:        t.ID,
@@ -123,34 +126,20 @@ func (h *TenantsHandlers) List(w http.ResponseWriter, r *http.Request) {
 
 		// Query commercial subscription details if available
 		if h.DB != nil {
-			var planID, subStatus string
-			var price float64
-			var periodEndStr sql.NullString
-			var trialEndStr sql.NullString
-			subErr := h.DB.QueryRowContext(r.Context(), `
-				SELECT ts.plan_id, ts.status, sp.monthly_price_inr, ts.current_period_end, ts.trial_end
-				FROM tenant_subscriptions ts
-				JOIN subscription_plans sp ON sp.id = ts.plan_id
-				WHERE ts.tenant_id = $1
-			`, t.ID).Scan(&planID, &subStatus, &price, &periodEndStr, &trialEndStr)
-
+			sub, subErr := queries.Subscription(r.Context(), t.ID)
 			if subErr == nil {
-				item.PlanID = planID
-				item.SubStatus = subStatus
-				item.MonthlyPrice = price
-				if periodEndStr.Valid {
-					item.PeriodEnd = periodEndStr.String
-				}
-				if trialEndStr.Valid {
-					item.TrialEnd = trialEndStr.String
-				}
+				item.PlanID = sub.PlanID
+				item.SubStatus = sub.Status
+				item.MonthlyPrice = sub.MonthlyPrice
+				item.PeriodEnd = sub.PeriodEnd
+				item.TrialEnd = sub.TrialEnd
 
-				if subStatus == "TRIAL" {
+				if sub.Status == "TRIAL" {
 					trialCount++
-				} else if subStatus == "ACTIVE" {
+				} else if sub.Status == "ACTIVE" {
 					paidCount++
-					totalMRR += price
-				} else if subStatus == "PAST_DUE" {
+					totalMRR += sub.MonthlyPrice
+				} else if sub.Status == "PAST_DUE" {
 					pastDueCount++
 				}
 			} else {
@@ -158,18 +147,11 @@ func (h *TenantsHandlers) List(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Query trip quota meter
-			var usedQty, maxQty int
-			mErr := h.DB.QueryRowContext(r.Context(), `
-				SELECT used_quantity, max_quantity
-				FROM tenant_usage_meters
-				WHERE tenant_id = $1 AND quota_key = 'max_trips_per_month'
-				ORDER BY updated_at DESC LIMIT 1
-			`, t.ID).Scan(&usedQty, &maxQty)
-
-			if mErr == nil && maxQty > 0 {
-				item.TripsUsed = usedQty
-				item.TripsMax = maxQty
-				item.QuotaUsagePct = float64(usedQty) / float64(maxQty) * 100.0
+			quota, mErr := queries.TripQuota(r.Context(), t.ID)
+			if mErr == nil && quota.Max > 0 {
+				item.TripsUsed = quota.Used
+				item.TripsMax = quota.Max
+				item.QuotaUsagePct = float64(quota.Used) / float64(quota.Max) * 100.0
 				if item.QuotaUsagePct >= 80.0 {
 					item.IsNearQuota = true
 					nearQuotaCount++
@@ -215,21 +197,13 @@ func (h *TenantsHandlers) UpdatePlan(w http.ResponseWriter, r *http.Request) {
 		planID = "GROWTH"
 	}
 	providerSubID := r.PostFormValue("provider_subscription_id")
-	if h.DB != nil {
-		now := time.Now().UTC()
-		end := now.Add(30 * 24 * time.Hour)
-		_, _ = h.DB.ExecContext(r.Context(), `
-			INSERT INTO tenant_subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, provider_subscription_id, created_at, updated_at)
-			VALUES ($1, $2, $3, 'ACTIVE', $4, $5, $6, $7, $8)
-			ON CONFLICT (tenant_id) DO UPDATE SET
-				plan_id = excluded.plan_id,
-				status = 'ACTIVE',
-				current_period_start = excluded.current_period_start,
-				current_period_end = excluded.current_period_end,
-				provider_subscription_id = COALESCE(NULLIF(excluded.provider_subscription_id, ''), tenant_subscriptions.provider_subscription_id),
-				updated_at = CURRENT_TIMESTAMP
-		`, "sub_"+id, id, planID, now.Format(time.RFC3339), end.Format(time.RFC3339), providerSubID, now.Format(time.RFC3339), now.Format(time.RFC3339))
-	}
+	// Legacy best-effort write: the SQL error was swallowed (the operator is
+	// always audited and redirected), preserved verbatim.
+	_ = tenantapp.NewTenantAdminService(h.DB).UpdatePlan(r.Context(), tenantapp.UpdatePlanCommand{
+		TenantID:               id,
+		PlanID:                 planID,
+		ProviderSubscriptionID: providerSubID,
+	})
 	h.auditTenant(r, "tenant.plan_update", id, map[string]string{"plan_id": planID})
 	http.Redirect(w, r, "/tenants", http.StatusSeeOther)
 }
@@ -237,15 +211,8 @@ func (h *TenantsHandlers) UpdatePlan(w http.ResponseWriter, r *http.Request) {
 // ExtendTrial grants an additional 14 days to a trial tenant.
 func (h *TenantsHandlers) ExtendTrial(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	if h.DB != nil {
-		now := time.Now().UTC()
-		newTrial := now.Add(14 * 24 * time.Hour)
-		_, _ = h.DB.ExecContext(r.Context(), `
-			UPDATE tenant_subscriptions
-			SET trial_end = $1, status = 'TRIAL', updated_at = CURRENT_TIMESTAMP
-			WHERE tenant_id = $2
-		`, newTrial.Format(time.RFC3339), id)
-	}
+	// Legacy best-effort write (swallowed error, preserved verbatim).
+	_ = tenantapp.NewTenantAdminService(h.DB).ExtendTrial(r.Context(), id)
 	h.auditTenant(r, "tenant.extend_trial", id, map[string]string{"extended_days": "14"})
 	http.Redirect(w, r, "/tenants", http.StatusSeeOther)
 }
@@ -260,16 +227,14 @@ func (h *TenantsHandlers) SetOverride(w http.ResponseWriter, r *http.Request) {
 	if entType == "" {
 		entType = "FEATURE"
 	}
-	if h.DB != nil {
-		recID := "ovr_" + id + "_" + keyName
-		_, _ = h.DB.ExecContext(r.Context(), `
-			INSERT INTO tenant_entitlement_overrides (id, tenant_id, entitlement_type, key_name, override_value, reason)
-			VALUES ($1, $2, $3, $4, $5, $6)
-			ON CONFLICT (tenant_id, entitlement_type, key_name) DO UPDATE SET
-				override_value = excluded.override_value,
-				reason = excluded.reason
-		`, recID, id, entType, keyName, val, reason)
-	}
+	// Legacy best-effort write (swallowed error, preserved verbatim).
+	_ = tenantapp.NewTenantAdminService(h.DB).SetOverride(r.Context(), tenantapp.SetOverrideCommand{
+		TenantID:        id,
+		EntitlementType: entType,
+		KeyName:         keyName,
+		OverrideValue:   val,
+		Reason:          reason,
+	})
 	h.auditTenant(r, "tenant.override", id, map[string]string{"key": keyName, "val": val})
 	http.Redirect(w, r, "/tenants", http.StatusSeeOther)
 }
@@ -280,27 +245,13 @@ func (h *TenantsHandlers) applyUserCounts(r *http.Request, list []service.Tenant
 	if h.DB == nil || len(list) == 0 {
 		return
 	}
-	rows, err := h.DB.QueryContext(r.Context(), `SELECT tenant_id, COUNT(*) FROM users GROUP BY tenant_id`)
+	counts, err := tenantapp.NewTenantAdminQueries(h.DB).UserCounts(r.Context())
 	if err != nil {
 		slog.WarnContext(r.Context(), "tenant user counts unavailable", slog.Any("error", err))
 		return
 	}
-	defer func() { _ = rows.Close() }()
-	for rows.Next() {
-		var tenantID string
-		var n int64
-		if err := rows.Scan(&tenantID, &n); err != nil {
-			slog.WarnContext(r.Context(), "tenant user count row skipped", slog.Any("error", err))
-			continue
-		}
-		for i := range list {
-			if list[i].ID == tenantID {
-				list[i].UserCount = n
-			}
-		}
-	}
-	if err := rows.Err(); err != nil {
-		slog.WarnContext(r.Context(), "tenant user counts incomplete", slog.Any("error", err))
+	for i := range list {
+		list[i].UserCount = counts[list[i].ID]
 	}
 }
 
@@ -373,15 +324,13 @@ func (h *TenantsHandlers) Create(w http.ResponseWriter, r *http.Request) {
 
 	// Slug doubles as the tenant id for provisioned orgs, so one probe covers
 	// both the primary key and the UNIQUE(slug) index.
-	var existing int
-	if err := h.DB.QueryRowContext(r.Context(),
-		`SELECT COUNT(1) FROM tenants WHERE id = $1 OR slug = $2`, form.Slug, form.Slug,
-	).Scan(&existing); err != nil {
+	existing, err := tenantapp.NewTenantAdminQueries(h.DB).TenantSlugExists(r.Context(), form.Slug)
+	if err != nil {
 		slog.ErrorContext(r.Context(), "tenant conflict probe failed", slog.Any("error", err))
 		http.Error(w, "Failed to create tenant", http.StatusInternalServerError)
 		return
 	}
-	if existing > 0 {
+	if existing {
 		fail(`A tenant with slug "` + form.Slug + `" already exists. Choose another.`)
 		return
 	}
@@ -443,14 +392,13 @@ func (h *TenantsHandlers) setStatus(w http.ResponseWriter, r *http.Request, stat
 	}
 
 	if status == "suspended" && h.DB != nil {
-		res, err := h.DB.ExecContext(r.Context(),
-			`DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE tenant_id = $1)`, id)
+		purged, err := tenantapp.NewTenantAdminService(h.DB).PurgeTenantSessions(r.Context(), id)
 		if err != nil {
 			slog.WarnContext(r.Context(), "tenant session purge failed",
 				slog.String("tenant_id", id), slog.Any("error", err))
-		} else if n, nerr := res.RowsAffected(); nerr == nil && n > 0 {
+		} else if purged > 0 {
 			slog.InfoContext(r.Context(), "suspended tenant sessions purged",
-				slog.String("tenant_id", id), slog.Int64("sessions", n))
+				slog.String("tenant_id", id), slog.Int64("sessions", purged))
 		}
 	}
 

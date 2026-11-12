@@ -22,7 +22,7 @@
  │  08. Deployment & Runbook      (docs/08-DEPLOYMENT-AND-PRODUCTION-RUNBOOK.md)│
  ├─────────────────────────────────────────────────────────────────────────────┤
  │                               REFERENCE                                     │
- │  • Migration Registry (1-140)  (docs/tech-specs/00-migration-ownership-index.md)
+ │  • Migration Registry (1-185)  (docs/tech-specs/00-migration-ownership-index.md)
  │  • REST API Specification      (openapi.yaml)                                │
  └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -43,4 +43,5 @@
 | **[`08-DEPLOYMENT-AND-PRODUCTION-RUNBOOK.md`](08-DEPLOYMENT-AND-PRODUCTION-RUNBOOK.md)** | Cross-compiled VPS deploy (`scripts/deploy-vps.sh`, systemd), 1-click Android deploy (`deploy_avandab.sh`), Cloudflare Tunnel, OSRM routing setup, Linux `ulimit -n 65535`, and private M2M APN SIMs. |
 | **[`09-CODEBASE-AND-FEATURE-ASSESSMENT.md`](09-CODEBASE-AND-FEATURE-ASSESSMENT.md)** | Evidence-based built-state survey: measured metrics, feature inventory, scorecard, honest gaps. |
 | **[`ROADMAP.md`](ROADMAP.md)** / **[`RELEASES.md`](RELEASES.md)** | Phased forward plan with closed-evidence items; append-only release log. |
-| **[`tech-specs/00-migration-ownership-index.md`](tech-specs/00-migration-ownership-index.md)** | Goose SQL database migration numbering index (00001 to 00140; next free slot 00141). |
+| **[`tech-specs/00-migration-ownership-index.md`](tech-specs/00-migration-ownership-index.md)** | Goose SQL database migration numbering index (00001 to 00185; next free slot 00186). |
+| **[`tech-specs/handlers-end-state-adr.md`](tech-specs/handlers-end-state-adr.md)** | End-state ADR + CI ratchet for `internal/handlers/` god-files and `internal/agent/tools.go`: target boundaries, migration order, exit criteria, SQL/line caps. |

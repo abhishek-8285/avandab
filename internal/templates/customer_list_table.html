@@ -34,7 +34,7 @@
                         {{if eq .Type "supplier"}} bg-amber-50 text-amber-strong border-amber-200
                         {{else if eq .Type "facilitator"}} bg-violet-50 text-violet-strong border-violet-200
                         {{else if eq .Type "contact"}} bg-slate-50 text-slate-strong border-slate-200
-                        {{else}} bg-sky-50 text-sky-700 border-sky-200{{end}}">
+                        {{else}} bg-sky-50 text-sky-strong border-sky-200{{end}}">
                         {{.Type}}
                     </span>
                     {{if .ContactPerson}}<div class="text-xs text-secondary mt-1 truncate">{{nullString .ContactPerson}}</div>{{end}}

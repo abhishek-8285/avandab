@@ -9,13 +9,26 @@ export interface UserSession {
   driverId?: string;   // from GET /api/v1/drivers/me
 }
 
+export type AppMode = 'driver' | 'manager';
+
+function defaultModeForRole(role?: string): AppMode {
+  const r = (role || '').toLowerCase();
+  if (r === 'admin' || r === 'dispatcher' || r === 'manager' || r === 'owner') {
+    return 'manager';
+  }
+  return 'driver';
+}
+
 interface AuthState {
   token: string | null;
   user: UserSession | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  activeMode: AppMode;
   setAuth: (token: string, user: UserSession) => Promise<void>;
   setDriverId: (driverId: string) => void;
+  setMode: (mode: AppMode) => void;
+  toggleMode: () => void;
   logout: () => Promise<void>;
   loadSession: () => Promise<void>;
 }
@@ -25,11 +38,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  activeMode: 'driver',
 
   setAuth: async (token: string, user: UserSession) => {
     await SecureStore.setItemAsync('auth_token', token);
     await SecureStore.setItemAsync('auth_user', JSON.stringify(user));
-    set({ token, user, isAuthenticated: true, isLoading: false });
+    const mode = defaultModeForRole(user.role);
+    set({ token, user, isAuthenticated: true, isLoading: false, activeMode: mode });
   },
 
   setDriverId: (driverId: string) => {
@@ -41,10 +56,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  setMode: (mode: AppMode) => {
+    set({ activeMode: mode });
+  },
+
+  toggleMode: () => {
+    const next = get().activeMode === 'manager' ? 'driver' : 'manager';
+    set({ activeMode: next });
+  },
+
   logout: async () => {
     await SecureStore.deleteItemAsync('auth_token');
     await SecureStore.deleteItemAsync('auth_user');
-    set({ token: null, user: null, isAuthenticated: false, isLoading: false });
+    set({ token: null, user: null, isAuthenticated: false, isLoading: false, activeMode: 'driver' });
   },
 
   loadSession: async () => {
@@ -53,7 +77,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const userJson = await SecureStore.getItemAsync('auth_user');
       if (token && userJson) {
         const user = JSON.parse(userJson) as UserSession;
-        set({ token, user, isAuthenticated: true, isLoading: false });
+        const mode = defaultModeForRole(user.role);
+        set({ token, user, isAuthenticated: true, isLoading: false, activeMode: mode });
       } else {
         set({ isLoading: false });
       }

@@ -33,6 +33,8 @@ var (
 	ErrTokenInvalid     = errors.New("push token is invalid or unregistered")
 	ErrDispatchFailed   = errors.New("failed to dispatch FCM push notification")
 	ErrFCMNotConfigured = errors.New("fcm credentials not configured")
+	// ErrPushNotConfigured means the push was recorded but never delivered.
+	ErrPushNotConfigured = errors.New("push delivery not configured; notification was not sent")
 )
 
 // PushMessage defines the push notification payload sent to devices.
@@ -149,7 +151,7 @@ func (s *FCMService) SendToToken(ctx context.Context, token, title, body string,
 			"body", body,
 			"data_count", len(data),
 		)
-		return nil
+		return ErrPushNotConfigured
 	}
 
 	// Dispatch via HTTP v1 or Legacy FCM
@@ -166,7 +168,7 @@ func (s *FCMService) SendToToken(ctx context.Context, token, title, body string,
 		"token", token,
 		"title", title,
 	)
-	return nil
+	return ErrPushNotConfigured
 }
 
 // sendLegacyHTTP dispatches to https://fcm.googleapis.com/fcm/send using the Server Key.

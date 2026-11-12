@@ -18,6 +18,11 @@ func newCompanyConfigDB(t *testing.T) *sql.DB {
 	return db
 }
 
+func TestNewEWayBillService_NilClientIsMockProvider(t *testing.T) {
+	svc := NewEWayBillService(nil, nil, nil, nil, Config{})
+	assert.True(t, svc.IsMockProvider(), "nil client falls back to the stub, so it must be mock")
+}
+
 func TestIsAutoGenerateEnabled_ReadsCompanyConfig(t *testing.T) {
 	db := newCompanyConfigDB(t)
 

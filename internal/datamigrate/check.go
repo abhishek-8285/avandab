@@ -19,6 +19,12 @@ type Precheck struct {
 	DirtyColumns []DirtyColumn
 	// Orphan FK rows in sqlite (would need quarantine).
 	Orphans []Orphan
+	// TenantOrphans are rows whose tenant_id has no tenants row. Migrations
+	// 00103+ enforce this with triggers, so pragma_foreign_key_check cannot
+	// see them — but the live copy quarantines them (and their FK dependents).
+	TenantOrphans TenantOrphans
+	// LegacyRows are sqlite-only tables with rows and no PG counterpart.
+	LegacyRows []LegacyTable
 	// Seed collisions preview on INTEGER-PK merge tables.
 	Collisions []Collision
 
@@ -39,6 +45,27 @@ type DirtyColumn struct {
 
 // Orphan is one foreign_key_check violation group.
 type Orphan struct {
+	Table string
+	Rows  int
+}
+
+// TenantOrphans counts rows the trigger-enforced tenant guards will reject.
+// Sessions/UserRoles cascade from orphan users: the live copy quarantines the
+// user first, then its dependents fail the FK.
+type TenantOrphans struct {
+	Users     int
+	Sessions  int
+	UserRoles int
+}
+
+// Blocking reports whether the copy would quarantine live tenant data.
+func (t TenantOrphans) Blocking() bool {
+	return t.Users > 0 || t.Sessions > 0 || t.UserRoles > 0
+}
+
+// LegacyTable is a sqlite-only table holding rows; no PG migration owns it, so
+// the live copy quarantines those rows.
+type LegacyTable struct {
 	Table string
 	Rows  int
 }
@@ -101,6 +128,12 @@ func RunPrecheck(ctx context.Context, src, pg *sql.DB) (*Precheck, error) {
 			p.Orphans = append(p.Orphans, Orphan{Table: t, Rows: n})
 		}
 	}
+	// Trigger-enforced tenant orphans (invisible to pragma_foreign_key_check).
+	p.TenantOrphans = detectTenantOrphans(ctx, src)
+
+	// sqlite-only tables that still hold rows would be quarantined row-by-row.
+	p.LegacyRows = legacyRows(ctx, src, p.MissingPG)
+
 	// Collisions on merge tables.
 	maps, err := BuildIDMaps(ctx, pg)
 	if err != nil {
@@ -112,6 +145,35 @@ func RunPrecheck(ctx context.Context, src, pg *sql.DB) (*Precheck, error) {
 		}
 	}
 	return p, nil
+}
+
+// detectTenantOrphans counts tenant-scoped rows whose tenant/user parent is
+// missing. Errors degrade to zero (old sqlite chains may lack a table); the
+// live copy remains the final authority.
+func detectTenantOrphans(ctx context.Context, src *sql.DB) TenantOrphans {
+	var t TenantOrphans
+	count := func(q string, dst *int) {
+		_ = src.QueryRowContext(ctx, q).Scan(dst)
+	}
+	count(`SELECT count(*) FROM users WHERE tenant_id NOT IN (SELECT id FROM tenants)`, &t.Users)
+	count(`SELECT count(*) FROM sessions WHERE user_id IN
+		(SELECT id FROM users WHERE tenant_id NOT IN (SELECT id FROM tenants))`, &t.Sessions)
+	count(`SELECT count(*) FROM user_roles WHERE user_id IN
+		(SELECT id FROM users WHERE tenant_id NOT IN (SELECT id FROM tenants))`, &t.UserRoles)
+	return t
+}
+
+// legacyRows counts rows in sqlite-only tables (no PG counterpart). Those rows
+// cannot be migrated by the copy and are quarantined by design.
+func legacyRows(ctx context.Context, src *sql.DB, missing []string) []LegacyTable {
+	var out []LegacyTable
+	for _, table := range missing {
+		var n int
+		if err := src.QueryRowContext(ctx, fmt.Sprintf(`SELECT count(*) FROM "%s"`, table)).Scan(&n); err == nil && n > 0 {
+			out = append(out, LegacyTable{Table: table, Rows: n})
+		}
+	}
+	return out
 }
 
 func intColumns(ctx context.Context, src *sql.DB, table string) ([]string, error) {
@@ -169,6 +231,11 @@ func (p *Precheck) Report() string {
 	for _, o := range p.Orphans {
 		fmt.Fprintf(&b, "  %s: %d rows -> quarantine\n", o.Table, o.Rows)
 	}
+	fmt.Fprintf(&b, "tenant orphans (trigger-enforced, invisible to FK check): users=%d sessions=%d user_roles=%d\n",
+		p.TenantOrphans.Users, p.TenantOrphans.Sessions, p.TenantOrphans.UserRoles)
+	if p.TenantOrphans.Blocking() {
+		fmt.Fprintf(&b, "  -> live copy WILL quarantine these rows; fix or delete them before cutover (users first, then sessions/user_roles)\n")
+	}
 	fmt.Fprintf(&b, "seed collisions: %d\n", len(p.Collisions))
 	for _, c := range p.Collisions {
 		fmt.Fprintf(&b, "  %s %q: sqlite=%s pg=%s -> merged by name, dependents remapped\n", c.Table, c.Key, c.SQLiteID, c.PGID)
@@ -180,6 +247,10 @@ func (p *Precheck) Report() string {
 	fmt.Fprintf(&b, "sqlite tables missing on PG: %d\n", len(p.MissingPG))
 	for _, t := range p.MissingPG {
 		fmt.Fprintf(&b, "  %s (purge probes skip absent tables; migrate data manually if non-empty)\n", t)
+	}
+	fmt.Fprintf(&b, "sqlite-only tables with rows (will be quarantined): %d\n", len(p.LegacyRows))
+	for _, l := range p.LegacyRows {
+		fmt.Fprintf(&b, "  %s: %d rows -> no PG owner; archive/drop before cutover\n", l.Table, l.Rows)
 	}
 	return b.String()
 }

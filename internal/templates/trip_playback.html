@@ -460,10 +460,10 @@
             if(!gpxStatus) return;
             gpxStatus.textContent=txt;
             gpxStatus.classList.remove('hidden');
-            gpxStatus.classList.toggle('text-rose-700', !!isErr);
+            gpxStatus.classList.toggle('text-rose-strong', !!isErr);
             gpxStatus.classList.toggle('border-rose-500/20', !!isErr);
-            gpxStatus.classList.toggle('bg-rose-500/10', !!isErr);
-            gpxStatus.classList.toggle('text-violet-700', !isErr);
+            gpxStatus.classList.toggle('bg-rose-soft', !!isErr);
+            gpxStatus.classList.toggle('text-violet-strong', !isErr);
         }
 
         var playbackCache={truncatedPages:1};

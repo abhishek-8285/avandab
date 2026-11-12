@@ -82,13 +82,13 @@
 
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle p-4 shadow-sm">
             <span class="text-eyebrow text-text-muted">{{t "fl.invoiced_balance"}}</span>
-            <p class="text-xl sm:text-2xl font-black text-amber-mid dark:text-amber-400 tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.OutstandingInvoices}}</p>
+            <p class="text-xl sm:text-2xl font-black text-amber-mid tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.OutstandingInvoices}}</p>
             <span class="text-[11px] text-text-muted mt-1 block">{{t "fl.unpaid_bills"}}</span>
         </div>
 
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle p-4 shadow-sm">
             <span class="text-eyebrow text-text-muted">{{t "fl.wip_unbilled_freight"}}</span>
-            <p class="text-xl sm:text-2xl font-black text-sky-600 dark:text-sky-400 tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.TotalUnbilledAmount}}</p>
+            <p class="text-xl sm:text-2xl font-black text-sky-mid tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.TotalUnbilledAmount}}</p>
             <span class="text-[11px] text-text-muted mt-1 block">{{len .Statement.UnbilledTrips}} {{t "fl.completed_trips"}}</span>
         </div>
 
@@ -130,7 +130,7 @@
             </div>
             <div class="p-4">
                 <span class="text-eyebrow text-text-muted">{{t "fl.n31_60_days"}}</span>
-                <p class="text-lg font-black {{if gt .Statement.Aging.Days31To60 0.0}}text-orange-600 dark:text-orange-400{{else}}text-on-surface{{end}} tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.Aging.Days31To60}}</p>
+                <p class="text-lg font-black {{if gt .Statement.Aging.Days31To60 0.0}}text-orange-mid dark:text-orange-400{{else}}text-on-surface{{end}} tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.Aging.Days31To60}}</p>
             </div>
             <div class="p-4">
                 <span class="text-eyebrow text-text-muted">{{t "fl.n60_days_overdue"}}</span>

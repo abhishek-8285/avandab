@@ -144,12 +144,24 @@ func (s *KharchaVerifyService) classify(ctx context.Context, e *expenseRow, ocrA
 
 	withinBand := median > 0 && e.Amount >= median/autoMedianBand && e.Amount <= median*autoMedianBand
 	highConf := ocrConf >= autoVerifyConfidence && ocrAmt > 0
+	amountMatches := ocrAmountMatches(e.Amount, ocrAmt)
 	nearRoute := dist <= maxRouteDistanceKm
 
-	if highConf && withinBand && nearRoute {
+	if highConf && amountMatches && withinBand && nearRoute {
 		return VerifyAutoVerified, ""
 	}
 	return VerifyManual, ""
+}
+
+// ocrAmountMatches reports whether the OCR amount agrees with the claim
+// within max(₹2.00, 5% of the claim). OCR is receipt evidence: a mismatch
+// means the text came from a different document, so it cannot verify.
+func ocrAmountMatches(claimed, ocrAmt float64) bool {
+	if claimed <= 0 || ocrAmt <= 0 {
+		return false
+	}
+	tolerance := math.Max(2.00, math.Abs(claimed)*0.05)
+	return math.Abs(ocrAmt-claimed) <= tolerance
 }
 
 // distanceFromRouteKm returns the haversine distance from the expense GPS

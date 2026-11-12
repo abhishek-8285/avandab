@@ -21,10 +21,18 @@ type AlertRepository interface {
 	UpdateEscalation(ctx context.Context, alertID string, nextStep int, nextAt *time.Time, status string) error
 	ListUnflushedStormAlerts(ctx context.Context, windowCutoff time.Time) ([]domain.Alert, error)
 	UpdateMetadata(ctx context.Context, alertID string, metadata string) error
+	// ListTenantUsersByRole resolves the active users of one tenant holding a
+	// named role, for escalation recipient targeting.
+	ListTenantUsersByRole(ctx context.Context, tenantID, role string) ([]domain.AlertRecipient, error)
 	UnreadCount(ctx context.Context, userID string) (int, error)
 	Recent(ctx context.Context, userID string, limit int) ([]domain.Alert, error)
 	Ack(ctx context.Context, alertID string, userID string) error
 	Resolve(ctx context.Context, alertID string, userID string) error
+	// ResolveOpenBySourceType closes every open/acknowledged/escalated alert of
+	// a source+type and returns the rows affected. Used by system recovery
+	// (e.g. the SLA monitor when measured uptime is back above target);
+	// platform-scoped by design, not request-scoped.
+	ResolveOpenBySourceType(ctx context.Context, source, alertType, resolvedBy string, at time.Time) (int64, error)
 	MarkAllRead(ctx context.Context, userID string) error
 
 	// Inbox operations (Spec 22 S1). status is one of open|snoozed|acked|

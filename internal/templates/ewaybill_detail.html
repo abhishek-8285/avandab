@@ -12,11 +12,11 @@
                 <div class="flex items-center gap-2.5 flex-wrap mt-0.5">
                     <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-on-surface font-data-mono tabular-nums truncate">{{.EWayBill.EwbNumber}}</h1>
                     {{if eq .EWayBill.Status "active"}}
-                    <span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold uppercase tracking-wide text-emerald-strong dark:text-emerald-300">{{t "mo.c.active"}}</span>
+                    <span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold uppercase tracking-wide text-emerald-strong">{{t "mo.c.active"}}</span>
                     {{else if eq .EWayBill.Status "cancelled"}}
-                    <span class="inline-flex px-2 py-1 rounded-full bg-rose-soft border border-rose-line text-[11px] font-bold uppercase tracking-wide text-rose-strong dark:text-rose-300">{{t "mo.c.cancelled"}}</span>
+                    <span class="inline-flex px-2 py-1 rounded-full bg-rose-soft border border-rose-line text-[11px] font-bold uppercase tracking-wide text-rose-strong">{{t "mo.c.cancelled"}}</span>
                     {{else if eq .EWayBill.Status "expired"}}
-                    <span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-bold uppercase tracking-wide text-amber-strong dark:text-amber-300">{{t "mo.c.expired"}}</span>
+                    <span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-bold uppercase tracking-wide text-amber-strong">{{t "mo.c.expired"}}</span>
                     {{end}}
                 </div>
                 <p class="text-sm text-secondary mt-1">
@@ -42,11 +42,11 @@
                     {{t "mo.ewb.cancel_btn"}}
                 </button>
             {{else if eq .EWayBill.Status "cancelled"}}
-                <span class="inline-flex px-3 py-1 rounded-full bg-rose-soft border border-rose-line text-xs font-bold text-rose-strong dark:text-rose-300">
+                <span class="inline-flex px-3 py-1 rounded-full bg-rose-soft border border-rose-line text-xs font-bold text-rose-strong">
                     Cancelled ({{.EWayBill.CancelReason}})
                 </span>
             {{else if eq .EWayBill.Status "expired"}}
-                <span class="inline-flex px-3 py-1 rounded-full bg-amber-soft border border-amber-line text-xs font-bold text-amber-strong dark:text-amber-300">
+                <span class="inline-flex px-3 py-1 rounded-full bg-amber-soft border border-amber-line text-xs font-bold text-amber-strong">
                     {{t "mo.c.expired"}}
                 </span>
             {{end}}
@@ -146,15 +146,15 @@
                             <td class="px-4 py-2.5 font-data-mono text-xs text-text-muted whitespace-nowrap"><time datetime="{{.CreatedAt.Format "2006-01-02T15:04"}}">{{.CreatedAt.Format "02 Jan 15:04:05"}}</time></td>
                             <td class="px-4 py-2.5">
                                 {{if eq .EventType "PART_A_GENERATED"}}
-                                <span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-bold text-amber-strong dark:text-amber-300">PART_A_GENERATED</span>
+                                <span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-bold text-amber-strong">PART_A_GENERATED</span>
                                 {{else if eq .EventType "PART_B_ADDED"}}
-                                <span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong dark:text-emerald-300">PART_B_ADDED</span>
+                                <span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong">PART_B_ADDED</span>
                                 {{else if eq .EventType "EXTENDED"}}
-                                <span class="inline-flex px-2 py-1 rounded-full bg-blue-soft border border-blue-line text-[11px] font-bold text-blue-strong dark:text-blue-300">{{t "mo.ewb.extended_badge"}}</span>
+                                <span class="inline-flex px-2 py-1 rounded-full bg-blue-soft border border-blue-line text-[11px] font-bold text-blue-strong">{{t "mo.ewb.extended_badge"}}</span>
                                 {{else if eq .EventType "EXTENSION_DENIED"}}
-                                <span class="inline-flex px-2 py-1 rounded-full bg-rose-soft border border-rose-line text-[11px] font-bold text-rose-strong dark:text-rose-300">EXTENSION_DENIED</span>
+                                <span class="inline-flex px-2 py-1 rounded-full bg-rose-soft border border-rose-line text-[11px] font-bold text-rose-strong">EXTENSION_DENIED</span>
                                 {{else if eq .EventType "CANCELLED"}}
-                                <span class="inline-flex px-2 py-1 rounded-full bg-rose-soft border border-rose-line text-[11px] font-bold text-rose-strong dark:text-rose-300">CANCELLED</span>
+                                <span class="inline-flex px-2 py-1 rounded-full bg-rose-soft border border-rose-line text-[11px] font-bold text-rose-strong">CANCELLED</span>
                                 {{else}}
                                 <span class="inline-flex px-2 py-1 rounded-full bg-surface-container text-text-muted border border-border-subtle text-[11px] font-bold">{{.EventType}}</span>
                                 {{end}}

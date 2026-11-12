@@ -2,12 +2,16 @@ package channels
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 
 	"transport-app/internal/alerts/domain"
 )
+
+// ErrNotConfigured is returned when WhatsApp transport has no valid configuration.
+var ErrNotConfigured = errors.New("whatsapp provider not configured")
 
 // WhatsAppMaxRank gates the channel: Spec 22 §10 — only rank 1–3
 // (critical/urgent/money) reach WhatsApp by default; waste and info
@@ -19,9 +23,15 @@ type whatsappSender interface {
 	send(ctx context.Context, phone, text string) error
 }
 
+// unconfiguredWASender fails loud when WhatsApp delivery is unconfigured or unknown.
+type unconfiguredWASender struct{}
+
+func (u unconfiguredWASender) send(ctx context.Context, phone, text string) error {
+	return ErrNotConfigured
+}
+
 // WhatsAppProvider delivers rank ≤3 alerts over WhatsApp. Transport is
-// config-selected (mock | gupshup | meta); unconfigured → mock, which
-// logs the delivery honestly instead of pretending it happened.
+// config-selected (mock | gupshup | meta | evolution | webhook); unconfigured → ErrNotConfigured.
 type WhatsAppProvider struct {
 	gate   bool
 	sender whatsappSender
@@ -32,8 +42,10 @@ func NewWhatsAppProvider(provider string, creds map[string]string, logger *slog.
 	if logger == nil {
 		logger = slog.Default()
 	}
-	var s whatsappSender = mockWASender{logger: logger}
+	var s whatsappSender = unconfiguredWASender{}
 	switch strings.ToLower(provider) {
+	case "mock":
+		s = mockWASender{logger: logger}
 	case "gupshup":
 		s = gupshupSender{apiKey: creds["api_key"], http: httpDoer(creds)}
 	case "meta":
@@ -53,7 +65,7 @@ func NewWhatsAppProvider(provider string, creds map[string]string, logger *slog.
 			http:   httpDoer(creds),
 		}
 	default:
-		logger.Info("whatsapp provider unconfigured — mock (log-only) sender active")
+		logger.Warn("whatsapp provider unconfigured or unknown", "provider", provider)
 	}
 	return &WhatsAppProvider{gate: true, sender: s, logger: logger}
 }

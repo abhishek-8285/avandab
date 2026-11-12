@@ -165,6 +165,18 @@ func TestLiveStore_ETA_Cached(t *testing.T) {
 	_, _ = db.Exec(`INSERT INTO telemetry_snapshots
 		(id, trip_id, vehicle_id, timestamp, latitude, longitude, speed, fuel_level, odometer)
 		VALUES ('s-latest', 't1', 'v1', ?, 19.3, 72.8, 60.0, 80.0, 1030.0)`, now.Add(-1*time.Minute).Format("2006-01-02 15:04:05"))
+	_, _ = db.Exec(`INSERT INTO vehicle_latest_position
+		(vehicle_id, trip_id, device_time, latitude, longitude, speed, fuel_level, odometer)
+		VALUES ('v1', 't1', ?, 19.3, 72.8, 60.0, 80.0, 1030.0)
+		ON CONFLICT(vehicle_id) DO UPDATE SET
+			trip_id = excluded.trip_id,
+			device_time = excluded.device_time,
+			latitude = excluded.latitude,
+			longitude = excluded.longitude,
+			speed = excluded.speed,
+			fuel_level = excluded.fuel_level,
+			odometer = excluded.odometer`,
+		now.Add(-1*time.Minute).Format("2006-01-02 15:04:05"))
 
 	store := NewLiveStore(db, 15*time.Minute).WithEtaService(eta.NewEtaService(db, 15, 30, 5, id.NewUUIDGenerator(), clock.NewRealClock()))
 

@@ -118,7 +118,7 @@
                 <h2 class="text-sm font-bold text-on-surface">{{t "mo.ful.queue"}}</h2>
                 <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .AuditClaims}} claims</span>
             </div>
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-soft border border-emerald-500/20 text-[11px] font-bold tracking-wide uppercase text-emerald-strong dark:text-emerald-300 cursor-default"
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-soft border border-emerald-500/20 text-[11px] font-bold tracking-wide uppercase text-emerald-strong cursor-default"
                   hx-get="/fuel/audit/queue"
                   hx-trigger="every 30s"
                   hx-target="#fuel-audit-queue"

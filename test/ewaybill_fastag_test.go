@@ -169,7 +169,7 @@ func TestEWayBill_AutoGenerate_Subscriber(t *testing.T) {
 		Enabled:         true,
 		MinInvoiceValue: 50000.0,
 	}
-	client := intEWB.NewClient(intEWB.Config{Enabled: true, UseMock: true})
+	client := &fakeEWBProvider{}
 	svc := ewaybill.NewEWayBillService(db, bus, client, nil, cfg)
 	svc.SubscribeTripEvents(bus)
 
@@ -214,7 +214,7 @@ func TestFASTag_DB_Balance_And_Deduct(t *testing.T) {
 	require.NoError(t, err)
 
 	client := intFastag.NewClient(intFastag.Config{Enabled: true, UseMock: true}, db)
-	svc := fastag.NewFASTagService(db, client, fastag.Config{AutoKharcha: true})
+	svc := fastag.NewFASTagService(db, client, fastag.Config{AutoKharcha: true, Provider: "NETC"})
 
 	// 1. Get balance should read DB balance (3500.00), not hardcoded 2475.50
 	bal, err := svc.GetBalance(ctx, "MH12CD5678")
@@ -277,7 +277,7 @@ func TestFASTag_Reconciliation_Greedy_And_AutoKharcha(t *testing.T) {
 	require.NoError(t, err)
 
 	client := intFastag.NewClient(intFastag.Config{Enabled: true, UseMock: true}, db)
-	svc := fastag.NewFASTagService(db, client, fastag.Config{AutoKharcha: true})
+	svc := fastag.NewFASTagService(db, client, fastag.Config{AutoKharcha: true, Provider: "NETC"})
 
 	// Run Reconcile
 	res, err := svc.Reconcile(ctx, "MH12EF9012", "", "")
@@ -326,7 +326,7 @@ func TestEWayBill_And_FASTag_HTTP_Handlers(t *testing.T) {
 	ewbClient := intEWB.NewClient(intEWB.Config{Enabled: true, UseMock: true})
 	ewbSvc := ewaybill.NewEWayBillService(db, bus, ewbClient, nil, ewaybill.Config{Enabled: true})
 	fastagClient := intFastag.NewClient(intFastag.Config{Enabled: true, UseMock: true}, db)
-	fastagSvc := fastag.NewFASTagService(db, fastagClient, fastag.Config{AutoKharcha: true})
+	fastagSvc := fastag.NewFASTagService(db, fastagClient, fastag.Config{AutoKharcha: true, Provider: "NETC"})
 
 	ewbHandlers := handlers.NewEWayBillHandlers(nil, ewbSvc, &stubAuthSvc{})
 	fastagHandlers := handlers.NewFASTagHandlers(nil, fastagSvc, &stubAuthSvc{})

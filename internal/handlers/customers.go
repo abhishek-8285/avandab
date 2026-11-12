@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	customerapp "transport-app/internal/customer/application"
 	"transport-app/internal/domain"
 	"transport-app/internal/logging"
 	"transport-app/internal/middleware"
@@ -88,9 +89,7 @@ func (h *CustomerHandlers) GrantPortalAccess(w http.ResponseWriter, r *http.Requ
 	_ = h.AuthSrv.AddRoleForUser(user.ID.String(), string(domain.RoleCustomer))
 
 	if h.DB != nil {
-		_, _ = h.DB.ExecContext(ctx,
-			`INSERT INTO customer_users (id, customer_id, user_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
-			uuid.NewString(), customerID, user.ID.String())
+		_ = customerapp.LinkPortalUser(ctx, h.DB, customerID, user.ID.String())
 	}
 
 	http.Redirect(w, r, "/customers/"+customerID, http.StatusSeeOther)

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"regexp"
 
+	"transport-app/internal/auth"
 	"transport-app/internal/shared/ports"
 )
 
@@ -49,6 +50,14 @@ func (h *OTPHandlers) SendOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	smsReady := h.App.Notify != nil && h.App.Notify.SMSConfigured()
+	dev := h.Config != nil && h.Config.IsDevelopment()
+	// No sender and not dev: fail before issuing a code nobody can receive.
+	if !smsReady && !dev {
+		writeJSONError(w, http.StatusServiceUnavailable, "sms_not_configured")
+		return
+	}
+
 	code, err := h.App.OTPStore.Create(req.Phone)
 	if err != nil {
 		// Throttle still blocks (race): respond generically.
@@ -58,7 +67,7 @@ func (h *OTPHandlers) SendOTP(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Info("OTP issued", "phone_prefix", phonePrefix(req.Phone))
 
-	if h.App.Notify != nil && h.App.Notify.SMSConfigured() {
+	if smsReady {
 		msg := fmt.Sprintf("Your Avandab verification code is %s. It expires in 5 minutes. Do not share it.", code)
 		if serr := h.App.Notify.SendSMS(r.Context(), ports.NotificationMessage{
 			Recipient: req.Phone,
@@ -69,7 +78,7 @@ func (h *OTPHandlers) SendOTP(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]interface{}{"ok": true})
 			return
 		}
-	} else if h.Config != nil && h.Config.IsDevelopment() {
+	} else {
 		// No SMS sender: dev convenience echoes the code (reset-link pattern).
 		writeJSON(w, http.StatusOK, map[string]interface{}{"ok": true, "dev_code": code})
 		return
@@ -107,9 +116,7 @@ func (h *OTPHandlers) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Possession proven: stamp for every user with this phone (typically one).
-	if _, err := h.App.DB.ExecContext(r.Context(),
-		`UPDATE users SET phone_verified_at = CURRENT_TIMESTAMP WHERE phone = $1 AND phone_verified_at IS NULL`,
-		req.Phone); err != nil {
+	if err := auth.MarkPhoneVerified(r.Context(), h.App.DB, req.Phone); err != nil {
 		slog.Error("otp verify stamp failed", "phone_prefix", phonePrefix(req.Phone), "error", err)
 	}
 

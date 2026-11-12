@@ -426,6 +426,25 @@ func (r *sqlAlertRepository) Resolve(ctx context.Context, alertID string, userID
 	return err
 }
 
+// ResolveOpenBySourceType implements system recovery: one UPDATE closes every
+// open/acknowledged/escalated alert of a source+type and clears its escalation.
+func (r *sqlAlertRepository) ResolveOpenBySourceType(ctx context.Context, source, alertType, resolvedBy string, at time.Time) (int64, error) {
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE alerts
+		SET status = 'resolved',
+		    ack_status = 'resolved',
+		    next_escalation_at = NULL,
+		    resolved_by = $1,
+		    resolved_at = $2,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE source = $3 AND alert_type = $4
+		  AND status IN ('open', 'acknowledged', 'escalated')`, resolvedBy, at.UTC(), source, alertType)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
 func (r *sqlAlertRepository) MarkAllRead(ctx context.Context, userID string) error {
 	now := time.Now().UTC()
 	_, err := r.db.ExecContext(ctx, `
@@ -658,4 +677,32 @@ func (r *sqlAlertRepository) ReopenExpiredSnoozesForTenant(ctx context.Context, 
 		return 0, err
 	}
 	return res.RowsAffected()
+}
+
+// ListTenantUsersByRole returns active users of one tenant holding the named
+// role (roles.name). Used by the escalator to target escalation steps at the
+// real people responsible for a role instead of a fixed channel destination.
+func (r *sqlAlertRepository) ListTenantUsersByRole(ctx context.Context, tenantID, role string) ([]domain.AlertRecipient, error) {
+	if tenantID == "" || role == "" {
+		return nil, nil
+	}
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT u.id, u.email, COALESCE(u.phone, '')
+		FROM users u
+		JOIN roles r ON r.id = u.role_id
+		WHERE u.tenant_id = $1 AND r.name = $2 AND u.status = 'active'
+		ORDER BY u.id`, tenantID, role)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []domain.AlertRecipient
+	for rows.Next() {
+		var rec domain.AlertRecipient
+		if err := rows.Scan(&rec.UserID, &rec.Email, &rec.Phone); err != nil {
+			return nil, err
+		}
+		out = append(out, rec)
+	}
+	return out, rows.Err()
 }

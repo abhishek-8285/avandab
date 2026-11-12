@@ -65,6 +65,24 @@ func TestSendOTP_DevReturnsCode(t *testing.T) {
 	require.Len(t, code, 6, "dev fallback must return the 6-digit code")
 }
 
+func TestSendOTP_NonDevWithoutSMS_503AndNoCodeIssued(t *testing.T) {
+	srv, app, cleanup := setupAuthAPIEnv(t)
+	defer cleanup()
+	app.Config.AppEnv = "production"
+	app.Notify = nil // no SMS sender in production
+
+	const phone = "+919876543211"
+	status, out := postJSON(t, srv.URL+"/api/v1/auth/otp/send", `{"phone":"`+phone+`"}`)
+	assert.Equal(t, http.StatusServiceUnavailable, status)
+	assert.Equal(t, "sms_not_configured", out["error"])
+	_, hasDevCode := out["dev_code"]
+	assert.False(t, hasDevCode, "production must never leak the code")
+
+	// ResendBlockedFor is only set by Create, so >0 would prove a code was issued.
+	assert.Zero(t, app.OTPStore.ResendBlockedFor(phone),
+		"no OTP may be created when SMS delivery is unavailable")
+}
+
 func TestSendOTP_SMSConfigured_DeliversViaNotify(t *testing.T) {
 	srv, app, cleanup := setupAuthAPIEnv(t)
 	defer cleanup()

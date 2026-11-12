@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"transport-app/internal/httpx"
+	kharchaapp "transport-app/internal/kharcha/application"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 )
@@ -33,15 +34,11 @@ func (h *DriverMoneyHandlers) driverIDForUser(r *http.Request) (string, bool) {
 	if !ok || session == nil || session.UserID == "" {
 		return "", false
 	}
-	var id string
-	err := h.db.QueryRowContext(r.Context(), `
-		SELECT id FROM drivers
-		WHERE id = $1 OR email = (SELECT email FROM users WHERE id = $2)
-		LIMIT 1`, session.UserID, session.UserID).Scan(&id)
-	if err != nil {
+	ref, err := kharchaapp.LookupUserDriver(r.Context(), h.db, session.UserID)
+	if err != nil || ref == nil || ref.ID == "" {
 		return "", false
 	}
-	return id, true
+	return ref.ID, true
 }
 
 // Balance handles GET /api/driver/balance.
@@ -66,38 +63,24 @@ func (h *DriverMoneyHandlers) Settlements(w http.ResponseWriter, r *http.Request
 		httpx.JSON(w, http.StatusNotFound, map[string]string{"error": "driver_not_linked"})
 		return
 	}
-	rows, err := h.db.QueryContext(r.Context(), `
-		SELECT id, trip_id, gross_fare, deductions, net_payout,
-		       status, COALESCE(tds_amount,0), paid_at
-		FROM driver_settlements WHERE driver_id = $1
-		ORDER BY created_at DESC LIMIT 50`, driverID)
+	items, err := kharchaapp.DriverSettlements(r.Context(), h.db, driverID)
 	if err != nil {
 		httpx.Error(w, r, err)
 		return
 	}
-	defer func() { _ = rows.Close() }()
-
 	settlements := []map[string]any{}
-	for rows.Next() {
-		var id, status string
-		var period sql.NullString
-		var gross, deductions, net, tds float64
-		var paidAt sql.NullTime
-		if err := rows.Scan(&id, &period, &gross, &deductions, &net, &status, &tds, &paidAt); err != nil {
-			httpx.Error(w, r, err)
-			return
-		}
+	for _, it := range items {
 		item := map[string]any{
-			"id":         id,
-			"period":     period.String,
-			"gross":      gross,
-			"deductions": deductions,
-			"net":        net,
-			"status":     status,
-			"tds":        tds,
+			"id":         it.ID,
+			"period":     it.Period,
+			"gross":      it.Gross,
+			"deductions": it.Deductions,
+			"net":        it.Net,
+			"status":     it.Status,
+			"tds":        it.TDS,
 		}
-		if paidAt.Valid {
-			item["paid_at"] = paidAt.Time.UTC().Format(time.RFC3339)
+		if it.PaidAt != nil {
+			item["paid_at"] = it.PaidAt.UTC().Format(time.RFC3339)
 		}
 		settlements = append(settlements, item)
 	}

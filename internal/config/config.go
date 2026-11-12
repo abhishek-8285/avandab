@@ -98,32 +98,60 @@ type Config struct {
 	DashboardSSEEnabled  bool
 	DashboardSSEInterval time.Duration
 	PWAEnabled           bool
-	RazorpayKeyID        string
-	RazorpayKeySecret    string
-	RazorpayWebhook      string
-	OCRProvider          string // mock | http (Spec 22 §6)
-	OCRHTTPURL           string
-	OCRHTTPKey           string
-	BootstrapAdmin       BootstrapAdminConfig
-	MultiTenant          MultiTenantConfig
-	RAG                  RAGConfig
-	Agent                AgentConfig
-	Experiment           ExperimentConfig
-	Telemetry            TelemetryConfig
-	LiveMap              LiveMapConfig
-	Alerts               AlertConfig
-	EWayBill             EWayBillConfig
-	GSTN                 GSTNConfig
-	FASTag               FASTagConfig
-	Routing              RoutingConfig
-	Cache                CacheConfig
-	Storage              StorageConfig
-	WorkerLeaderLock     bool
-	Notify               NotifyConfig
-	Comm                 CommConfig
-	Google               GoogleConfig
-	FCM                  FCMConfig
-	Turnstile            TurnstileConfig
+	// UptimeSampleInterval controls the in-process availability sampler that
+	// feeds the measured 30-day history on /status (migration 00180).
+	UptimeSampleInterval time.Duration
+	// UptimeSLACheckInterval controls how often the SLA monitor re-evaluates
+	// measured 30-day uptime and raises availability.sla_breach alerts.
+	UptimeSLACheckInterval time.Duration
+	// RetentionWorkerEnabled runs the business-data retention worker that
+	// enforces the published DPDP schedule (video 90d, audit/breach 3y,
+	// consents/DSAR 5y). RetentionInterval is its tick (default 24h).
+	RetentionWorkerEnabled bool
+	RetentionInterval      time.Duration
+	// KYCPostTenureRetention is how long driver KYC/licence data is kept after
+	// deactivation (published DPDP schedule: employment duration + 3 years).
+	KYCPostTenureRetention time.Duration
+	PayoutRailEnabled      bool
+	// PayoutStuckAfter is how long a payout may sit in initiated/processing
+	// before the stuck-payout sweep raises a settlement.payout_stuck alert.
+	PayoutStuckAfter time.Duration
+	// PayoutSweepInterval is the stuck-payout sweep tick.
+	PayoutSweepInterval time.Duration
+	// Payout rail provider: "" (disabled) | "razorpayx". The rail stays off
+	// unless PAYOUT_RAIL_ENABLED=true AND the provider is fully configured.
+	PayoutProvider      string
+	PayoutAccountNumber string
+	PayoutWebhookSecret string
+	RazorpayXKeyID      string
+	RazorpayXKeySecret  string
+	RazorpayKeyID       string
+	RazorpayKeySecret   string
+	RazorpayWebhook     string
+	OCRProvider         string // mock | http (Spec 22 §6)
+	OCRHTTPURL          string
+	OCRHTTPKey          string
+	BootstrapAdmin      BootstrapAdminConfig
+	MultiTenant         MultiTenantConfig
+	RAG                 RAGConfig
+	Agent               AgentConfig
+	Experiment          ExperimentConfig
+	Telemetry           TelemetryConfig
+	LiveMap             LiveMapConfig
+	Alerts              AlertConfig
+	EWayBill            EWayBillConfig
+	GSTN                GSTNConfig
+	FASTag              FASTagConfig
+	Video               VideoConfig
+	Routing             RoutingConfig
+	Cache               CacheConfig
+	Storage             StorageConfig
+	WorkerLeaderLock    bool
+	Notify              NotifyConfig
+	Comm                CommConfig
+	Google              GoogleConfig
+	FCM                 FCMConfig
+	Turnstile           TurnstileConfig
 }
 
 // CommConfig controls the durable outbound queue (comm_outbox, migration
@@ -168,18 +196,34 @@ func (c *TurnstileConfig) Enabled() bool {
 // NotifyConfig holds outbound delivery channel settings. Empty values keep a
 // channel unconfigured — sends then fail honestly instead of faking success.
 type NotifyConfig struct {
-	SMTPHost        string
-	SMTPPort        string
-	SMTPUser        string
-	SMTPPassword    string
-	SMTPFrom        string
-	SMTPDirect      bool
-	SMSWebhookURL   string
-	SMSWebhookToken string
+	SMTPHost            string
+	SMTPPort            string
+	SMTPUser            string
+	SMTPPassword        string
+	SMTPFrom            string
+	SMTPDirect          bool
+	SMSProvider         string
+	SMSWebhookURL       string
+	SMSWebhookToken     string
+	SMSMSG91AuthKey     string
+	SMSMSG91SenderID    string
+	SMSMSG91Route       string
+	SMSMSG91Endpoint    string
+	SMSTwilioAccountSID string
+	SMSTwilioAuthToken  string
+	SMSTwilioFromNumber string
+	SMSTwilioEndpoint   string
+	SMSFast2SMSAPIKey   string
+	SMSFast2SMSSenderID string
+	SMSFast2SMSRoute    string
+	SMSFast2SMSEndpoint string
 	// Email pool — dynamic multi-provider failover with quota tracking.
 	EmailPoolEnabled   bool
 	EmailPoolStrategy  string
 	EmailProvidersJSON string
+	// ReportWebhookSecret signs scheduled-report webhook deliveries
+	// (HMAC-SHA256, X-Report-Signature). Optional: unsigned when empty.
+	ReportWebhookSecret string
 }
 
 // FCMConfig holds Firebase Cloud Messaging settings for driver push notifications.
@@ -205,6 +249,14 @@ type FASTagConfig struct {
 	APIKey   string
 	Enabled  bool
 	Endpoint string
+}
+
+// VideoConfig holds video telematics media brokering settings. An empty
+// MediaServerURL keeps live streaming unconfigured: StartLivestream fails
+// closed with no session row instead of fabricating stream URLs
+// (Plan P3 item 3.12; P0 "stop fake data").
+type VideoConfig struct {
+	MediaServerURL string
 }
 
 // EWayBillConfig holds configuration for the E-Way Bill lifecycle worker (Spec 05 §7, Spec 07).
@@ -320,9 +372,12 @@ type BootstrapAdminConfig struct {
 	Password string
 }
 
-// MultiTenantConfig gates per-user tenant resolution (Spec 24). Disabled
-// (default) keeps the single-org bootstrap tenant for every request; enabled
-// resolves each user's tenant from users.tenant_id and rejects suspended orgs.
+// MultiTenantConfig gates per-user tenant resolution (Spec 24). Enabled is
+// the default: each request resolves its tenant from users.tenant_id and
+// suspended orgs are rejected at the edge (fail-closed). Single-org
+// deployments must opt out explicitly with MULTI_TENANT_ENABLED=false —
+// startup then logs a warning because every request collapses onto the
+// bootstrap tenant '1'.
 type MultiTenantConfig struct {
 	Enabled bool
 }
@@ -389,32 +444,47 @@ func Load() *Config {
 			MaxIdleConns:    maxIdleConns,
 			ConnMaxLifetime: getEnvDuration("DB_CONN_MAX_LIFETIME", 15*time.Minute),
 		},
-		CookieSecret:         getEnv("COOKIE_SECRET", "dev-secret-key-change-in-production-32b!"),
-		APITokenSecret:       getEnv("API_SECRET", ""),
-		PublicBaseURL:        strings.TrimRight(getEnv("APP_PUBLIC_URL", "https://avandab.com"), "/"),
-		SessionMaxAge:        sessionMaxAge,
-		CookieSecure:         cookieSecure,
-		LogLevel:             getEnv("LOG_LEVEL", "info"),
-		UploadDir:            getEnv("UPLOAD_DIR", "./uploads"),
-		StaticDir:            getEnv("STATIC_DIR", "internal/static"),
-		MaxUploadSize:        maxUpload,
-		ExportMaxRows:        getEnvInt("EXPORT_MAX_ROWS", 50000),
-		DashboardSSEEnabled:  getEnvBool("DASHBOARD_SSE_ENABLED", true),
-		DashboardSSEInterval: time.Duration(getEnvInt("DASHBOARD_SSE_INTERVAL_SEC", 5)) * time.Second,
-		PWAEnabled:           getEnvBool("PWA_ENABLED", false),
-		RazorpayKeyID:        getEnv("RAZORPAY_KEY_ID", ""),
-		RazorpayKeySecret:    getEnv("RAZORPAY_KEY_SECRET", ""),
-		RazorpayWebhook:      os.Getenv("RAZORPAY_WEBHOOK_SECRET"),
-		OCRProvider:          getEnv("OCR_PROVIDER", "mock"),
-		OCRHTTPURL:           getEnv("OCR_HTTP_URL", ""),
-		OCRHTTPKey:           getEnv("OCR_HTTP_KEY", ""),
+		CookieSecret:           getEnv("COOKIE_SECRET", "dev-secret-key-change-in-production-32b!"),
+		APITokenSecret:         getEnv("API_SECRET", ""),
+		PublicBaseURL:          strings.TrimRight(getEnv("APP_PUBLIC_URL", "https://avandab.com"), "/"),
+		SessionMaxAge:          sessionMaxAge,
+		CookieSecure:           cookieSecure,
+		LogLevel:               getEnv("LOG_LEVEL", "info"),
+		UploadDir:              getEnv("UPLOAD_DIR", "./uploads"),
+		StaticDir:              getEnv("STATIC_DIR", "internal/static"),
+		MaxUploadSize:          maxUpload,
+		ExportMaxRows:          getEnvInt("EXPORT_MAX_ROWS", 50000),
+		DashboardSSEEnabled:    getEnvBool("DASHBOARD_SSE_ENABLED", true),
+		DashboardSSEInterval:   time.Duration(getEnvInt("DASHBOARD_SSE_INTERVAL_SEC", 5)) * time.Second,
+		PWAEnabled:             getEnvBool("PWA_ENABLED", false),
+		UptimeSampleInterval:   getEnvDuration("UPTIME_SAMPLE_INTERVAL", time.Minute),
+		UptimeSLACheckInterval: getEnvDuration("UPTIME_SLA_CHECK_INTERVAL", 15*time.Minute),
+		RetentionWorkerEnabled: getEnvBool("RETENTION_WORKER_ENABLED", true),
+		RetentionInterval:      getEnvDuration("RETENTION_INTERVAL", 24*time.Hour),
+		KYCPostTenureRetention: getEnvDuration("KYC_POST_TENURE_RETENTION", 3*365*24*time.Hour),
+		PayoutRailEnabled:      getEnvBool("PAYOUT_RAIL_ENABLED", false),
+		PayoutStuckAfter:       getEnvDuration("PAYOUT_STUCK_AFTER", 24*time.Hour),
+		PayoutSweepInterval:    getEnvDuration("PAYOUT_SWEEP_INTERVAL", time.Hour),
+		PayoutProvider:         getEnv("PAYOUT_PROVIDER", ""),
+		PayoutAccountNumber:    os.Getenv("RAZORPAYX_ACCOUNT_NUMBER"),
+		PayoutWebhookSecret:    getEnv("PAYOUT_WEBHOOK_SECRET", os.Getenv("RAZORPAYX_WEBHOOK_SECRET")),
+		RazorpayXKeyID:         getEnv("RAZORPAYX_KEY_ID", os.Getenv("RAZORPAY_KEY_ID")),
+		RazorpayXKeySecret:     getEnv("RAZORPAYX_KEY_SECRET", os.Getenv("RAZORPAY_KEY_SECRET")),
+		RazorpayKeyID:          getEnv("RAZORPAY_KEY_ID", ""),
+		RazorpayKeySecret:      getEnv("RAZORPAY_KEY_SECRET", ""),
+		RazorpayWebhook:        os.Getenv("RAZORPAY_WEBHOOK_SECRET"),
+		OCRProvider:            getEnv("OCR_PROVIDER", "mock"),
+		OCRHTTPURL:             getEnv("OCR_HTTP_URL", ""),
+		OCRHTTPKey:             getEnv("OCR_HTTP_KEY", ""),
 		BootstrapAdmin: BootstrapAdminConfig{
 			Email:    os.Getenv("BOOTSTRAP_ADMIN_EMAIL"),
 			Name:     getEnv("BOOTSTRAP_ADMIN_NAME", "Admin"),
 			Password: os.Getenv("BOOTSTRAP_ADMIN_PASSWORD"),
 		},
 		MultiTenant: MultiTenantConfig{
-			Enabled: getEnv("MULTI_TENANT_ENABLED", "false") == "true",
+			// Fail-closed SaaS default: resolve the tenant per user. Opt out
+			// only for a deliberate single-org deployment.
+			Enabled: getEnv("MULTI_TENANT_ENABLED", "true") == "true",
 		},
 		RAG: RAGConfig{
 			Enabled:          getEnv("RAG_ENABLED", "false") == "true",
@@ -529,6 +599,12 @@ func Load() *Config {
 		Endpoint: getEnv("INTEGRATION_FASTAG_ENDPOINT", "https://api.fastag.org"),
 	}
 
+	// Plan P3 item 3.12 — live stream brokering target. Unset keeps
+	// StartLivestream fail-closed; no default host is invented.
+	cfg.Video = VideoConfig{
+		MediaServerURL: strings.TrimRight(strings.TrimSpace(os.Getenv("VIDEO_MEDIA_SERVER_URL")), "/"),
+	}
+
 	// Spec 18 — Route optimization (Wave A)
 	cfg.Routing = RoutingConfig{
 		Provider: getEnv("ROUTING_PROVIDER", "mock"),
@@ -560,6 +636,12 @@ func Load() *Config {
 		S3AllowedRegions:  getEnv("S3_ALLOWED_REGIONS", ""),
 	}
 	cfg.WorkerLeaderLock = getEnvBool("WORKER_LEADER_LOCK", true)
+	// SQLite is a single-process file DB: DB leases only add write contention
+	// (SQLITE_BUSY storms at boot) and cannot coordinate replicas. Default the
+	// leader lock off for sqlite unless the operator explicitly set it.
+	if _, explicit := os.LookupEnv("WORKER_LEADER_LOCK"); !explicit && dbDriver == "sqlite" {
+		cfg.WorkerLeaderLock = false
+	}
 
 	smtpPass := os.Getenv("SMTP_PASSWORD")
 	if smtpPass == "" {
@@ -568,17 +650,31 @@ func Load() *Config {
 	smtpPass = strings.ReplaceAll(smtpPass, " ", "")
 
 	cfg.Notify = NotifyConfig{
-		SMTPHost:           os.Getenv("SMTP_HOST"),
-		SMTPPort:           os.Getenv("SMTP_PORT"),
-		SMTPUser:           os.Getenv("SMTP_USER"),
-		SMTPPassword:       smtpPass,
-		SMTPFrom:           os.Getenv("SMTP_FROM"),
-		SMTPDirect:         getEnvBool("SMTP_DIRECT", false) || strings.EqualFold(os.Getenv("SMTP_HOST"), "direct"),
-		SMSWebhookURL:      os.Getenv("SMS_WEBHOOK_URL"),
-		SMSWebhookToken:    os.Getenv("SMS_WEBHOOK_TOKEN"),
-		EmailPoolEnabled:   getEnvBool("EMAIL_POOL_ENABLED", true),
-		EmailPoolStrategy:  getEnv("EMAIL_POOL_STRATEGY", getEnv("EMAIL_PROVIDER_STRATEGY", "priority")),
-		EmailProvidersJSON: os.Getenv("EMAIL_PROVIDERS_JSON"),
+		SMTPHost:            os.Getenv("SMTP_HOST"),
+		SMTPPort:            os.Getenv("SMTP_PORT"),
+		SMTPUser:            os.Getenv("SMTP_USER"),
+		SMTPPassword:        smtpPass,
+		SMTPFrom:            os.Getenv("SMTP_FROM"),
+		SMTPDirect:          getEnvBool("SMTP_DIRECT", false) || strings.EqualFold(os.Getenv("SMTP_HOST"), "direct"),
+		SMSProvider:         os.Getenv("SMS_PROVIDER"),
+		SMSWebhookURL:       os.Getenv("SMS_WEBHOOK_URL"),
+		SMSWebhookToken:     os.Getenv("SMS_WEBHOOK_TOKEN"),
+		SMSMSG91AuthKey:     os.Getenv("SMS_MSG91_AUTH_KEY"),
+		SMSMSG91SenderID:    os.Getenv("SMS_MSG91_SENDER_ID"),
+		SMSMSG91Route:       os.Getenv("SMS_MSG91_ROUTE"),
+		SMSMSG91Endpoint:    os.Getenv("SMS_MSG91_ENDPOINT"),
+		SMSTwilioAccountSID: os.Getenv("TWILIO_ACCOUNT_SID"),
+		SMSTwilioAuthToken:  os.Getenv("TWILIO_AUTH_TOKEN"),
+		SMSTwilioFromNumber: os.Getenv("TWILIO_FROM_NUMBER"),
+		SMSTwilioEndpoint:   os.Getenv("TWILIO_ENDPOINT"),
+		SMSFast2SMSAPIKey:   os.Getenv("FAST2SMS_API_KEY"),
+		SMSFast2SMSSenderID: os.Getenv("FAST2SMS_SENDER_ID"),
+		SMSFast2SMSRoute:    os.Getenv("FAST2SMS_ROUTE"),
+		SMSFast2SMSEndpoint: os.Getenv("FAST2SMS_ENDPOINT"),
+		EmailPoolEnabled:    getEnvBool("EMAIL_POOL_ENABLED", true),
+		EmailPoolStrategy:   getEnv("EMAIL_POOL_STRATEGY", getEnv("EMAIL_PROVIDER_STRATEGY", "priority")),
+		EmailProvidersJSON:  os.Getenv("EMAIL_PROVIDERS_JSON"),
+		ReportWebhookSecret: getEnv("REPORT_WEBHOOK_SECRET", os.Getenv("REPORT_DELIVERY_WEBHOOK_SECRET")),
 	}
 	cfg.Comm = CommConfig{
 		OutboxWorker: getEnvBool("COMM_OUTBOX_WORKER", true),

@@ -137,7 +137,6 @@ func TestSelectedDashboard_FastagThresholdOverlay(t *testing.T) {
 		Experiment:   config.ExperimentConfig{Rollout: 100, ForceVariant: "B"},
 	}
 	app := newDashboardSelectedApp(t, db, cfg, &mockAuthSvc{})
-	require.NotNil(t, app.Services.TenantConfigs, "overlay reader must be wired")
 
 	setup := func(tenant, configValue string) {
 		t.Helper()

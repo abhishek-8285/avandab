@@ -154,9 +154,6 @@ func (uc *AssignVehicleUseCase) checkVehicleCompliance(ctx ports.TxContext, cmd 
 						if tenant == "" {
 							return fmt.Errorf("cannot record dispatch override audit: tenant unknown")
 						}
-						_, _ = repository.ExecTx(ctx, dbGetter.DB(), `CREATE TABLE IF NOT EXISTS dispatch_overrides (
-                            id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL DEFAULT '1', trip_id TEXT NOT NULL, vehicle_id TEXT, driver_id TEXT, blocked_by TEXT NOT NULL, reason TEXT NOT NULL, overridden_by TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
-                        )`)
 						overriddenBy := ""
 						if uid := getUserID(ctx); uid != nil {
 							overriddenBy = string(*uid)

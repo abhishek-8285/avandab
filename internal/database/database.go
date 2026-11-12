@@ -66,6 +66,7 @@ var sqlitePragmas = []string{
 	"PRAGMA locking_mode=NORMAL;",
 	"PRAGMA foreign_keys=ON;",
 	"PRAGMA temp_store=MEMORY;",
+	"PRAGMA auto_vacuum=INCREMENTAL;",
 }
 
 // Settings is the minimal view of config.DatabaseConfig this package needs.

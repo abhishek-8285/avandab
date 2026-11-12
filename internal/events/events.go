@@ -37,6 +37,7 @@ const (
 
 	GPSDeviationAlert = "telemetry.gps_deviation_alert"
 	FuelTheftAlert    = "telemetry.fuel_theft_alert"
+	TempBreachAlert   = "telemetry.temp_breach_alert"
 
 	GeofenceZoneBreach = "geofence.zone_breach"
 

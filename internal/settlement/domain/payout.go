@@ -35,6 +35,21 @@ type PayoutInstruction struct {
 	UpdatedAt        time.Time    `json:"updated_at"`
 }
 
+// PayoutAccount is a driver bank account row. The account number is AES-GCM
+// encrypted at rest; callers decrypt only when handing it to the payout rail.
+type PayoutAccount struct {
+	ID                     string
+	TenantID               string
+	DriverID               string
+	HolderName             string
+	AccountNumberEncrypted string
+	AccountNumberMasked    string
+	IFSC                   string
+	BankName               string
+	VerificationStatus     string
+	VerificationReference  string
+}
+
 // ValidatePayoutEligibility checks that a payout is permissible under banking and balance constraints.
 func ValidatePayoutEligibility(availableBalance, requestedAmount float64, accountVerified bool, minPayoutAmount float64) error {
 	if !accountVerified {

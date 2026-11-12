@@ -1017,6 +1017,48 @@ func TestComputeLineTax_InterState(t *testing.T) {
 	assert.Equal(t, 6.0, igst) // 33.33*18/100=5.9994 ->6.00
 }
 
+// TestComputeLineTax_RoundsToPaise locks the rounding contract shared by the
+// live invoice line handlers: each tax component is rounded to 2dp, so naive
+// taxable*rate/100 values must not leak into persisted or printed totals.
+func TestComputeLineTax_RoundsToPaise(t *testing.T) {
+	cases := []struct {
+		name                            string
+		taxable, rate                   float64
+		intra                           bool
+		wantCGST, wantSGST, wantIGST    float64
+		naiveCGST, naiveSGST, naiveIGST float64
+	}{
+		{
+			name: "intra_18pct_sub_paise_taxable", taxable: 99.995, rate: 18, intra: true,
+			wantCGST: 9.00, wantSGST: 9.00, wantIGST: 0,
+			naiveCGST: 99.995 * 9 / 100, naiveSGST: 99.995 * 9 / 100, naiveIGST: 0,
+		},
+		{
+			name: "intra_5pct_tiny_taxable", taxable: 0.005, rate: 5, intra: true,
+			wantCGST: 0, wantSGST: 0, wantIGST: 0,
+			naiveCGST: 0.005 * 2.5 / 100, naiveSGST: 0.005 * 2.5 / 100, naiveIGST: 0,
+		},
+		{
+			name: "inter_12pct_fractional_taxable", taxable: 1234.567, rate: 12, intra: false,
+			wantCGST: 0, wantSGST: 0, wantIGST: 148.15,
+			naiveCGST: 0, naiveSGST: 0, naiveIGST: 1234.567 * 12 / 100,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cgst, sgst, igst := ComputeLineTax(tc.taxable, tc.rate, tc.intra)
+			assert.Equal(t, tc.wantCGST, cgst)
+			assert.Equal(t, tc.wantSGST, sgst)
+			assert.Equal(t, tc.wantIGST, igst)
+			// The fixture must actually exercise rounding: naive total tax
+			// differs from the rounded components.
+			assert.NotEqual(t,
+				tc.naiveCGST+tc.naiveSGST+tc.naiveIGST,
+				tc.wantCGST+tc.wantSGST+tc.wantIGST)
+		})
+	}
+}
+
 func TestValidateInvoiceAmounts(t *testing.T) {
 	require.NoError(t, validateInvoiceAmounts(100, 18, 0, 118))
 	require.NoError(t, validateInvoiceAmounts(0, 0, 0, 0))

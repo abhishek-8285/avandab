@@ -30,7 +30,7 @@
                     {{t "mo.c.home"}}
                 </a>
                 <span class="text-border-subtle">|</span>
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium {{if .IsPaid}}bg-emerald-soft text-emerald-mid dark:text-emerald-400 border border-emerald-500/20{{else}}bg-amber-soft text-amber-mid dark:text-amber-400 border border-amber-500/20{{end}}">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium {{if .IsPaid}}bg-emerald-soft text-emerald-mid border border-emerald-500/20{{else}}bg-amber-soft text-amber-mid dark:text-amber-400 border border-amber-500/20{{end}}">
                     <span class="w-2 h-2 rounded-full {{if .IsPaid}}bg-emerald-500{{else}}bg-amber-500 animate-pulse{{end}}"></span>
                     {{if .IsPaid}}Paid &amp; Settled{{else}}Payment Outstanding{{end}}
                 </span>
@@ -247,7 +247,7 @@
                     </div>
                     <div class="flex justify-between text-text-muted">
                         <span>{{t "mo.pay.total_paid"}}</span>
-                        <span class="font-semibold text-emerald-mid dark:text-emerald-400 tabular-nums">₹{{printf "%.2f" .Invoice.PaidAmount}}</span>
+                        <span class="font-semibold text-emerald-mid tabular-nums">₹{{printf "%.2f" .Invoice.PaidAmount}}</span>
                     </div>
                     <div class="pt-2 border-t border-border-subtle flex justify-between items-center">
                         <span class="text-xs font-bold uppercase tracking-wider text-text-muted">{{t "mo.inv.balance_due"}}</span>
@@ -267,7 +267,7 @@
                         <svg aria-hidden="true" class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                     </div>
                     <div>
-                        <h2 class="text-xl font-bold text-emerald-strong dark:text-emerald-300 font-display">{{t "mo.pay.settled_full"}}</h2>
+                        <h2 class="text-xl font-bold text-emerald-strong font-display">{{t "mo.pay.settled_full"}}</h2>
                         <p class="text-xs text-text-muted mt-1">{{t "mo.pay.thanks"}}</p>
                     </div>
                     {{if .LatestPayment}}
@@ -278,7 +278,7 @@
                         </div>
                         <div class="flex justify-between text-text-muted">
                             <span>{{t "mo.pay.settled_amount"}}</span>
-                            <span class="font-bold text-emerald-mid dark:text-emerald-400 tabular-nums">₹{{printf "%.2f" .LatestPayment.Amount}}</span>
+                            <span class="font-bold text-emerald-mid tabular-nums">₹{{printf "%.2f" .LatestPayment.Amount}}</span>
                         </div>
                         <div class="flex justify-between text-text-muted">
                             <span>{{t "mo.pay.payment_method"}}</span>
@@ -355,7 +355,7 @@
                             {{range .Payments}}
                             <tr>
                                 <td class="px-4 py-2 text-on-surface">{{.PaymentDate}}</td>
-                                <td class="px-4 py-2 text-right font-bold text-emerald-mid dark:text-emerald-400">₹{{printf "%.2f" .Amount}}</td>
+                                <td class="px-4 py-2 text-right font-bold text-emerald-mid">₹{{printf "%.2f" .Amount}}</td>
                                 <td class="px-4 py-2 uppercase font-medium text-text-muted">{{.Method}}</td>
                                 <td class="px-4 py-2 font-data-mono text-text-muted">{{if .RazorpayPaymentID}}{{.RazorpayPaymentID}}{{else}}{{.Reference}}{{end}}</td>
                             </tr>
@@ -390,11 +390,11 @@ function resetPayLabel() {
         }
         
         function showMessage(type, text) {
-            statusMsg.classList.remove('hidden', 'bg-red-500/10', 'text-red-600', 'border-red-500/30', 'bg-emerald-500/10', 'text-emerald-600', 'border-emerald-500/30');
+            statusMsg.classList.remove('hidden', 'bg-red-soft', 'text-red-mid', 'border-red-500/30', 'bg-emerald-soft', 'text-emerald-mid', 'border-emerald-500/30');
             if (type === 'error') {
-                statusMsg.classList.add('bg-red-500/10', 'text-red-600', 'border', 'border-red-500/30');
+                statusMsg.classList.add('bg-red-soft', 'text-red-mid', 'border', 'border-red-500/30');
             } else {
-                statusMsg.classList.add('bg-emerald-500/10', 'text-emerald-600', 'border', 'border-emerald-500/30');
+                statusMsg.classList.add('bg-emerald-soft', 'text-emerald-mid', 'border', 'border-emerald-500/30');
             }
             statusMsg.innerHTML = text;
         }

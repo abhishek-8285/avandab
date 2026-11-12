@@ -24,6 +24,7 @@ import (
 	clock "transport-app/internal/shared/clock"
 	id "transport-app/internal/shared/id"
 	uow "transport-app/internal/shared/uow"
+	tenantapp "transport-app/internal/tenant/application"
 	"transport-app/internal/validate"
 	vehicleapp "transport-app/internal/vehicle/application"
 	vehicleagg "transport-app/internal/vehicle/domain/aggregate"
@@ -246,8 +247,7 @@ func (h *SettingsHandlers) SaveOnboard(w http.ResponseWriter, r *http.Request) {
 	// Keep /tenants list label in sync with wizard — profile table holds
 	// truth, tenants.name is display only. Best-effort, never blocks onboard.
 	if h.DB != nil && tenantID != "" {
-		if _, err := h.DB.ExecContext(r.Context(),
-			`UPDATE tenants SET name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, companyName, string(tenantID)); err != nil {
+		if err := tenantapp.NewTenantAdminService(h.DB).SyncTenantDisplayName(r.Context(), string(tenantID), companyName); err != nil {
 			slog.WarnContext(r.Context(), "onboard tenant name sync failed",
 				slog.String("tenant_id", string(tenantID)), slog.Any("error", err))
 		}

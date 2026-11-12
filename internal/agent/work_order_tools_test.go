@@ -28,13 +28,14 @@ func newWOAgentEnv(t *testing.T) (*ToolEnv, map[string]*RegisteredTool) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	bus := events.NewInMemoryBus()
 	services := service.NewServices(store, cfg, logger, bus)
+	_ = services
 
 	_, err := db.Exec(`INSERT INTO vehicles
 		(id, registration_number, vehicle_number, vehicle_type, capacity, status, insurance_expiry, fitness_expiry, permit_expiry, tenant_id)
 		VALUES ('veh-wo','REG-WO','MH-01-WO','truck',15,'available',date('now','+1 year'),date('now','+1 year'),date('now','+1 year'),'1')`)
 	require.NoError(t, err)
 
-	env := &ToolEnv{Services: services, UserID: "agent-op", UserName: "Agent Op"}
+	env := &ToolEnv{DB: db, UserID: "agent-op", UserName: "Agent Op"}
 	byName := map[string]*RegisteredTool{}
 	for _, tl := range RegisterTools(env) {
 		byName[tl.Name] = tl
@@ -169,4 +170,38 @@ func TestWorkOrderTools_Gated(t *testing.T) {
 	action, err := approval.Approve(woAgentCtx(), pending[0].ID, "admin-1", "Admin")
 	require.NoError(t, err)
 	assert.Equal(t, rl.ActionExecuted, action.Status)
+}
+
+// Tenant isolation for the work-order tools: a card created by tenant "1" is
+// invisible through every tool once another tenant asks (read or write).
+func TestWorkOrderTools_TenantIsolation(t *testing.T) {
+	_, byName := newWOAgentEnv(t)
+	ctxOwn := woAgentCtx()
+
+	res, err := byName["create_work_order"].Handler(ctxOwn, json.RawMessage(`{"vehicle_id":"veh-wo","title":"Tenant 1 job"}`))
+	require.NoError(t, err)
+	var created map[string]any
+	require.NoError(t, json.Unmarshal([]byte(res), &created))
+	id, _ := created["id"].(string)
+	require.NotEmpty(t, id)
+
+	otherCtx := shared.ContextWithTenantID(context.Background(), "2")
+	otherCtx = WithAgentUser(otherCtx, "agent-op", "Agent Op")
+
+	res, err = byName["list_work_orders"].Handler(otherCtx, json.RawMessage(`{}`))
+	require.NoError(t, err)
+	assert.Contains(t, res, "No job cards found")
+	assert.NotContains(t, res, "Tenant 1 job")
+
+	_, err = byName["get_work_order"].Handler(otherCtx, json.RawMessage(`{"id":`+q(id)+`}`))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+
+	_, err = byName["transition_work_order"].Handler(otherCtx, json.RawMessage(`{"id":`+q(id)+`,"status":"in_progress"}`))
+	require.Error(t, err)
+
+	// The owning tenant still sees it.
+	res, err = byName["list_work_orders"].Handler(ctxOwn, json.RawMessage(`{}`))
+	require.NoError(t, err)
+	assert.Contains(t, res, "Tenant 1 job")
 }

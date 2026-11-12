@@ -46,7 +46,7 @@ const PRESET_UTTERANCES = [
 export function VoiceKharchaSheet({
   visible,
   onClose,
-  tripId = 'TRP-8491',
+  tripId,
   onSaved,
 }: VoiceKharchaSheetProps) {
   const [isListening, setIsListening] = useState(false);
@@ -325,7 +325,7 @@ useEffect(() => {
         ? `[VOICE AUDIO AUDIT] Spoken: "${transcript}" (Original: ₹${originalSpokenAmount}, Claimed: ₹${finalAmount})`
         : `${categoryInput} ₹${finalAmount} ${vendorInput}`;
 
-      const draft = buildExpenseDraft(fullAuditNote, tripId, new Date());
+      const draft = buildExpenseDraft(fullAuditNote, tripId || '', new Date());
       draft.amount = finalAmount;
       draft.expense_type = categoryInput;
 
@@ -386,7 +386,7 @@ useEffect(() => {
               </View>
               <View>
                 <Text style={styles.headerTitle}>VOICE KHARCHA (आवाज़ से खर्चा)</Text>
-                <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">Audio Recording & Verbatim Transcript • #{tripId}</Text>
+                <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">Audio Recording & Verbatim Transcript{tripId ? ` • #${tripId}` : ""}</Text>
               </View>
             </View>
             <TouchableOpacity

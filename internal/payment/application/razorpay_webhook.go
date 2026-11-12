@@ -442,7 +442,7 @@ func (uc *RazorpayWebhookUseCase) acknowledgeUnattributable(ctx context.Context,
 	if uc.eventBus == nil {
 		return
 	}
-	uc.eventBus.Publish(ctx, events.Event{
+	if err := uc.eventBus.Publish(ctx, events.Event{
 		Type: events.RazorpayPaymentFailed,
 		Payload: RazorpayPaymentFailedEvent{
 			RazorpayPaymentID: paymentID,
@@ -451,7 +451,9 @@ func (uc *RazorpayWebhookUseCase) acknowledgeUnattributable(ctx context.Context,
 			ErrorDescription:  "webhook payment missing notes.invoice_id",
 			CreatedAt:         uc.clock.Now(),
 		},
-	})
+	}); err != nil {
+		slog.Default().Warn("razorpay webhook event publish failed", "error", err)
+	}
 }
 
 func (uc *RazorpayWebhookUseCase) processRefundEntity(ctx context.Context, entity RazorpayRefundEntity) (paymentagg.PaymentID, error) {
@@ -494,7 +496,7 @@ func (uc *RazorpayWebhookUseCase) processFailed(ctx context.Context, eventID str
 		return nil
 	}
 
-	uc.eventBus.Publish(ctx, events.Event{
+	if err := uc.eventBus.Publish(ctx, events.Event{
 		Type: events.RazorpayPaymentFailed,
 		Payload: RazorpayPaymentFailedEvent{
 			RazorpayEventID:   eventID,
@@ -507,7 +509,9 @@ func (uc *RazorpayWebhookUseCase) processFailed(ctx context.Context, eventID str
 			ErrorDescription:  entity.ErrorDescription,
 			CreatedAt:         uc.clock.Now(),
 		},
-	})
+	}); err != nil {
+		slog.Default().Warn("razorpay webhook event publish failed", "error", err)
+	}
 	return nil
 }
 

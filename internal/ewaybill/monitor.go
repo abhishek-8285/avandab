@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"transport-app/internal/events"
+	"transport-app/internal/shared"
 )
 
 // Monitor periodically scans active E-Way Bills approaching expiration.
@@ -42,6 +43,10 @@ func NewMonitor(svc *EWayBillService, cfg Config) *Monitor {
 
 // Run starts the monitor loop until ctx is cancelled.
 func (m *Monitor) Run(ctx context.Context) {
+	if m.svc.IsMockProvider() {
+		m.logger.Warn("ewaybill: mock provider — expiry monitor disabled (would mutate bills via stub)")
+		return
+	}
 	ticker := time.NewTicker(m.interval)
 	defer ticker.Stop()
 
@@ -109,7 +114,7 @@ func (m *Monitor) processExpiredEWBs(ctx context.Context) {
 			`, eventID, it.ewbNumber, it.tripID)
 
 			if m.bus != nil && it.tenantID != "" {
-				m.bus.Publish(ctx, events.Event{
+				if err := m.bus.Publish(ctx, events.Event{
 					Type: "AlertEvent",
 					Payload: map[string]interface{}{
 						"source":      "ewaybill",
@@ -121,7 +126,9 @@ func (m *Monitor) processExpiredEWBs(ctx context.Context) {
 						"tenant_id":   it.tenantID,
 						"occurred_at": time.Now().UTC(),
 					},
-				})
+				}); err != nil {
+					slog.WarnContext(ctx, "ewaybill alert publish failed", "error", err)
+				}
 			}
 		}
 	}
@@ -163,11 +170,15 @@ func (m *Monitor) processExpiringSoonEWBs(ctx context.Context) {
 	}
 
 	for _, it := range items {
+		itemCtx := ctx
+		if it.tenantID != "" {
+			itemCtx = shared.ContextWithTenantID(ctx, shared.TenantID(it.tenantID))
+		}
 		// Alert central alert engine if expiring soon. Orphan EWBs (trip
 		// deleted, tenant unknown) still get lifecycle handling below, but
 		// no cross-org alert is published for them.
 		if m.bus != nil && it.tenantID != "" {
-			m.bus.Publish(ctx, events.Event{
+			if err := m.bus.Publish(ctx, events.Event{
 				Type: "AlertEvent",
 				Payload: map[string]interface{}{
 					"source":      "ewaybill",
@@ -179,13 +190,15 @@ func (m *Monitor) processExpiringSoonEWBs(ctx context.Context) {
 					"tenant_id":   it.tenantID,
 					"occurred_at": time.Now().UTC(),
 				},
-			})
+			}); err != nil {
+				slog.WarnContext(ctx, "ewaybill alert publish failed", "error", err)
+			}
 		}
 
 		switch it.tripStatus {
 		case "in_transit", "started", "reached_pickup":
 			// Try auto-extension if supported by geofence evidence
-			_, err := m.svc.Extend(ctx, it.ewbNumber, ExtendRequest{
+			_, err := m.svc.Extend(itemCtx, it.ewbNumber, ExtendRequest{
 				EwbNumber: it.ewbNumber,
 				Reason:    "auto_expiry_monitor_extension",
 			})
@@ -193,7 +206,7 @@ func (m *Monitor) processExpiringSoonEWBs(ctx context.Context) {
 				m.logger.Debug("auto extend skipped/denied", "ewb", it.ewbNumber, "reason", err)
 			}
 		case "completed", "cancelled", "delivered":
-			_, _ = m.svc.Cancel(ctx, it.ewbNumber, "trip_completed_or_cancelled")
+			_, _ = m.svc.Cancel(itemCtx, it.ewbNumber, "trip_completed_or_cancelled")
 		}
 	}
 }

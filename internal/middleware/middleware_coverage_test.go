@@ -744,7 +744,7 @@ func TestAuthRequired_SuccessWithValidSession(t *testing.T) {
 	cookie := rec.Result().Cookies()[0]
 
 	nextCalled := false
-	handler := AuthRequired(store, "/login", nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := AuthRequired(store, "/login", DefaultTenantResolver)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		nextCalled = true
 		// check context has user and tenant
 		sess, ok := r.Context().Value(auth.ContextUser).(*auth.SessionData)
@@ -760,6 +760,23 @@ func TestAuthRequired_SuccessWithValidSession(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 	assert.True(t, nextCalled)
 	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func TestAuthRequired_NilResolverFailsClosed(t *testing.T) {
+	store := auth.NewSessionStore("test-secret-32-bytes-long-xxxxxx", false)
+	rec := httptest.NewRecorder()
+	store.CreateSession(rec, "usr-1", "admin", "Admin")
+	cookie := rec.Result().Cookies()[0]
+
+	handler := AuthRequired(store, "/login", nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("nil resolver must fail closed and never reach handler")
+	}))
+	req := httptest.NewRequest("GET", "/", nil)
+	req.AddCookie(cookie)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusSeeOther, rr.Code)
+	assert.Equal(t, "/login", rr.Header().Get("Location"))
 }
 
 func TestAuthRequired_TenantResolverErrorRejects(t *testing.T) {
@@ -940,7 +957,7 @@ func TestRequireAPIAuth_BearerSuccess(t *testing.T) {
 	require.NoError(t, err)
 
 	called := false
-	handler := RequireAPIAuth(store, secret, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := RequireAPIAuth(store, secret, DefaultTenantResolver)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
 		sess, ok := r.Context().Value(auth.ContextUser).(*auth.SessionData)
 		require.True(t, ok)
@@ -953,6 +970,23 @@ func TestRequireAPIAuth_BearerSuccess(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 	assert.True(t, called)
 	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func TestRequireAPIAuth_NilResolverFailsClosed(t *testing.T) {
+	secret := []byte("super-secret-key-32-bytes-long-xxxxx")
+	claims := auth.APITokenClaims{UserID: "usr-api-1", Role: "admin", TenantID: "1"}
+	token, err := auth.IssueAPIToken(secret, claims)
+	require.NoError(t, err)
+
+	handler := RequireAPIAuth(nil, secret, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("nil resolver must fail closed and never reach handler")
+	}))
+	req := httptest.NewRequest("GET", "/api/test", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+	assert.Contains(t, rr.Body.String(), "tenant resolver not configured")
 }
 
 func TestRequireAPIAuth_InvalidBearerRejected(t *testing.T) {
@@ -976,7 +1010,7 @@ func TestRequireAPIAuth_SessionFallback(t *testing.T) {
 	cookie := rec.Result().Cookies()[0]
 
 	called := false
-	handler := RequireAPIAuth(store, secret, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := RequireAPIAuth(store, secret, DefaultTenantResolver)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -1087,7 +1121,7 @@ func TestRequireAPIAuth_BearerWithValidatorRoleOverride(t *testing.T) {
 	token, err := auth.IssueAPIToken(secret, claims)
 	require.NoError(t, err)
 	called := false
-	handler := RequireAPIAuth(store, secret, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := RequireAPIAuth(store, secret, DefaultTenantResolver)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
 		sess, ok := r.Context().Value(auth.ContextUser).(*auth.SessionData)
 		require.True(t, ok)
@@ -1150,7 +1184,7 @@ func TestRequireAPIAuth_BearerWithNilStore(t *testing.T) {
 	token, err := auth.IssueAPIToken(secret, claims)
 	require.NoError(t, err)
 	called := false
-	handler := RequireAPIAuth(nil, secret, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := RequireAPIAuth(nil, secret, DefaultTenantResolver)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusOK)
 	}))

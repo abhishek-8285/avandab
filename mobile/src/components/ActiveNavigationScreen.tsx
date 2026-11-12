@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   StyleSheet,
   Text,
   View,
@@ -21,8 +22,7 @@ import { resolvePlaceCoords } from '../utils/geocode';
 import { Telemetry } from '../services/telemetry';
 import { Colors, Font, Radius, Spacing, FontSize} from '../constants/theme';
 import { Trip } from '../types/api';
-import { useLanguageStore } from '../stores/languageStore';
-import { t } from '../i18n';
+
 
 type TripStage = 'TO_PICKUP' | 'IN_TRANSIT' | 'AT_DESTINATION';
 
@@ -40,14 +40,7 @@ export function ActiveNavigationScreen({
   onMenuToggle,
 }: ActiveNavigationScreenProps) {
   const insets = useSafeAreaInsets();
-  const { locale } = useLanguageStore();
-  const intlTag = `${locale}-IN`;
-  const intlNum = (n: number) =>
-    new Intl.NumberFormat(intlTag, { maximumFractionDigits: 0 }).format(n);
-  const intlTime = (h: number, m: number) =>
-    new Intl.DateTimeFormat(intlTag, { hour: 'numeric', minute: '2-digit' }).format(
-      new Date(2026, 7, 15, h, m)
-    );
+
 
   const [stage, setStage] = useState<TripStage>('TO_PICKUP');
   const [maxUnlockedStage, setMaxUnlockedStage] = useState<number>(1);
@@ -59,9 +52,10 @@ export function ActiveNavigationScreen({
 
   // Viewport-only seed (Pune corridor): shown until live GPS arrives. Speed
   // stays null when unknown — never a fabricated 48.
-  const [coords, setCoords] = useState<{ latitude: number; longitude: number; speedKmh: number | null }>({
-    latitude: 18.5204,
-    longitude: 73.8567,
+  // No fabricated start point: the map renders only after a real GPS fix.
+  const [coords, setCoords] = useState<{ latitude: number | null; longitude: number | null; speedKmh: number | null }>({
+    latitude: null,
+    longitude: null,
     speedKmh: null,
   });
 
@@ -74,16 +68,22 @@ export function ActiveNavigationScreen({
     };
   }, []);
 
-  const origin = trip?.origin || 'JNPT Port, Navi Mumbai';
-  const destination = trip?.destination || 'Chakan MIDC, Pune';
+  // Real trip data only: missing addresses render as an em dash, never a
+  // default city that would look like the driver's actual route.
+  const origin = trip?.origin || '—';
+  const destination = trip?.destination || '—';
   // Map legs come from real trip data only: a trip without an origin draws no
   // pickup leg instead of one pinned to a default city.
   const pickupLeg = trip?.origin ? resolvePlaceCoords(trip.origin) : null;
   const destinationLeg = trip?.destination ? resolvePlaceCoords(trip.destination) : null;
-  const tripNumber = trip?.tripNumber || tripId || 'TRP-8491';
-  const vehiclePlate = trip?.vehiclePlate || 'DL-01-AB-1234';
+  const tripNumber = trip?.tripNumber || tripId || '—';
+  const vehiclePlate = trip?.vehiclePlate || '—';
 
   const launchNavigation = (targetLocation: string) => {
+    if (!targetLocation || targetLocation === '—') {
+      Alert.alert('Navigation unavailable', 'No pickup/destination address is available for this trip.');
+      return;
+    }
     const query = encodeURIComponent(targetLocation);
     const navUrl = `geo:0,0?q=${query}`;
     Linking.openURL(navUrl).catch(() => {
@@ -107,7 +107,7 @@ export function ActiveNavigationScreen({
       if (targetStageNum === 2) {
         Alert.alert(
           'Step 2 Locked 🔒',
-          'You must confirm loading and departure at JNPT Port (Step 1) before starting Highway Transit.'
+          `You must confirm loading and departure at ${origin} (Step 1) before starting Highway Transit.`
         );
       } else if (targetStageNum === 3) {
         Alert.alert(
@@ -129,7 +129,7 @@ export function ActiveNavigationScreen({
           badgeText: Colors.warningText,
           targetLabel: 'PICKUP WAREHOUSE',
           targetAddress: origin,
-          subInfo: 'Terminal 4 Bay 2 • 18 Tons Steel Coils',
+          subInfo: '',
           navBtn: 'NAVIGATE TO PICKUP (MAPS)',
           navTarget: origin,
           footerBtn: 'CONFIRM LOADED & START TRANSIT',
@@ -142,7 +142,7 @@ export function ActiveNavigationScreen({
           badgeText: Colors.primary,
           targetLabel: 'DELIVERY DESTINATION',
           targetAddress: destination,
-          subInfo: `Mumbai-Pune Expressway • ~${intlNum(128)} KM (${intlNum(3)}h ${intlNum(15)}m)`,
+          subInfo: '',
           navBtn: 'NAVIGATE TO FACTORY (MAPS)',
           navTarget: destination,
           footerBtn: 'ARRIVED AT DESTINATION FACTORY',
@@ -155,7 +155,7 @@ export function ActiveNavigationScreen({
           badgeText: Colors.info,
           targetLabel: 'RECEIVING DOCK',
           targetAddress: destination,
-          subInfo: 'Gate 3 Receiving Bay • Tata AutoComp Systems',
+          subInfo: '',
           navBtn: 'VIEW GATE DIRECTIONS (MAPS)',
           navTarget: destination,
           footerBtn: 'COMPLETE e-POD SIGNATURE',
@@ -170,7 +170,7 @@ export function ActiveNavigationScreen({
     if (stage === 'TO_PICKUP') {
       Alert.alert(
         'Confirm Loading Complete',
-        'Have you loaded the 18 Tons cargo and received the Gate Pass at JNPT Port?',
+        `Have you loaded the cargo and received the Gate Pass at ${origin}?`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -185,7 +185,7 @@ export function ActiveNavigationScreen({
     } else if (stage === 'IN_TRANSIT') {
       Alert.alert(
         'Arrived at Destination',
-        'Confirm arrival at Chakan MIDC factory receiving bay?',
+        `Confirm arrival at ${destination} receiving bay?`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -220,7 +220,7 @@ export function ActiveNavigationScreen({
           </TouchableOpacity>
           <View>
             <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">#{tripNumber}</Text>
-            <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">{vehiclePlate} • 18 Tons</Text>
+            <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">{vehiclePlate}</Text>
           </View>
         </View>
         <View style={styles.headerRight}>
@@ -239,8 +239,8 @@ export function ActiveNavigationScreen({
           <SOSButton
             tripId={tripId}
             vehicleId={vehiclePlate}
-            latitude={coords.latitude}
-            longitude={coords.longitude}
+            latitude={coords.latitude ?? undefined}
+            longitude={coords.longitude ?? undefined}
             style={{ paddingHorizontal: 10, paddingVertical: 5, height: 44 }}
           />
         </View>
@@ -346,7 +346,9 @@ export function ActiveNavigationScreen({
 
           <Text style={styles.targetLabel}>{currentContent.targetLabel}</Text>
           <Text style={styles.targetAddress} numberOfLines={2} ellipsizeMode="tail">{currentContent.targetAddress}</Text>
-          <Text style={styles.subInfoText} numberOfLines={2} ellipsizeMode="tail">{currentContent.subInfo}</Text>
+          {currentContent.subInfo ? (
+            <Text style={styles.subInfoText} numberOfLines={2} ellipsizeMode="tail">{currentContent.subInfo}</Text>
+          ) : null}
 
           {/* Big High-Contrast Maps CTA */}
           <TouchableOpacity
@@ -363,21 +365,30 @@ export function ActiveNavigationScreen({
           </TouchableOpacity>
         </View>
 
-        {/* Live Interactive Leaflet Map with Route & Controls */}
-        <LiveDriverTrackingMap
-          driverLatitude={coords.latitude}
-          driverLongitude={coords.longitude}
-          pickupLatitude={pickupLeg?.latitude}
-          pickupLongitude={pickupLeg?.longitude}
-          destinationLatitude={destinationLeg?.latitude}
-          destinationLongitude={destinationLeg?.longitude}
-          pickupLabel={origin}
-          destinationLabel={destination}
-          vehicleLabel={vehiclePlate}
-          speedKmh={coords.speedKmh}
-          height={240}
-          onOpenExternalNav={() => launchNavigation(currentContent.navTarget)}
-        />
+        {/* Live map: only after a real GPS fix, never a fabricated start point. */}
+        {coords.latitude != null && coords.longitude != null ? (
+          <LiveDriverTrackingMap
+            driverLatitude={coords.latitude}
+            driverLongitude={coords.longitude}
+            pickupLatitude={pickupLeg?.latitude}
+            pickupLongitude={pickupLeg?.longitude}
+            destinationLatitude={destinationLeg?.latitude}
+            destinationLongitude={destinationLeg?.longitude}
+            pickupLabel={origin}
+            destinationLabel={destination}
+            vehicleLabel={vehiclePlate}
+            speedKmh={coords.speedKmh}
+            height={240}
+            onOpenExternalNav={() => launchNavigation(currentContent.navTarget)}
+          />
+        ) : (
+          <View style={{ backgroundColor: Colors.surface, borderRadius: 16, padding: 20, alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <ActivityIndicator color={Colors.primary} />
+            <Text style={{ color: Colors.textMuted, fontSize: FontSize.label, textAlign: 'center' }}>
+              Waiting for GPS fix — the map appears when the device reports a location.
+            </Text>
+          </View>
+        )}
 
         {/* Clean 3-Item Quick Action Row */}
         <View style={styles.actionRow}>
@@ -395,7 +406,7 @@ export function ActiveNavigationScreen({
           <TouchableOpacity
             style={styles.actionPill}
             activeOpacity={0.8}
-            onPress={() => Alert.alert('Call Dispatch', 'Calling Control Room: +91 98200 12345')}
+            onPress={() => Alert.alert('Call Dispatch', 'No dispatch contact is configured on this device. Use the web console to reach the control room.')}
             accessibilityRole="button"
             accessibilityLabel="Call dispatch hub"
           >
@@ -406,7 +417,7 @@ export function ActiveNavigationScreen({
           <TouchableOpacity
             style={styles.actionPill}
             activeOpacity={0.8}
-            onPress={() => Alert.alert('GST E-Way Bill', `E-Way Bill: #7291-8841-0294\nValid till ${new Intl.DateTimeFormat(intlTag, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(2026, 7, 31))}\nVehicle: DL-01-AB-1234`)}
+            onPress={() => Alert.alert('GST E-Way Bill', 'E-way bill details are not available on this device. Open the web console to view or download the e-way bill.')}
             accessibilityRole="button"
             accessibilityLabel="View GST E-Way Bill"
           >
@@ -422,9 +433,9 @@ export function ActiveNavigationScreen({
           <View style={styles.routeRow}>
             <View style={[styles.dot, { backgroundColor: maxUnlockedStage > 1 ? Colors.primary : Colors.warning }]} />
             <View style={styles.routeDetails}>
-              <Text style={styles.routeCity} numberOfLines={1} ellipsizeMode="tail">JNPT Port, Navi Mumbai</Text>
+              <Text style={styles.routeCity} numberOfLines={1} ellipsizeMode="tail">{origin}</Text>
               <Text style={styles.routeStatus} numberOfLines={1} ellipsizeMode="tail">
-                {maxUnlockedStage > 1 ? `Loaded (${intlTime(10, 30)})` : 'Loading Bay 2 (In Progress)'}
+                {maxUnlockedStage > 1 ? 'Loaded' : 'Awaiting loading'}
               </Text>
             </View>
           </View>
@@ -434,9 +445,9 @@ export function ActiveNavigationScreen({
           <View style={styles.routeRow}>
             <View style={[styles.dot, { backgroundColor: maxUnlockedStage >= 3 ? Colors.info : Colors.modalSub }]} />
             <View style={styles.routeDetails}>
-              <Text style={styles.routeCity} numberOfLines={1} ellipsizeMode="tail">Chakan MIDC, Pune</Text>
+              <Text style={styles.routeCity} numberOfLines={1} ellipsizeMode="tail">{destination}</Text>
               <Text style={styles.routeStatus} numberOfLines={1} ellipsizeMode="tail">
-                {maxUnlockedStage >= 3 ? 'Arrived at Gate 3' : (maxUnlockedStage === 2 ? `In Transit • ETA ${intlTime(13, 45)}` : 'Step 2 (Locked)')}
+                {maxUnlockedStage >= 3 ? 'Arrived' : (maxUnlockedStage === 2 ? 'In transit' : 'Locked')}
               </Text>
             </View>
           </View>

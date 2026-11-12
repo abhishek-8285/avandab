@@ -1,16 +1,14 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 
+	alertsapp "transport-app/internal/alerts/application"
 	"transport-app/internal/events"
 	"transport-app/internal/httpx"
 	"transport-app/internal/shared"
@@ -60,28 +58,25 @@ func (h *SOSHandlers) Mount(r chi.Router) {
 	r.Post("/api/v1/sos", h.TriggerSOS)
 }
 
-// driverIDForUser maps the authenticated user session to their driver record.
-func (h *SOSHandlers) driverIDForUser(r *http.Request) (string, bool) {
-	session, ok := h.app.getUserFromContext(r)
-	if !ok || session == nil || session.UserID == "" {
-		return "", false
+// eventBus returns the shared event bus when wired; nil-safe for partially
+// built apps (the service skips publishing on a nil bus).
+func (h *SOSHandlers) eventBus() events.EventBus {
+	if h.app == nil || h.app.Services == nil {
+		return nil
 	}
-
-	var driverID string
-	err := h.db.QueryRowContext(r.Context(), `
-		SELECT id FROM drivers
-		WHERE id = $1 OR email = (SELECT email FROM users WHERE id = $2)
-		LIMIT 1`, session.UserID, session.UserID).Scan(&driverID)
-	if err != nil {
-		return session.UserID, true // Fallback to UserID as driver identifier
-	}
-	return driverID, true
+	return h.app.Services.Events
 }
 
 // TriggerSOS handles emergency panic trigger from mobile client (Phase 8 §P3A).
 func (h *SOSHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
-	driverID, ok := h.driverIDForUser(r)
-	if !ok {
+	svc := alertsapp.NewSOSService(h.db, h.eventBus())
+
+	driverID := ""
+	authorized := false
+	if session, ok := h.app.getUserFromContext(r); ok && session != nil && session.UserID != "" {
+		driverID, authorized = svc.DriverForUser(r.Context(), session.UserID)
+	}
+	if !authorized {
 		// If unauthenticated session, check if Driver-ID header provided
 		if headerID := r.Header.Get("X-Driver-ID"); headerID != "" {
 			driverID = headerID
@@ -116,23 +111,17 @@ func (h *SOSHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 	// attribute via the driver's own org. Never another org, never dropped.
 	tenantID := string(shared.TenantIDFromContext(r.Context()))
 	if tenantID == "" {
-		_ = h.db.QueryRowContext(r.Context(),
-			`SELECT tenant_id FROM drivers WHERE id = $1`, driverID).Scan(&tenantID)
+		tenantID = svc.DriverTenant(r.Context(), driverID)
 	}
 
 	// Resolve active trip and vehicle if omitted in mobile request
 	if req.TripID == "" || req.VehicleID == "" {
-		var activeTripID, activeVehicleID sql.NullString
-		_ = h.db.QueryRowContext(r.Context(), `
-			SELECT id, vehicle_id FROM trips
-			WHERE driver_id = $1 AND status IN ('assigned', 'started', 'reached_pickup', 'in_transit')
-			ORDER BY created_at DESC LIMIT 1`,
-			driverID).Scan(&activeTripID, &activeVehicleID)
-		if req.TripID == "" && activeTripID.Valid {
-			req.TripID = activeTripID.String
+		tripID, vehicleID := svc.ActiveTrip(r.Context(), driverID)
+		if req.TripID == "" {
+			req.TripID = tripID
 		}
-		if req.VehicleID == "" && activeVehicleID.Valid {
-			req.VehicleID = activeVehicleID.String
+		if req.VehicleID == "" {
+			req.VehicleID = vehicleID
 		}
 	}
 
@@ -140,61 +129,27 @@ func (h *SOSHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 		req.Reason = "Emergency SOS Triggered from Driver Mobile App"
 	}
 
-	sosID := "sos_" + uuid.NewString()
-	if req.CommandID != "" {
-		sosID = "sos_" + req.CommandID
-	}
+	sosID := alertsapp.NewSOSID(req.CommandID)
 
-	// 1. Persist to outbox_events table idempotently
-	eventPayload := map[string]interface{}{
-		"SOSID":        sosID,
-		"TenantID":     tenantID,
-		"DriverID":     driverID,
-		"VehicleID":    req.VehicleID,
-		"TripID":       req.TripID,
-		"Latitude":     req.Latitude,
-		"Longitude":    req.Longitude,
-		"Accuracy":     req.Accuracy,
-		"BatteryLevel": req.BatteryLevel,
-		"Reason":       req.Reason,
-		"TriggeredAt":  req.TriggeredAt,
-		"ReceivedAt":   now,
-		"vehicle_id":   req.VehicleID,
-		"driver_id":    driverID,
-		"trip_id":      req.TripID,
-		"latitude":     req.Latitude,
-		"longitude":    req.Longitude,
-	}
-
-	payloadBytes, _ := json.Marshal(eventPayload)
-	res, err := h.db.ExecContext(r.Context(), `
-		INSERT INTO outbox_events (id, aggregate_id, aggregate_type, event_type, payload, created_at)
-		VALUES ($1, $2, 'sos', $3, $4, CURRENT_TIMESTAMP)
-		ON CONFLICT DO NOTHING
-	`, "ob_"+sosID, sosID, events.SOSEvent, string(payloadBytes))
-
-	rowsAffected := int64(0)
-	if err == nil && res != nil {
-		rowsAffected, _ = res.RowsAffected()
-	}
-
-	// Only publish to Event Bus and log audit if this is the first delivery of this command_id
-	if rowsAffected > 0 {
-		// 2. Publish to Event Bus for synchronous/asynchronous Alert Pipeline processing
-		if h.app != nil && h.app.Services != nil && h.app.Services.Events != nil {
-			h.app.Services.Events.Publish(r.Context(), events.Event{
-				Type:    events.SOSEvent,
-				Payload: eventPayload,
-			})
-		}
-
-		// 3. Log Audit Trail
-		auditDetail := fmt.Sprintf("Driver SOS triggered at lat:%.6f, lng:%.6f, vehicle:%s, trip:%s", req.Latitude, req.Longitude, req.VehicleID, req.TripID)
-		_ = h.app.logAuditDirect(r.Context(), driverID, "driver_sos_triggered", "safety", sosID, auditDetail)
-	}
+	// Persist to outbox_events idempotently; only the first delivery of a
+	// command id publishes the event + audit row and alerts responders.
+	firstDelivery, _ := svc.Trigger(r.Context(), alertsapp.SOSTrigger{
+		SOSID:        sosID,
+		TenantID:     tenantID,
+		DriverID:     driverID,
+		VehicleID:    req.VehicleID,
+		TripID:       req.TripID,
+		Latitude:     req.Latitude,
+		Longitude:    req.Longitude,
+		Accuracy:     req.Accuracy,
+		BatteryLevel: req.BatteryLevel,
+		Reason:       req.Reason,
+		TriggeredAt:  req.TriggeredAt,
+		ReceivedAt:   now,
+	})
 
 	status := http.StatusCreated
-	if rowsAffected == 0 {
+	if !firstDelivery {
 		status = http.StatusOK // Idempotent duplicate acknowledgment
 	}
 
@@ -206,15 +161,4 @@ func (h *SOSHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 		ReceivedAt: now,
 		Message:    "Emergency response team and dispatchers have been alerted.",
 	})
-}
-
-func (a *App) logAuditDirect(ctx context.Context, userID, action, entityType, entityID, details string) error {
-	if a.DB == nil {
-		return nil
-	}
-	_, err := a.DB.ExecContext(ctx, `
-		INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, tenant_id, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
-	`, "aud_"+uuid.NewString(), userID, action, entityType, entityID, details, string(shared.TenantOrPlatform(ctx)))
-	return err
 }

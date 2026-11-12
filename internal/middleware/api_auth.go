@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -28,10 +29,20 @@ func DefaultTenantResolver(_ context.Context, _ string) (shared.TenantID, error)
 	return shared.DefaultTenant, nil //nolint:tenant-default // single-tenant bootstrap; per-user resolver when MULTI_TENANT_ENABLED=true
 }
 
+// ErrTenantResolverNotConfigured is returned when middleware is invoked without a configured TenantResolver.
+var ErrTenantResolverNotConfigured = errors.New("tenant resolver not configured")
+
+// FailClosedTenantResolver is the fail-closed fallback resolver when no TenantResolver
+// is provided. It returns ErrTenantResolverNotConfigured so unconfigured middleware
+// never silently defaults to the bootstrap tenant.
+func FailClosedTenantResolver(_ context.Context, _ string) (shared.TenantID, error) {
+	return "", ErrTenantResolverNotConfigured
+}
+
 // RequireAPIAuth protects REST API routes by accepting either: ...
 func RequireAPIAuth(store *auth.SessionStore, secret []byte, tenantResolver TenantResolver) func(http.Handler) http.Handler {
 	if tenantResolver == nil {
-		tenantResolver = DefaultTenantResolver
+		tenantResolver = FailClosedTenantResolver
 	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -111,6 +122,9 @@ func resolveAPIPrincipal(r *http.Request, store *auth.SessionStore, secret []byt
 		if terr != nil {
 			return apiPrincipal{}, terr
 		}
+		if tenantID == "" {
+			return apiPrincipal{}, errors.New("unauthorized: missing tenant")
+		}
 
 		return apiPrincipal{
 			UserID:   claims.UserID,
@@ -128,6 +142,9 @@ func resolveAPIPrincipal(r *http.Request, store *auth.SessionStore, secret []byt
 	tenantID, err := tenantResolver(r.Context(), session.UserID)
 	if err != nil {
 		return apiPrincipal{}, err
+	}
+	if tenantID == "" {
+		return apiPrincipal{}, errors.New("unauthorized: missing tenant")
 	}
 	return apiPrincipal{
 		UserID:   session.UserID,

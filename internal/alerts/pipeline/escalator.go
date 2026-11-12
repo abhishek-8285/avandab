@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"transport-app/internal/alerts/channels"
@@ -13,10 +14,14 @@ import (
 )
 
 // EscalationStep defines a scheduled escalation target and channel.
+// Recipients optionally pins explicit destinations (emails for the email
+// channel, phones for sms/whatsapp, user ids for in_app); when empty the step
+// resolves TargetRole to active users of the alert's tenant.
 type EscalationStep struct {
-	AfterSeconds int    `json:"after_seconds"`
-	TargetRole   string `json:"target_role"`
-	Channel      string `json:"channel"`
+	AfterSeconds int      `json:"after_seconds"`
+	TargetRole   string   `json:"target_role"`
+	Channel      string   `json:"channel"`
+	Recipients   []string `json:"recipients,omitempty"`
 }
 
 // Escalator periodically checks for unresolved alerts that need escalation.
@@ -88,23 +93,7 @@ func (e *Escalator) Tick(ctx context.Context) error {
 		if a.EscalationStep < len(schedule) {
 			currentStep := schedule[a.EscalationStep]
 
-			msg := channels.Message{
-				AlertID:      a.ID,
-				SeverityRank: a.SeverityRank,
-				Title:        fmt.Sprintf("[Escalation Step %d] %s", a.EscalationStep+1, a.Title),
-				Body:         fmt.Sprintf("Alert unresolved for role %s: %s", currentStep.TargetRole, a.Message),
-				Severity:     a.Severity,
-				Meta: map[string]any{
-					"escalation_step": a.EscalationStep + 1,
-					"target_role":     currentStep.TargetRole,
-				},
-			}
-
-			if p, ok := e.channels[currentStep.Channel]; ok && p != nil {
-				if err := p.Send(ctx, msg); err != nil {
-					e.logger.Warn("failed to send escalation message", "channel", currentStep.Channel, "alert_id", a.ID, "error", err)
-				}
-			}
+			e.dispatchStep(ctx, &a, currentStep)
 
 			nextIndex := a.EscalationStep + 1
 			if nextIndex < len(schedule) {
@@ -120,4 +109,123 @@ func (e *Escalator) Tick(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// dispatchStep delivers one escalation step. Per-recipient channels (email,
+// sms, whatsapp, in_app) send one message per resolved recipient; channels
+// without per-user routing (telegram) send once with the resolved recipients
+// recorded in metadata. When neither explicit recipients nor target-role users
+// exist, the step logs honestly and falls back to the channel's configured
+// destination instead of silently dropping the escalation.
+func (e *Escalator) dispatchStep(ctx context.Context, a *domain.Alert, step EscalationStep) {
+	p, ok := e.channels[step.Channel]
+	if !ok || p == nil {
+		e.logger.Warn("escalation channel not configured; step skipped",
+			"alert_id", a.ID, "channel", step.Channel)
+		return
+	}
+	base := channels.Message{
+		AlertID:      a.ID,
+		SeverityRank: a.SeverityRank,
+		Title:        fmt.Sprintf("[Escalation Step %d] %s", a.EscalationStep+1, a.Title),
+		Body:         fmt.Sprintf("Alert unresolved for role %s: %s", step.TargetRole, a.Message),
+		Severity:     a.Severity,
+		Meta: map[string]any{
+			"escalation_step": a.EscalationStep + 1,
+			"target_role":     step.TargetRole,
+		},
+	}
+
+	recipients := e.resolveRecipients(ctx, a, step)
+	if len(recipients) == 0 {
+		e.logger.Warn("escalation step has no resolvable recipients; using channel default",
+			"alert_id", a.ID, "target_role", step.TargetRole, "channel", step.Channel)
+		e.sendToChannel(ctx, p, base)
+		return
+	}
+
+	switch step.Channel {
+	case "email", "sms", "whatsapp", "in_app":
+		for _, r := range recipients {
+			msg := base
+			switch step.Channel {
+			case "email":
+				if r.Email == "" {
+					e.logger.Warn("escalation recipient has no email", "alert_id", a.ID, "user_id", r.UserID)
+					continue
+				}
+				msg.Email = r.Email
+			case "sms", "whatsapp":
+				if r.Phone == "" {
+					e.logger.Warn("escalation recipient has no phone", "alert_id", a.ID, "user_id", r.UserID)
+					continue
+				}
+				msg.Phone = r.Phone
+			case "in_app":
+				if r.UserID == "" {
+					continue
+				}
+				msg.UserID = r.UserID
+			}
+			e.sendToChannel(ctx, p, msg)
+		}
+	default:
+		base.Meta["target_recipients"] = recipientLabels(recipients)
+		e.sendToChannel(ctx, p, base)
+	}
+}
+
+// resolveRecipients returns the destinations for a step: explicit recipients
+// first, then active tenant users holding the target role. An empty slice means
+// the step has no resolvable recipient (caller falls back honestly).
+func (e *Escalator) resolveRecipients(ctx context.Context, a *domain.Alert, step EscalationStep) []domain.AlertRecipient {
+	if len(step.Recipients) > 0 {
+		out := make([]domain.AlertRecipient, 0, len(step.Recipients))
+		for _, raw := range step.Recipients {
+			v := strings.TrimSpace(raw)
+			if v == "" {
+				continue
+			}
+			switch step.Channel {
+			case "email":
+				out = append(out, domain.AlertRecipient{Email: v})
+			case "sms", "whatsapp":
+				out = append(out, domain.AlertRecipient{Phone: v})
+			default:
+				out = append(out, domain.AlertRecipient{UserID: v})
+			}
+		}
+		return out
+	}
+	if strings.TrimSpace(step.TargetRole) == "" {
+		return nil
+	}
+	users, err := e.repo.ListTenantUsersByRole(ctx, a.TenantID, step.TargetRole)
+	if err != nil {
+		e.logger.Warn("escalation role lookup failed",
+			"alert_id", a.ID, "tenant_id", a.TenantID, "target_role", step.TargetRole, "error", err)
+		return nil
+	}
+	return users
+}
+
+func (e *Escalator) sendToChannel(ctx context.Context, p channels.Provider, msg channels.Message) {
+	if err := p.Send(ctx, msg); err != nil {
+		e.logger.Warn("failed to send escalation message", "channel", p.Name(), "alert_id", msg.AlertID, "error", err)
+	}
+}
+
+func recipientLabels(recipients []domain.AlertRecipient) []string {
+	out := make([]string, 0, len(recipients))
+	for _, r := range recipients {
+		switch {
+		case r.UserID != "":
+			out = append(out, r.UserID)
+		case r.Email != "":
+			out = append(out, r.Email)
+		case r.Phone != "":
+			out = append(out, r.Phone)
+		}
+	}
+	return out
 }

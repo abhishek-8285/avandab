@@ -47,7 +47,7 @@ func newSecuredRouter(t *testing.T) (*chi.Mux, *Handler, []byte, *auth.SessionSt
 
 	r := chi.NewRouter()
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.RequireAPIAuth(sessionStore, secret, nil))
+		r.Use(middleware.RequireAPIAuth(sessionStore, secret, middleware.DefaultTenantResolver))
 		h.WithPermissionGuards(
 			middleware.RequirePermission(authSrv, "rag", "read"),
 			middleware.RequirePermission(authSrv, "rag", "write"),

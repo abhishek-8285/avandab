@@ -92,16 +92,37 @@
 
         <h2 class="text-lg font-semibold text-on-surface font-display tracking-tight mt-8">11. Your Rights (DPDP Act, Sections 11&ndash;15)</h2>
         <ul class="list-disc pl-6 space-y-1.5">
-            <li class="text-sm text-on-surface-variant leading-relaxed">Obtain information about the processing of your personal data;</li>
-            <li class="text-sm text-on-surface-variant leading-relaxed">Request correction, completion, updating or erasure;</li>
-            <li class="text-sm text-on-surface-variant leading-relaxed">Withdraw consent where processing is based on consent;</li>
-            <li class="text-sm text-on-surface-variant leading-relaxed">Nominate another person to exercise your rights on death or incapacity;</li>
-            <li class="text-sm text-on-surface-variant leading-relaxed">Request a summary of the personal data being processed;</li>
-            <li class="text-sm text-on-surface-variant leading-relaxed">Seek grievance redressal and, if unresolved, approach the Data Protection Board of India.</li>
+            <li class="text-sm text-on-surface-variant leading-relaxed"><strong>Right to Access (&sect;11):</strong> Obtain a summary of personal data processed, identities of all Data Fiduciaries/Processors with whom data has been shared, and any other information prescribed. You can generate and download your automated machine-readable DSAR bundle via <code class="px-1.5 py-0.5 rounded bg-surface-container-low text-primary font-mono text-xs">POST /api/v1/privacy/dsar/export</code>.</li>
+            <li class="text-sm text-on-surface-variant leading-relaxed"><strong>Right to Correction &amp; Erasure (&sect;12):</strong> Request correction of inaccurate data, completion of incomplete data, updating of obsolete data, and erasure of personal data that is no longer necessary. Automated erasure requests can be submitted via <code class="px-1.5 py-0.5 rounded bg-surface-container-low text-primary font-mono text-xs">POST /api/v1/privacy/dsar/erase</code>. Personal identifiers, phone numbers, email addresses, and active sessions are anonymized, while statutory business records (e.g. tax invoices, E-way bills) are retained in an immutable, anonymized form per Section 36 of the CGST Act, 2017.</li>
+            <li class="text-sm text-on-surface-variant leading-relaxed"><strong>Right to Withdraw Consent (&sect;6(4)):</strong> Withdraw consent anytime with ease at <a href="/consent" class="text-primary hover:underline font-medium">/consent</a> or via <code class="px-1.5 py-0.5 rounded bg-surface-container-low text-primary font-mono text-xs">POST /api/v1/consent/withdraw</code>.</li>
+            <li class="text-sm text-on-surface-variant leading-relaxed"><strong>Right to Nominate (&sect;14):</strong> Nominate an individual to exercise rights on your behalf in the event of death or incapacity.</li>
+            <li class="text-sm text-on-surface-variant leading-relaxed"><strong>Right of Grievance Redressal (&sect;13):</strong> Redress grievances through our Grievance Officer, with escalation available to the Data Protection Board of India.</li>
         </ul>
-        <p class="text-sm text-on-surface-variant leading-relaxed">Requests may be made to the Grievance Officer (details below). Data-privacy requests: acknowledged within 3 business days, responded within 30 days. Consumer/e-commerce complaints: acknowledged within 48 hours with a copy of the recorded complaint, redressed within 1 month — see <a href="/contact-us" class="text-primary hover:underline">Contact Us</a>, <a href="/consumer-compliance" class="text-primary hover:underline">Consumer Compliance</a> and the <a href="https://consumerhelpline.gov.in" target="_blank" rel="noopener" class="text-primary hover:underline">National Consumer Helpline</a>.</p>
+        <p class="text-sm text-on-surface-variant leading-relaxed">Requests may also be submitted manually to the Grievance Officer (details below). Data-privacy requests: acknowledged within 3 business days, responded within 30 days. Consumer complaints: acknowledged within 48 hours, redressed within 1 month &mdash; see <a href="/contact-us" class="text-primary hover:underline">Contact Us</a>, <a href="/consumer-compliance" class="text-primary hover:underline">Consumer Compliance</a> and the <a href="https://consumerhelpline.gov.in" target="_blank" rel="noopener" class="text-primary hover:underline">National Consumer Helpline</a>.</p>
 
-        <h2 class="text-lg font-semibold text-on-surface font-display tracking-tight mt-8">12. Grievance Officer (DPDP Act, Section 5(8)) &amp; Data-Protection Contact</h2>
+        <h2 class="text-lg font-semibold text-on-surface font-display tracking-tight mt-8">12. Data Retention Schedule &amp; Sub-Processors</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-3">
+            <div class="rounded-xl border border-border-subtle bg-surface-container-low p-4">
+                <h3 class="text-sm font-semibold text-on-surface flex items-center justify-between">
+                    <span>Statutory Retention Schedule</span>
+                    <a href="/api/v1/privacy/retention-schedule" class="text-xs text-primary hover:underline font-medium">API JSON &rarr;</a>
+                </h3>
+                <p class="text-xs text-on-surface-variant mt-2 leading-relaxed">
+                    Personal data is retained only as long as necessary under Section 8(7) of the DPDP Act. Telemetry frames (30 days chunked purge), sessions (7 days), and video dashcam events (90 days) are automatically expired. Invoices and financial tax ledgers are retained for 8 years per Section 36 of the CGST Act, 2017.
+                </p>
+            </div>
+            <div class="rounded-xl border border-border-subtle bg-surface-container-low p-4">
+                <h3 class="text-sm font-semibold text-on-surface flex items-center justify-between">
+                    <span>Authorized Sub-Processors</span>
+                    <a href="/api/v1/privacy/sub-processors" class="text-xs text-primary hover:underline font-medium">API JSON &rarr;</a>
+                </h3>
+                <p class="text-xs text-on-surface-variant mt-2 leading-relaxed">
+                    Under DPDP Act &sect;8(1), data is processed by vetted sub-processors under standard contractual clauses: Cloudflare (Edge/R2/Turnstile), Razorpay (Payments/FASTag), MSG91 / Twilio / Fast2SMS (SMS gateways), Resend / Brevo (Email), OSRM (Routing), and NIC/GSTN (E-Way Bills).
+                </p>
+            </div>
+        </div>
+
+        <h2 class="text-lg font-semibold text-on-surface font-display tracking-tight mt-8">13. Grievance Officer (DPDP Act, Section 5(8)) &amp; Data-Protection Contact</h2>
         <ul class="list-disc pl-6 space-y-1.5">
             <li class="text-sm text-on-surface-variant leading-relaxed"><strong>Name:</strong> Grievance Officer – Finance &amp; Legal, Avandab Operations Platform</li>
             <li class="text-sm text-on-surface-variant leading-relaxed"><strong>Designation:</strong> Grievance Officer (also answers data-protection questions; DPO details published here when appointed)</li>
@@ -110,7 +131,7 @@
             <li class="text-sm text-on-surface-variant leading-relaxed"><strong>Address:</strong> New Delhi, India — full registered-office details on request via <a href="/contact-us" class="text-primary hover:underline">Contact Us</a></li>
         </ul>
 
-        <h2 class="text-lg font-semibold text-on-surface font-display tracking-tight mt-8">13. Changes</h2>
+        <h2 class="text-lg font-semibold text-on-surface font-display tracking-tight mt-8">14. Changes</h2>
         <p class="text-sm text-on-surface-variant leading-relaxed">We may update this Privacy Policy from time to time. Material changes will be reflected by the &ldquo;Effective&rdquo; date above. Continued use after an update constitutes acceptance of the revised policy.</p>
 
         <p class="text-xs text-text-muted mt-10">&copy; 2026 Avandab Operations Platform. All rights reserved.</p>

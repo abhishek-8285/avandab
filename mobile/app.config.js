@@ -23,6 +23,7 @@ module.exports = {
       backgroundColor: '#00685f',
     },
     ios: {
+      bundleIdentifier: 'com.avandab.mobile',
       supportsTablet: true,
       infoPlist: {
         UIBackgroundModes: ['location', 'fetch'],
@@ -32,7 +33,8 @@ module.exports = {
     },
     android: {
       package: 'com.avandab.mobile',
-      usesCleartextTraffic: true,
+      // Cleartext only for http dev servers; release builds (https default) stay locked down.
+      usesCleartextTraffic: (process.env.EXPO_PUBLIC_API_SCHEME || 'https') === 'http',
       permissions: [
         'CAMERA',
         'ACCESS_COARSE_LOCATION',

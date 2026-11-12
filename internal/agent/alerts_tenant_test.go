@@ -50,8 +50,9 @@ func TestGetOpenAlerts_TenantIsolation(t *testing.T) {
 	cfg := &config.Config{}
 	bus := events.NewInMemoryBus()
 	services := service.NewServices(store, cfg, logger, bus)
+	_ = services
 
-	env := &ToolEnv{Services: services}
+	env := &ToolEnv{DB: db}
 	tools := RegisterTools(env)
 
 	var alertTool *RegisteredTool

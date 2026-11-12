@@ -122,3 +122,46 @@ func TestTelemetryService_ProcessTelemetryStream_PersistsAlerts(t *testing.T) {
 	// Verify AlertEvent published on bus
 	assert.Len(t, receivedAlertEvents, 2)
 }
+
+func TestTelemetryService_ProcessTelemetryStream_TempBreach(t *testing.T) {
+	db := newTelemetryTestDB(t)
+	repo := sqliterepo.NewRepository(db)
+	bus := events.NewInMemoryBus()
+
+	var alertEvents []events.Event
+	var tempBreachEvents []events.Event
+	bus.Subscribe("AlertEvent", func(ctx context.Context, e events.Event) error {
+		alertEvents = append(alertEvents, e)
+		return nil
+	})
+	bus.Subscribe(events.TempBreachAlert, func(ctx context.Context, e events.Event) error {
+		tempBreachEvents = append(tempBreachEvents, e)
+		return nil
+	})
+
+	svc := NewServices(repo, nil, nil, bus)
+	ctx := context.Background()
+	spikeTemp := 32.5
+	dp := TelemetryDataPoint{
+		VehicleID:   domain.VehicleID("veh-reefer-1"),
+		Latitude:    19.0,
+		Longitude:   74.0,
+		FuelLevel:   50.0,
+		IgnitionOn:  true,
+		Temperature: &spikeTemp,
+		Timestamp:   time.Now(),
+	}
+
+	alerts, err := svc.Telemetry.ProcessTelemetryStream(ctx, dp, 50.0)
+	require.NoError(t, err)
+	require.Len(t, alerts, 1)
+	assert.Equal(t, "temp_breach", alerts[0].AlertType)
+	assert.Equal(t, "critical", alerts[0].Severity)
+	assert.Contains(t, alerts[0].Details, "32.5°C")
+
+	assert.Len(t, alertEvents, 1)
+	assert.Equal(t, "temp_breach", alertEvents[0].Payload.(map[string]interface{})["alert_type"])
+
+	assert.Len(t, tempBreachEvents, 1)
+	assert.Equal(t, spikeTemp, tempBreachEvents[0].Payload.(map[string]interface{})["temperature"])
+}

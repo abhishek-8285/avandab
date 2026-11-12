@@ -205,8 +205,7 @@ func TestP4_MultiTenantEWayBillIsolation(t *testing.T) {
 
 	bus := newMockRecordedBus()
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	client := intEWB.NewClient(intEWB.Config{Enabled: true, UseMock: true})
-	svc := ewaybill.NewEWayBillService(db, bus, client, logger, ewaybill.Config{Enabled: true, MinInvoiceValue: 50000})
+	svc := ewaybill.NewEWayBillService(db, bus, fakeRealProvider{}, logger, ewaybill.Config{Enabled: true, MinInvoiceValue: 50000})
 	svc.SubscribeTripEvents(bus)
 
 	// Tenant A: auto-generate disabled
@@ -455,8 +454,7 @@ func TestP4_TripDeliveryReconcilesEWBCompletion(t *testing.T) {
 	defer db.Close()
 
 	bus := newMockRecordedBus()
-	client := intEWB.NewClient(intEWB.Config{Enabled: true, UseMock: true})
-	svc := ewaybill.NewEWayBillService(db, bus, client, slog.Default(), ewaybill.Config{Enabled: true})
+	svc := ewaybill.NewEWayBillService(db, bus, fakeRealProvider{}, slog.Default(), ewaybill.Config{Enabled: true})
 	svc.SubscribeTripEvents(bus)
 
 	tripID := "TRIP-DELIVERY-EWB-001"

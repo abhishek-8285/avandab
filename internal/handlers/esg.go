@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -28,6 +29,71 @@ func NewESGHandlers(app *App, useCase *esgapp.ESGUsecase) *ESGHandlers {
 		App:     app,
 		useCase: useCase,
 	}
+}
+
+// Routes mounts the /esg web UI routes.
+func (h *ESGHandlers) Routes(r chi.Router) {
+	r.With(middleware.RequirePermission(h.AuthSrv, "esg", "read")).Get("/", h.WebESGDashboard)
+	r.With(middleware.RequirePermission(h.AuthSrv, "esg", "write")).Post("/generate", h.WebGenerateSnapshot)
+}
+
+// WebESGDashboard renders the ESG carbon reporting dashboard.
+func (h *ESGHandlers) WebESGDashboard(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+	snapshots, err := h.useCase.ListSnapshots(r.Context(), tenantID)
+	if err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to load ESG snapshots", err.Error(), user)
+		return
+	}
+
+	var totalCO2eKG float64
+	var totalDistanceKM float64
+	var cleanDistanceKM float64
+	var totalCargoTKM float64
+	for _, s := range snapshots {
+		totalCO2eKG += s.TotalCO2eKG
+		totalDistanceKM += s.TotalDistanceKM
+		cleanDistanceKM += s.EVDistanceKM + s.BS6DistanceKM
+		totalCargoTKM += s.TotalCargoTKM
+	}
+
+	var avgIntensity float64
+	if totalCargoTKM > 0 {
+		avgIntensity = (totalCO2eKG * 1000.0) / totalCargoTKM
+	}
+
+	data := PageData{
+		Title: "ESG & Carbon Reporting",
+		User:  user,
+		Extra: map[string]interface{}{
+			"Snapshots":       snapshots,
+			"TotalCO2eMT":     totalCO2eKG / 1000.0,
+			"AvgIntensity":    avgIntensity,
+			"CleanDistanceKM": cleanDistanceKM,
+			"TotalDistanceKM": totalDistanceKM,
+		},
+	}
+	h.renderPage(w, r, "esg_dashboard.html", data)
+}
+
+// WebGenerateSnapshot calculates a new periodic snapshot and redirects to the dashboard.
+func (h *ESGHandlers) WebGenerateSnapshot(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	now := time.Now().UTC()
+	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).Format("2006-01-02")
+	endOfMonth := now.Format("2006-01-02")
+
+	req := sustainability.GenerateSnapshotRequest{
+		PeriodStart: startOfMonth,
+		PeriodEnd:   endOfMonth,
+	}
+	createdBy := "staff"
+	if user, ok := h.getUserFromContext(r); ok && user != nil && user.Name != "" {
+		createdBy = user.Name
+	}
+	_, _ = h.useCase.GenerateSnapshot(r.Context(), tenantID, req, createdBy)
+	http.Redirect(w, r, "/esg", http.StatusSeeOther)
 }
 
 // RegisterAPIRoutes mounts the /api/v1/esg/* REST endpoints.

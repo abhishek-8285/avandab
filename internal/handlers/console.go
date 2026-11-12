@@ -3,8 +3,8 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
-	"log/slog"
+	"errors"
+
 	"net/http"
 	"time"
 
@@ -20,7 +20,10 @@ import (
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 
-	"github.com/google/uuid"
+	"strings"
+	ctapp "transport-app/internal/controltower/application"
+	"transport-app/internal/controltower/domain"
+	"transport-app/internal/middleware"
 )
 
 // ConsoleHandlers serves the owner Command Center (Spec 22 §4.1):
@@ -129,17 +132,6 @@ func (h *ConsoleHandlers) MoneyStrip(w http.ResponseWriter, r *http.Request) {
 
 // ── S3: Fleet strip + vehicle context panel (Spec 22 §2.3, §4.1) ────────
 
-// fleetStripItem is one color-coded card in the fleet strip.
-type fleetStripItem struct {
-	ID        string   `json:"id"`
-	Number    string   `json:"number"`
-	Status    string   `json:"status"`
-	Lat       *float64 `json:"lat,omitempty"`
-	Lng       *float64 `json:"lng,omitempty"`
-	SpeedKmph *float64 `json:"speed_kmph,omitempty"`
-	At        string   `json:"at,omitempty"`
-}
-
 // Fleet handles GET /api/fleet — every vehicle with its latest position
 // (single composite query; no N+1).
 func (h *ConsoleHandlers) Fleet(w http.ResponseWriter, r *http.Request) {
@@ -148,99 +140,12 @@ func (h *ConsoleHandlers) Fleet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tenantID := string(shared.TenantIDFromContext(r.Context()))
-	rows, err := h.db.QueryContext(r.Context(), `
-		SELECT v.id, v.vehicle_number, v.status,
-		       p.latitude, p.longitude, p.speed, p.device_time
-		FROM vehicles v
-		LEFT JOIN vehicle_latest_position p ON p.vehicle_id = v.id
-		WHERE v.tenant_id = $1
-		ORDER BY v.vehicle_number
-		LIMIT 500`, tenantID)
+	items, err := ctapp.NewConsoleReadModel(h.db, h.eta).Fleet(r.Context(), tenantID)
 	if err != nil {
 		httpx.Error(w, r, err)
 		return
 	}
-	defer func() { _ = rows.Close() }()
-
-	items := []fleetStripItem{}
-	for rows.Next() {
-		var it fleetStripItem
-		var lat, lng, speed sql.NullFloat64
-		var at sql.NullTime
-		if err := rows.Scan(&it.ID, &it.Number, &it.Status, &lat, &lng, &speed, &at); err != nil {
-			httpx.Error(w, r, err)
-			return
-		}
-		if lat.Valid && lng.Valid {
-			it.Lat, it.Lng = &lat.Float64, &lng.Float64
-		}
-		if speed.Valid {
-			it.SpeedKmph = &speed.Float64
-		}
-		if at.Valid {
-			it.At = at.Time.UTC().Format(time.RFC3339)
-		}
-		items = append(items, it)
-	}
-	if err := rows.Err(); err != nil {
-		httpx.Error(w, r, err)
-		return
-	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"vehicles": items})
-}
-
-// contextResponse is the Spec 22 §2.3 wire shape.
-type contextResponse struct {
-	Vehicle        vehicleCtx    `json:"vehicle"`
-	Position       *positionCtx  `json:"position,omitempty"`
-	Trip           *tripCtx      `json:"trip,omitempty"`
-	Driver         *driverCtx    `json:"driver,omitempty"`
-	PnlKmToday     float64       `json:"pnl_km_today"`
-	KharchaPending []kharchaItem `json:"kharcha_pending"`
-	EwayBill       *ewayCtx      `json:"eway_bill,omitempty"`
-	FastagBalance  *float64      `json:"fastag_balance"`
-	DocsExpiring   []docItem     `json:"docs_expiring"`
-}
-
-type vehicleCtx struct {
-	ID     string `json:"id"`
-	Number string `json:"number"`
-	Status string `json:"status"`
-}
-
-type positionCtx struct {
-	Lat       float64 `json:"lat"`
-	Lng       float64 `json:"lng"`
-	SpeedKmph float64 `json:"speed_kmph"`
-	At        string  `json:"at"`
-}
-
-type tripCtx struct {
-	ID    string     `json:"id"`
-	Route string     `json:"route"`
-	EtaAt *time.Time `json:"eta_at,omitempty"`
-}
-
-type driverCtx struct {
-	ID    string  `json:"id"`
-	Name  string  `json:"name"`
-	Phone *string `json:"phone,omitempty"`
-}
-
-type kharchaItem struct {
-	ID       string  `json:"id"`
-	Amount   float64 `json:"amount"`
-	Category string  `json:"category"`
-}
-
-type ewayCtx struct {
-	ID        string `json:"id"`
-	ExpiresAt string `json:"expires_at"`
-}
-
-type docItem struct {
-	Kind      string `json:"kind"`
-	ExpiresOn string `json:"expires_on"`
 }
 
 const contextCacheTTL = 60 * time.Second
@@ -263,14 +168,8 @@ func (h *ConsoleHandlers) VehicleContext(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	ctx := r.Context()
-	resp := contextResponse{KharchaPending: []kharchaItem{}, DocsExpiring: []docItem{}}
-
-	// 1. Vehicle (existence + tenancy gate for everything below).
-	err := h.db.QueryRowContext(ctx, `
-		SELECT id, vehicle_number, status FROM vehicles WHERE id = $1 AND tenant_id = $2`,
-		vehicleID, tenantID).Scan(&resp.Vehicle.ID, &resp.Vehicle.Number, &resp.Vehicle.Status)
-	if err == sql.ErrNoRows {
+	resp, err := ctapp.NewConsoleReadModel(h.db, h.eta).VehicleContext(r.Context(), tenantID, vehicleID)
+	if errors.Is(err, ctapp.ErrConsoleNotFound) {
 		httpx.Error(w, r, apperr.New(apperr.CodeNotFound))
 		return
 	}
@@ -278,132 +177,6 @@ func (h *ConsoleHandlers) VehicleContext(w http.ResponseWriter, r *http.Request)
 		httpx.Error(w, r, err)
 		return
 	}
-
-	// 2. Latest position.
-	var lat, lng, speed sql.NullFloat64
-	var deviceTime sql.NullTime
-	posErr := h.db.QueryRowContext(ctx, `
-		SELECT latitude, longitude, speed, device_time
-		FROM vehicle_latest_position WHERE vehicle_id = $1 AND tenant_id = $2`,
-		vehicleID, tenantID).Scan(&lat, &lng, &speed, &deviceTime)
-	if posErr == nil && lat.Valid && lng.Valid {
-		p := &positionCtx{Lat: lat.Float64, Lng: lng.Float64}
-		if speed.Valid {
-			p.SpeedKmph = speed.Float64
-		}
-		if deviceTime.Valid {
-			p.At = deviceTime.Time.UTC().Format(time.RFC3339)
-		}
-		resp.Position = p
-	}
-
-	// 3. Active trip + route.
-	var tripID, driverID sql.NullString
-	var routeLabel string
-	var distance float64
-	tripErr := h.db.QueryRowContext(ctx, `
-		SELECT t.id, t.driver_id, COALESCE(r.source,'') || '→' || COALESCE(r.destination,''), COALESCE(r.distance,0)
-		FROM trips t JOIN routes r ON r.id = t.route_id
-		WHERE t.vehicle_id = $1 AND t.tenant_id = $2
-		  AND t.status IN ('assigned','started','reached_pickup','in_transit')
-		ORDER BY t.departure_time DESC LIMIT 1`,
-		vehicleID, tenantID).Scan(&tripID, &driverID, &routeLabel, &distance)
-	hasTrip := tripErr == nil && tripID.Valid
-	if hasTrip {
-		t := &tripCtx{ID: tripID.String, Route: routeLabel}
-		if h.eta != nil {
-			if res, etaErr := h.eta.Calculate(ctx, tripID.String); etaErr == nil {
-				arrival := res.ArrivalAt
-				t.EtaAt = &arrival
-			}
-		}
-		resp.Trip = t
-	}
-
-	// 4. Driver on the active trip.
-	if hasTrip && driverID.Valid && driverID.String != "" {
-		var d driverCtx
-		var phone sql.NullString
-		dErr := h.db.QueryRowContext(ctx, `
-			SELECT id,
-			       COALESCE(first_name,'') || ' ' || COALESCE(last_name,''),
-			       phone
-			FROM drivers WHERE id = $1`, driverID.String).Scan(&d.ID, &d.Name, &phone)
-		if dErr == nil {
-			if phone.Valid && phone.String != "" {
-				d.Phone = &phone.String
-			}
-			resp.Driver = &d
-		}
-	}
-
-	// 5. pnl per km today: live margin of the active trip over route length.
-	if hasTrip && distance > 0 {
-		var margin float64
-		if mErr := h.db.QueryRowContext(ctx,
-			`SELECT estimated_margin FROM trips WHERE id = $1`, tripID.String).Scan(&margin); mErr == nil {
-			resp.PnlKmToday = margin / distance
-		}
-	}
-
-	// 6. Pending kharcha on this vehicle's trips.
-	kRows, kErr := h.db.QueryContext(ctx, `
-		SELECT de.id, de.amount, COALESCE(de.category, de.expense_type, '')
-		FROM driver_expenses de JOIN trips t ON de.trip_id = t.id
-		WHERE t.vehicle_id = $1 AND t.tenant_id = $2 AND de.status = 'pending'
-		ORDER BY de.created_at DESC LIMIT 10`, vehicleID, tenantID)
-	if kErr == nil {
-		defer func() { _ = kRows.Close() }()
-		for kRows.Next() {
-			var it kharchaItem
-			if err := kRows.Scan(&it.ID, &it.Amount, &it.Category); err == nil {
-				resp.KharchaPending = append(resp.KharchaPending, it)
-			}
-		}
-	}
-
-	// 7. Active e-way bill on the active trip.
-	if hasTrip {
-		var e ewayCtx
-		var validUntil time.Time
-		eErr := h.db.QueryRowContext(ctx, `
-			SELECT eb.id, eb.valid_until FROM eway_bills eb
-			WHERE eb.trip_id = $1 AND eb.status = 'active'
-			ORDER BY eb.valid_until ASC LIMIT 1`, tripID.String).
-			Scan(&e.ID, &validUntil)
-		if eErr == nil {
-			e.ExpiresAt = validUntil.UTC().Format(time.RFC3339)
-			resp.EwayBill = &e
-		}
-	}
-
-	// 8. FASTag balance (sum across tags fitted to the vehicle).
-	var balance float64
-	bErr := h.db.QueryRowContext(ctx, `
-		SELECT COALESCE(SUM(balance),0) FROM fastag_tags
-		WHERE vehicle_id = $1 AND tenant_id = $2`, vehicleID, tenantID).Scan(&balance)
-	if bErr == nil {
-		resp.FastagBalance = &balance
-	}
-
-	// 9. Documents expiring within 30 days.
-	dRows, dErr := h.db.QueryContext(ctx, `
-		SELECT doc_type, expiry_date FROM vehicle_documents
-		WHERE vehicle_id = $1 AND expiry_date IS NOT NULL
-		  AND substr(CAST(expiry_date AS TEXT), 1, 10) <= $2
-		ORDER BY expiry_date ASC LIMIT 5`, vehicleID, time.Now().UTC().AddDate(0, 0, 30).Format("2006-01-02"))
-	if dErr == nil {
-		defer func() { _ = dRows.Close() }()
-		for dRows.Next() {
-			var it docItem
-			var expiry sql.NullTime
-			if err := dRows.Scan(&it.Kind, &expiry); err == nil && expiry.Valid {
-				it.ExpiresOn = expiry.Time.Format("2006-01-02")
-				resp.DocsExpiring = append(resp.DocsExpiring, it)
-			}
-		}
-	}
-
 	blob, err := json.Marshal(resp)
 	if err != nil {
 		httpx.Error(w, r, err)
@@ -442,14 +215,14 @@ func (h *ConsoleHandlers) ExtendEwayBill(w http.ResponseWriter, r *http.Request)
 	tenantID := string(shared.TenantIDFromContext(ctx))
 	ewbID := chi.URLParam(r, "id")
 
-	var tripID sql.NullString
-	var validUntil time.Time
-	err := h.db.QueryRowContext(ctx, `
-		SELECT e.trip_id, e.valid_until
-		FROM eway_bills e JOIN trips t ON e.trip_id = t.id
-		WHERE e.id = $1 AND t.tenant_id = $2`, ewbID, tenantID).
-		Scan(&tripID, &validUntil)
-	if err == sql.ErrNoRows {
+	uc := ctapp.NewExtendEwayBillUseCase(h.db, h.ewbClient, h.ewbExtend)
+	newExpiry, err := uc.Extend(ctx, ctapp.ExtendEwayBillCommand{
+		EWBID:    ewbID,
+		TenantID: tenantID,
+		ActorID:  contextUserID(r),
+		Hours:    body.ValidUptoHours,
+	})
+	if errors.Is(err, ctapp.ErrConsoleNotFound) {
 		httpx.Error(w, r, apperr.New(apperr.CodeNotFound))
 		return
 	}
@@ -457,38 +230,6 @@ func (h *ConsoleHandlers) ExtendEwayBill(w http.ResponseWriter, r *http.Request)
 		httpx.Error(w, r, err)
 		return
 	}
-
-	newExpiry := validUntil.Add(time.Duration(body.ValidUptoHours) * time.Hour)
-	if h.ewbExtend && h.ewbClient != nil {
-		var ewbNumber string
-		if nErr := h.db.QueryRowContext(ctx,
-			`SELECT ewb_number FROM eway_bills WHERE id = $1`, ewbID).Scan(&ewbNumber); nErr == nil {
-			if resp, extErr := h.ewbClient.Extend(ctx, ewbNumber, intEWB.ExtendRequest{
-				EwbNumber: ewbNumber,
-				Reason:    "console_inline_extend",
-			}); extErr == nil && !resp.ValidUpto.IsZero() {
-				newExpiry = resp.ValidUpto
-			}
-		}
-	}
-
-	if _, uErr := h.db.ExecContext(ctx,
-		`UPDATE eway_bills SET valid_until = $1 WHERE id = $2`,
-		newExpiry, ewbID); uErr != nil {
-		httpx.Error(w, r, uErr)
-		return
-	}
-	if _, eErr := h.db.ExecContext(ctx, `
-		INSERT INTO eway_bill_events (id, ewb_number, trip_id, event_type, payload, created_by)
-		SELECT $1, ewb_number, trip_id, 'EXTENDED', $2, $3 FROM eway_bills WHERE id = $4`,
-		uuid.NewString(), fmt.Sprintf(`{"hours":%d}`, body.ValidUptoHours), contextUserID(r), ewbID); eErr != nil {
-		slog.Warn("eway_bill_events insert failed", "ewb", ewbID, "error", eErr)
-	}
-
-	writeAuditLog(r, h.db, "ewaybill.extend", "eway_bills", ewbID, map[string]any{
-		"new_expiry":       newExpiry.UTC().Format(time.RFC3339),
-		"valid_upto_hours": body.ValidUptoHours,
-	})
 
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"ok":         true,
@@ -499,17 +240,81 @@ func (h *ConsoleHandlers) ExtendEwayBill(w http.ResponseWriter, r *http.Request)
 // writeAuditLog records one audit trail row for a console action; failures
 // are logged but never fail the action itself.
 func writeAuditLog(r *http.Request, db *sql.DB, action, table, recordID string, newValues any) {
-	blob, err := json.Marshal(newValues)
-	if err != nil {
-		return
-	}
-	_, _ = db.ExecContext(r.Context(), `
-		INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, tenant_id, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`,
-		uuid.NewString(), contextUserID(r), action, table, recordID, string(blob), string(shared.TenantOrPlatform(r.Context())))
+	_ = ctapp.WriteAuditLog(r.Context(), db, contextUserID(r), string(shared.TenantOrPlatform(r.Context())), action, table, recordID, newValues)
 }
 
 // WriteAuditLog exposes writeAuditLog for vertical-slice presentation packages.
 func WriteAuditLog(r *http.Request, db *sql.DB, action, table, recordID string, newValues any) {
 	writeAuditLog(r, db, action, table, recordID, newValues)
+}
+
+// ---------------------------------------------------------------------------
+// Merged from control_tower.go
+// ---------------------------------------------------------------------------
+
+// ControlTowerHandlers serves web cockpit UI for the Dispatcher Control Tower.
+type ControlTowerHandlers struct {
+	*App
+	service *ctapp.Service
+}
+
+// NewControlTowerHandlers constructs a new ControlTowerHandlers.
+func NewControlTowerHandlers(app *App, ctSvc *ctapp.Service) *ControlTowerHandlers {
+	return &ControlTowerHandlers{
+		App:     app,
+		service: ctSvc,
+	}
+}
+
+// Routes registers web UI routes for the control tower under /control-tower.
+func (h *ControlTowerHandlers) Routes(r chi.Router) {
+	r.With(middleware.RequirePermission(h.AuthSrv, "trips", "read")).Get("/", h.WebControlTowerPage)
+}
+
+// WebControlTowerPage renders the operations cockpit / control tower dashboard.
+func (h *ControlTowerHandlers) WebControlTowerPage(w http.ResponseWriter, r *http.Request) {
+	tenantID := shared.TenantIDFromContext(r.Context())
+	user, _ := h.getUserFromContext(r)
+	statusFilter := strings.TrimSpace(r.URL.Query().Get("status"))
+
+	var trips []domain.ControlTowerTrip
+	if h.service != nil {
+		res, err := h.service.GetTrips(r.Context(), tenantID, statusFilter)
+		if err != nil {
+			h.renderError(w, http.StatusInternalServerError, "Failed to load control tower data", err.Error(), user)
+			return
+		}
+		trips = res
+	}
+
+	var activeCount, delayedCount, sosCount, staleCount int
+	for _, t := range trips {
+		st := strings.ToUpper(t.Status)
+		if st == "STARTED" || st == "IN_TRANSIT" || st == "ASSIGNED" || st == "SCHEDULED" {
+			activeCount++
+		}
+		if t.Safety.HasActiveSOS {
+			sosCount++
+		}
+		if t.SyncState.IsStale {
+			staleCount++
+		}
+		if t.Safety.IsDeviated || t.Safety.ActiveAlertsCount > 0 {
+			delayedCount++
+		}
+	}
+
+	data := PageData{
+		Title: "Control Tower",
+		User:  user,
+		Extra: map[string]interface{}{
+			"Trips":        trips,
+			"ActiveCount":  activeCount,
+			"DelayedCount": delayedCount,
+			"SOSCount":     sosCount,
+			"StaleCount":   staleCount,
+			"StatusFilter": statusFilter,
+		},
+	}
+	h.renderPage(w, r, "control_tower.html", data)
 }

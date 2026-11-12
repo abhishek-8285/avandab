@@ -24,6 +24,11 @@ export function LoginScreen({ onLoginSuccess, onForgotPassword, onRegisterLink }
 
   const setAuth = useAuthStore((state) => state.setAuth);
 
+  // Dev-only demo autofill: no hardcoded credentials ship in the bundle.
+  // Requires EXPO_PUBLIC_DEMO_EMAIL + EXPO_PUBLIC_DEMO_PASSWORD in a dev build.
+  const demoEmail = __DEV__ ? process.env.EXPO_PUBLIC_DEMO_EMAIL : undefined;
+  const demoPassword = __DEV__ ? process.env.EXPO_PUBLIC_DEMO_PASSWORD : undefined;
+
   const handleSignIn = async () => {
     if (!email || !password) {
       setFormError(t('auth.err_both', 'Please enter both email and password.', locale));
@@ -116,7 +121,7 @@ export function LoginScreen({ onLoginSuccess, onForgotPassword, onRegisterLink }
             <MaterialCommunityIcons name="email-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} accessible={false} />
             <TextInput
               style={styles.input}
-              placeholder="driver@avandab.com"
+              placeholder="driver@example.com"
               placeholderTextColor={Colors.textMuted}
               value={email}
               onChangeText={setEmail}
@@ -186,7 +191,8 @@ export function LoginScreen({ onLoginSuccess, onForgotPassword, onRegisterLink }
           )}
         </TouchableOpacity>
 
-        {/* 1-Tap Quick Driver Demo Sign-In */}
+        {/* Dev-only demo autofill (env-driven): never rendered in production. */}
+        {demoEmail && demoPassword && (
         <TouchableOpacity
           style={{
             flexDirection: 'row',
@@ -202,15 +208,16 @@ export function LoginScreen({ onLoginSuccess, onForgotPassword, onRegisterLink }
           }}
           activeOpacity={0.85}
           onPress={() => {
-            setEmail('driver@avandab.com');
-            setPassword('password123');
+            setEmail(demoEmail);
+            setPassword(demoPassword);
           }}
         >
           <MaterialCommunityIcons name="truck-fast" size={16} color={Colors.primary} accessible={false} />
           <Text style={{ fontSize: FontSize.label, fontWeight: '800', color: Colors.primary }}>
-            {t('auth.demo_fill', 'AUTO-FILL DRIVER (Abhishek • DL-01)', locale)}
+            {t('auth.demo_fill', 'AUTO-FILL DEMO DRIVER', locale)}
           </Text>
         </TouchableOpacity>
+        )}
 
         {onRegisterLink && (
           <TouchableOpacity style={styles.registerLink} onPress={onRegisterLink} accessibilityRole="button" accessibilityLabel={t('auth.a11y_register', 'Register for a driver account', locale)}>

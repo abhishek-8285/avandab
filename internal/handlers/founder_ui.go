@@ -4,6 +4,9 @@ import (
 	"net/http"
 	"time"
 
+	experimentapp "transport-app/internal/experiments"
+	founderapp "transport-app/internal/founder"
+	pnlapp "transport-app/internal/pnl"
 	"transport-app/internal/service"
 )
 
@@ -12,14 +15,14 @@ func (h *FounderHandlers) DashboardPage(w http.ResponseWriter, r *http.Request) 
 	tenantID := h.tenantID(r)
 	session, _ := h.getUserFromContext(r)
 
-	unackCount, _ := h.App.Services.FounderSignals.CountUnacknowledged(r.Context(), tenantID)
-	recentSignals, _, _ := h.App.Services.FounderSignals.ListSignals(r.Context(), tenantID, service.SignalFilters{
+	unackCount, _ := founderapp.NewSignalQueries(h.DB).CountUnacknowledged(r.Context(), tenantID)
+	recentSignals, _, _ := founderapp.NewSignalQueries(h.DB).ListSignals(r.Context(), tenantID, founderapp.SignalFilters{
 		UnacknowledgedOnly: true,
 		Limit:              5,
 	})
-	activeExperiments, _ := h.App.Services.Experiments.CountByStatus(r.Context(), tenantID, service.ExperimentStatusRunning)
+	activeExperiments, _ := experimentapp.NewQueries(h.DB).CountByStatus(r.Context(), tenantID, experimentapp.ExperimentStatusRunning)
 	openAlerts, _ := h.App.Services.OpsAlerts.CountByStatus(r.Context(), tenantID, service.OpsAlertStatusOpen)
-	latestPNL, _ := h.App.Services.PNL.GetLatest(r.Context(), tenantID)
+	latestPNL, _ := pnlapp.NewSnapshotQueries(h.DB).Latest(r.Context(), tenantID)
 
 	h.renderPage(w, r, "founder_dashboard.html", PageData{
 		Title: "Founder Dashboard",
@@ -69,7 +72,7 @@ func (h *FounderHandlers) PNLDashboardPage(w http.ResponseWriter, r *http.Reques
 
 	fromTime, _ := time.Parse("2006-01-02", from)
 	toTime, _ := time.Parse("2006-01-02", to)
-	snapshots, _ := h.App.Services.PNL.GetPNLRange(r.Context(), tenantID, fromTime, toTime)
+	snapshots, _ := pnlapp.NewSnapshotQueries(h.DB).Range(r.Context(), tenantID, fromTime, toTime)
 
 	h.renderPage(w, r, "pnl_dashboard.html", PageData{
 		Title: "Profit & Loss",
@@ -89,7 +92,7 @@ func (h *FounderHandlers) ExperimentsPage(w http.ResponseWriter, r *http.Request
 
 	// ?status= drives the filter_bar status chips ("" = all).
 	status := r.URL.Query().Get("status")
-	experiments, _ := h.App.Services.Experiments.ListExperiments(r.Context(), tenantID, status)
+	experiments, _ := experimentapp.NewQueries(h.DB).ListExperiments(r.Context(), tenantID, status)
 
 	h.renderPage(w, r, "experiments_list.html", PageData{
 		Title: "A/B Experiments",

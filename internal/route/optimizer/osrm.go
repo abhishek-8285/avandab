@@ -3,6 +3,7 @@ package optimizer
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -36,21 +37,16 @@ func (o *OSRMClient) client() *http.Client {
 	return &http.Client{Timeout: 10 * time.Second}
 }
 
-// Solve uses OSRM table for distance matrix; falls back to haversine on error.
+// Solve uses OSRM table for distance matrix; returns an honest error on failure.
 func (o *OSRMClient) Solve(ctx context.Context, in OptimizationInput) (OptimizationOutput, error) {
 	if err := in.Validate(); err != nil {
 		return OptimizationOutput{}, err
 	}
 	start := time.Now()
 
-	// If no URL configured, delegate to mock.
+	// If no URL configured, fail loud — BaseURL is required.
 	if o.BaseURL == "" {
-		m := &MockOptimizer{}
-		out, err := m.Solve(ctx, in)
-		if err == nil {
-			out.ProviderName = o.Name()
-		}
-		return out, err
+		return OptimizationOutput{}, errors.New("osrm: BaseURL not configured")
 	}
 
 	// Build coordinate list: vehicles starts + shipments
@@ -84,11 +80,7 @@ func (o *OSRMClient) Solve(ctx context.Context, in OptimizationInput) (Optimizat
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	resp, err := o.client().Do(req)
 	if err != nil {
-		// Fallback to mock on network error
-		m := &MockOptimizer{}
-		out, _ := m.Solve(ctx, in)
-		out.ProviderName = o.Name() + "-fallback"
-		return out, nil
+		return OptimizationOutput{}, fmt.Errorf("osrm network error: %w", err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -97,11 +89,7 @@ func (o *OSRMClient) Solve(ctx context.Context, in OptimizationInput) (Optimizat
 	}()
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		_ = body
-		m := &MockOptimizer{}
-		out, _ := m.Solve(ctx, in)
-		out.ProviderName = o.Name() + "-fallback"
-		return out, nil
+		return OptimizationOutput{}, fmt.Errorf("osrm table request returned HTTP %d: %s", resp.StatusCode, string(body))
 	}
 	var tbl struct {
 		Code      string      `json:"code"`
@@ -109,11 +97,11 @@ func (o *OSRMClient) Solve(ctx context.Context, in OptimizationInput) (Optimizat
 		Durations [][]float64 `json:"durations"`
 	}
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if err := json.Unmarshal(body, &tbl); err != nil || tbl.Code != "Ok" {
-		m := &MockOptimizer{}
-		out, _ := m.Solve(ctx, in)
-		out.ProviderName = o.Name() + "-fallback"
-		return out, nil
+	if err := json.Unmarshal(body, &tbl); err != nil {
+		return OptimizationOutput{}, fmt.Errorf("osrm table unmarshal failed: %w", err)
+	}
+	if tbl.Code != "Ok" {
+		return OptimizationOutput{}, fmt.Errorf("osrm table returned code %q: %s", tbl.Code, string(body))
 	}
 
 	// Greedy assignment using OSRM distances
