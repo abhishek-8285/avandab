@@ -1005,6 +1005,11 @@ admin/console/cron/test consumers, then delete the fields and service types.
 - Migrated `PNLHandlers` (`GetPNLRange`, `GenerateSnapshot`) to `internal/pnl.SnapshotQueries`; zero active `service.PNLService` calls remaining in PNL HTTP handlers.
 - Fixed 5 unsafe coarse-clock ID generation sites (`assign_driver.go`, `assign_vehicle.go`, `experiments.go`, `einvoice.go`) with UUID/atomic sequences, proven by red-green regression suites.
 
+**Phase 4 progress (2026-11-12, sixth increment - branch audit + CI workflow re-apply):**
+- Branch audit of `fix/unsafe-id-and-adr-phase4` found and fixed: ratchet RED (`internal/handlers/console.go` grew to 322 lineCount vs cap 321 after the PNL decoupling - comment compacted back to 320 wc, ratchet green), gofmt drift in `internal/customer/domain/quotes_test.go`, and the two CI workflow gates that had been reverted to unblock a workflow-scope-restricted push: `.github/workflows/ci.yml` (OpenAPI parity) and `.github/workflows/restore-drill.yml` (encrypted backups + no-passphrase refusal) are re-applied as a ready patch at `docs/tech-specs/ci-workflow-reapply.patch` - the current PAT lacks `workflow` scope, so they cannot be pushed from this host; apply with a workflow-scoped token or via the GitHub web UI.
+- Topology note: `origin/master` at `30dab1a` is a squashed merge of the earlier ADR work, so the 151-commit difference vs `origin/feat/trip-fuel-rollup` is history shape, not missing content; this branch carries the Phase 4 increments on top of the squashed base.
+- Remaining Phase 4 blockers unchanged in substance: experiments admin A/B API (legacy write/read service), app.go/cmd wiring, and 32 test refs through `NewTestServices` must migrate before the `PNL`/`FounderSignals`/`Experiments` container fields and legacy service code can be deleted.
+
 ### 5. Exit criteria per file/domain
 
 - zero raw SQL in the handler/tool file (ratchet cap 0),

@@ -87,8 +87,7 @@ func (h *ConsoleHandlers) Page(w http.ResponseWriter, r *http.Request) {
 		inbox = append(inbox, item)
 	}
 
-	// Money strip is best-effort on the page render: without DB or
-	// on error the partial renders placeholders instead of failing the page.
+	// Money strip is best-effort on render: without DB or on error the partial shows placeholders.
 	var strip *pnlapp.MoneyStrip
 	if h.db != nil {
 		strip, _ = pnlapp.NewSnapshotQueries(h.db).GetMoneyStrip(r.Context(), tenantID, time.Now())

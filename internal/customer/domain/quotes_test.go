@@ -20,43 +20,43 @@ func TestCalculateQuote_Validation(t *testing.T) {
 
 func TestCalculateQuote_Calculations(t *testing.T) {
 	tests := []struct {
-		name         string
-		vehicleType  string
-		distanceKm   float64
-		ttlMinutes   int
-		expectedBase float64
+		name          string
+		vehicleType   string
+		distanceKm    float64
+		ttlMinutes    int
+		expectedBase  float64
 		expectedPerKm float64
 	}{
 		{
-			name:         "2 wheeler short distance",
-			vehicleType:  "BIKE",
-			distanceKm:   10,
-			ttlMinutes:   15,
-			expectedBase: 50.0,
+			name:          "2 wheeler short distance",
+			vehicleType:   "BIKE",
+			distanceKm:    10,
+			ttlMinutes:    15,
+			expectedBase:  50.0,
 			expectedPerKm: 12.0,
 		},
 		{
-			name:         "Tata Ace with toll",
-			vehicleType:  "TATA_ACE",
-			distanceKm:   120, // >30km -> toll = floor(120/50)*120 = 2*120 = 240
-			ttlMinutes:   60,
-			expectedBase: 400.0,
+			name:          "Tata Ace with toll",
+			vehicleType:   "TATA_ACE",
+			distanceKm:    120, // >30km -> toll = floor(120/50)*120 = 2*120 = 240
+			ttlMinutes:    60,
+			expectedBase:  400.0,
 			expectedPerKm: 25.0,
 		},
 		{
-			name:         "Heavy Trailer",
-			vehicleType:  "TRAILER",
-			distanceKm:   200,
-			ttlMinutes:   0, // fallback to 30
-			expectedBase: 3500.0,
+			name:          "Heavy Trailer",
+			vehicleType:   "TRAILER",
+			distanceKm:    200,
+			ttlMinutes:    0, // fallback to 30
+			expectedBase:  3500.0,
 			expectedPerKm: 75.0,
 		},
 		{
-			name:         "Default fallback vehicle type and zero distance",
-			vehicleType:  "UNKNOWN_TYPE",
-			distanceKm:   0, // fallback to 15.0
-			ttlMinutes:   0,
-			expectedBase: 500.0,
+			name:          "Default fallback vehicle type and zero distance",
+			vehicleType:   "UNKNOWN_TYPE",
+			distanceKm:    0, // fallback to 15.0
+			ttlMinutes:    0,
+			expectedBase:  500.0,
 			expectedPerKm: 28.0,
 		},
 	}

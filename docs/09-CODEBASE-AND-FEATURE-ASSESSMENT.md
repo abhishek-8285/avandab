@@ -1,6 +1,6 @@
 # 09 — Codebase & Feature Assessment
 
-> Evidence-based snapshot of built state, quality, and honest gaps. Refreshed survey date: **2026-11-11**, commit `4a3b07f` (branch `feat/trip-fuel-rollup`). Supersedes the `41345ca` (2026-11-10), `544247ca` (2026-09-10), `3f015a8b` (2026-09-08) and `ea5b078` surveys; deltas called out per section. This refresh records the executed end-state migrations (ADR Phases 2–3 complete) and the first Phase 4 cleanup inventory. `docs/*.md` supersede on conflict (per `docs/ROADMAP.md` header rule).
+> Evidence-based snapshot of built state, quality, and honest gaps. Refreshed survey date: **2026-11-12**, commit `8d3791c` (branch `fix/unsafe-id-and-adr-phase4`; PR #47 squashed the earlier ADR Phases 2-3 work into `30dab1a`, this branch adds Phase 4 increments 5-6 + branch-audit fixes). Supersedes the `41345ca` (2026-11-10), `544247ca` (2026-09-10), `3f015a8b` (2026-09-08) and `ea5b078` surveys; deltas called out per section. This refresh records the executed end-state migrations (ADR Phases 2–3 complete) and the first Phase 4 cleanup inventory. `docs/*.md` supersede on conflict (per `docs/ROADMAP.md` header rule).
 
 ---
 
@@ -17,7 +17,7 @@
 | Build / vet / gofmt | exit 0 / exit 0 / clean (tracked Go) | `go build ./...`, `go vet ./...`, `gofmt -l` 2026-11-11 |
 | ADR ratchet — `internal/handlers/` raw SQL | **0** sites (was 245 at `41345ca`); asserted with `assert.Zero` + per-file line caps may only shrink | `internal/architecture/ratchet_test.go`; Phase 2 complete at `e3dd6fe` |
 | ADR ratchet — `internal/agent/tools.go` | **0** raw SQL, **0** `env.Services` refs, 1,027 lines (was 1,186 lines / 1 SQL site / legacy service container) | same ratchet; Phase 3 complete at `a20aabf` |
-| Legacy service container remaining live use | **231** `Services.*` call sites in `internal/handlers` across **21 fields**; container **30 fields** — Phase 4 increment 4 re-verified deletion blockers: `Experiments` (A/B admin handlers use legacy write/read API; 9 test refs), `FounderSignals` (write/ack path + audit wiring; 10 test refs), `PNL` (handlers + console money strip + nightly cron `GenerateDailySnapshot`; 13 test refs) — tests count as blockers, so nothing deleted yet | `grep` 2026-11-11 |
+| Legacy service container remaining live use | **231** `Services.*` call sites in `internal/handlers` across **21 fields**; container **30 fields** - Phase 4 increment 5 migrated the PNL/Founder HTTP handlers to slice facades (`internal/pnl.SnapshotQueries`, `internal/founder.SignalQueries`) and decoupled console money strip + nightly cron from `PNLService`; remaining deletion blockers: experiments admin A/B API still on the legacy write/read service, app.go/cmd wiring, and 32 test refs via `NewTestServices` | `grep` 2026-11-12 |
 | Security gate | **Partial locally** — golangci-lint 0 issues across all branch changes; `govulncheck` + `-race` are CI-only on this android/arm64 host | `golangci-lint --new-from-rev=origin` 2026-11-10 |
 | Migrations | **179 files each engine, head `00185`**, SQLite + PG mirrors | `ls db/migrations*/ *.sql` |
 | Schema | 179 tables / 283 indexes | regenerated `db/schema.sql` at head |
