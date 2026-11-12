@@ -17,6 +17,7 @@ import (
 	"transport-app/internal/eta"
 	"transport-app/internal/httpx"
 	intEWB "transport-app/internal/integration/ewaybill"
+	pnlapp "transport-app/internal/pnl"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 
@@ -86,11 +87,11 @@ func (h *ConsoleHandlers) Page(w http.ResponseWriter, r *http.Request) {
 		inbox = append(inbox, item)
 	}
 
-	// Money strip is best-effort on the page render: without PNL service or
+	// Money strip is best-effort on the page render: without DB or
 	// on error the partial renders placeholders instead of failing the page.
-	var strip *service.MoneyStrip
-	if h.pnl != nil {
-		strip, _ = h.pnl.GetMoneyStrip(r.Context(), tenantID, time.Now())
+	var strip *pnlapp.MoneyStrip
+	if h.db != nil {
+		strip, _ = pnlapp.NewSnapshotQueries(h.db).GetMoneyStrip(r.Context(), tenantID, time.Now())
 	}
 
 	h.app.renderPage(w, r, "console.html", PageData{
@@ -106,11 +107,11 @@ func (h *ConsoleHandlers) Page(w http.ResponseWriter, r *http.Request) {
 // MoneyStrip handles GET /api/dashboard/money-strip (Spec 22 §2.2).
 func (h *ConsoleHandlers) MoneyStrip(w http.ResponseWriter, r *http.Request) {
 	tenantID := string(shared.TenantIDFromContext(r.Context()))
-	if h.pnl == nil || h.repo == nil {
+	if h.db == nil || h.repo == nil {
 		httpx.Error(w, r, apperr.New(apperr.CodeInternal))
 		return
 	}
-	strip, err := h.pnl.GetMoneyStrip(r.Context(), tenantID, time.Now())
+	strip, err := pnlapp.NewSnapshotQueries(h.db).GetMoneyStrip(r.Context(), tenantID, time.Now())
 	if err != nil {
 		httpx.Error(w, r, err)
 		return

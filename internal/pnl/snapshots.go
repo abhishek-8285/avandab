@@ -33,6 +33,14 @@ type Snapshot struct {
 	VehicleCount  int     `json:"vehicle_count"`
 }
 
+// MoneyStrip is the command center money strip read model.
+type MoneyStrip struct {
+	Date        string  `json:"date"`
+	Revenue     float64 `json:"revenue"`
+	Spent       float64 `json:"spent"`
+	Receivables float64 `json:"receivables"`
+}
+
 // SnapshotQueries is the read facade. Stateless.
 type SnapshotQueries struct{ db *sql.DB }
 
@@ -220,4 +228,38 @@ func (q *SnapshotQueries) dailyTotals(ctx context.Context, tenantID, dateStr str
 	}
 
 	return revenue, fuel, driverPayouts, maint, toll, nil
+}
+
+// GetMoneyStrip returns the tenant's daily money strip metrics for the given timestamp.
+func (q *SnapshotQueries) GetMoneyStrip(ctx context.Context, tenantID string, now time.Time) (*MoneyStrip, error) {
+	if q == nil || q.db == nil {
+		return nil, sql.ErrNoRows
+	}
+	tid, err := shared.RequireTenantOr(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	tID := string(tid)
+	dateStr := now.Format("2006-01-02")
+	revenue, fuelCosts, driverPayouts, maintenance, tollCosts, err := q.dailyTotals(ctx, tID, dateStr)
+	if err != nil {
+		return nil, err
+	}
+
+	var receivables float64
+	_ = q.db.QueryRowContext(ctx,
+		`SELECT COALESCE(SUM(CASE WHEN i.total - COALESCE(p.paid, 0) > 0 THEN i.total - COALESCE(p.paid, 0) ELSE 0 END), 0)
+		 FROM invoices i
+		 LEFT JOIN (
+		   SELECT invoice_id, SUM(amount) AS paid FROM payments GROUP BY invoice_id
+		 ) p ON p.invoice_id = i.id
+		 WHERE i.tenant_id = $1`,
+		tID).Scan(&receivables)
+
+	return &MoneyStrip{
+		Date:        dateStr,
+		Revenue:     revenue,
+		Spent:       fuelCosts + driverPayouts + maintenance + tollCosts,
+		Receivables: receivables,
+	}, nil
 }

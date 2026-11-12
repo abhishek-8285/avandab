@@ -15,16 +15,32 @@ import (
 	"transport-app/internal/shared"
 )
 
+// ExperimentManager defines the application interface required by the A/B experiment API handlers.
+type ExperimentManager interface {
+	CreateExperiment(ctx context.Context, exp service.Experiment) (string, error)
+	GetExperiment(ctx context.Context, id string) (*service.Experiment, error)
+	ListExperiments(ctx context.Context, tenantID, status string) ([]service.Experiment, error)
+	StartExperiment(ctx context.Context, id string) error
+	PauseExperiment(ctx context.Context, id string) error
+	ResumeExperiment(ctx context.Context, id string) error
+	CompleteExperiment(ctx context.Context, id string) error
+	ArchiveExperiment(ctx context.Context, id string) error
+	EvaluateFeatureFlag(ctx context.Context, tenantID, name, subjectType, subjectID string) string
+	ListAssignments(ctx context.Context, id string) ([]service.ExperimentAssignment, error)
+	RecordMetric(ctx context.Context, tenantID, id, subjectType, subjectID string, val float64) error
+	GetExperimentResults(ctx context.Context, id string) (*service.ExperimentResults, error)
+}
+
 // ExperimentHandlers exposes the A/B experiment API (Spec 16 §5) plus the
 // feature flag evaluation endpoint other services query.
 type ExperimentHandlers struct {
 	App     *App
-	Service *service.ExperimentsService
+	Service ExperimentManager
 	authSrv auth.AuthorizationService
 }
 
 // NewExperimentHandlers constructs an ExperimentHandlers instance.
-func NewExperimentHandlers(app *App, svc *service.ExperimentsService, authSrv auth.AuthorizationService) *ExperimentHandlers {
+func NewExperimentHandlers(app *App, svc ExperimentManager, authSrv auth.AuthorizationService) *ExperimentHandlers {
 	return &ExperimentHandlers{App: app, Service: svc, authSrv: authSrv}
 }
 
