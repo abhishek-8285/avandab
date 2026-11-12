@@ -999,6 +999,12 @@ the container stays at 30 fields. Next increment must port these legacy APIs
 into `internal/experiments`/`internal/founder`/`internal/pnl`, migrate the
 admin/console/cron/test consumers, then delete the fields and service types.
 
+**Phase 4 progress (2026-11-12, fifth increment - PNL & Founder handler slice migration):**
+- Migrated `FounderHandlers` HTTP endpoints (`ListSignals`, `GetSignal`, `AcknowledgeSignal`, `Dashboard`) to `internal/founder.SignalQueries` facade; zero active `service.FounderSignalsService` calls remaining in HTTP handlers. Added `FindByID` and `Acknowledge` to `SignalQueries`.
+- Ported `GenerateDailySnapshot` and `dailyTotals` into `internal/pnl.SnapshotQueries` with idempotent upsert and collision-free ID generation.
+- Migrated `PNLHandlers` (`GetPNLRange`, `GenerateSnapshot`) to `internal/pnl.SnapshotQueries`; zero active `service.PNLService` calls remaining in PNL HTTP handlers.
+- Fixed 5 unsafe coarse-clock ID generation sites (`assign_driver.go`, `assign_vehicle.go`, `experiments.go`, `einvoice.go`) with UUID/atomic sequences, proven by red-green regression suites.
+
 ### 5. Exit criteria per file/domain
 
 - zero raw SQL in the handler/tool file (ratchet cap 0),
