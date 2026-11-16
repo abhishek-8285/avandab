@@ -273,7 +273,9 @@ func (s *KharchaService) ApproveExpense(ctx context.Context, expenseID, approved
 		var category string
 		_ = tx.QueryRowContext(ctx, `SELECT COALESCE(category, 'kharcha') FROM driver_expenses WHERE id = $1 AND tenant_id = $2`, expenseID, tenantIDFor(ctx)).Scan(&category)
 
-		err := tx.QueryRowContext(ctx, `SELECT id FROM driver_settlements WHERE trip_id = $1 AND driver_id = $2 AND tenant_id = $3`, tripID, driverID, tenantIDFor(ctx)).Scan(&settlementID)
+		err := tx.QueryRowContext(ctx, `SELECT id FROM driver_settlements WHERE trip_id = $1 AND driver_id = $2`, tripID, driverID).Scan(&settlementID)
+		// Missing settlement is a normal state (trip not settled yet); the
+		// expense still approves, it just has no payout row to adjust.
 		if err == nil && settlementID != "" {
 			_, _ = tx.ExecContext(ctx,
 				`UPDATE driver_settlements
