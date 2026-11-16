@@ -31,7 +31,19 @@ type UserService struct {
 // accounts provisioned as admin (bootstrap env, platform tenant creation).
 // Returns isNewOwner=true so callers route the owner into onboarding and
 // bind the org_admin session/Casbin role.
+// ErrSelfRegistrationDisabled is returned when public signup is attempted on
+// a deployment that has not enabled multi-tenancy.
+var ErrSelfRegistrationDisabled = errors.New("self-service registration is disabled on this deployment")
+
 func (s *UserService) RegisterSelfServiceAccount(ctx context.Context, email, name, phone, password, companyName string) (domain.User, bool, error) {
+	// Public self-registration always provisions a new tenant organization.
+	// Serving that tenant requires MULTI_TENANT_ENABLED=true: in single-tenant
+	// mode the account would be unreachable (the resolver pins everyone to
+	// tenant "1") and the next boot would trip the foreign-tenant startup guard.
+	// Tests and local multi-tenant flows opt in explicitly.
+	if s.cfg != nil && !s.cfg.MultiTenant.Enabled {
+		return domain.User{}, false, ErrSelfRegistrationDisabled
+	}
 	getter, ok := s.store.(repository.DBGetter)
 	if !ok || getter == nil || s.txManager == nil {
 		return domain.User{}, false, fmt.Errorf("self-registration unavailable: storage does not support transactions")

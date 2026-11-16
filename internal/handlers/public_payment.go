@@ -31,6 +31,10 @@ type (
 // PublicPay renders the customer-facing invoice payment page (GET /pay/{invoiceId}).
 func (h *PaymentHandlers) PublicPay(w http.ResponseWriter, r *http.Request) {
 	h.init()
+	// Public, link-shared page: never leak the invoice URL through Referer or
+	// intermediaries, and never let a shared cache retain billing identity.
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.Header().Set("Cache-Control", "no-store")
 	invoiceID := chi.URLParam(r, "invoiceId")
 	if invoiceID == "" {
 		invoiceID = chi.URLParam(r, "id")
@@ -119,9 +123,10 @@ func (h *PaymentHandlers) PublicRazorpayOrder(w http.ResponseWriter, r *http.Req
 			w.WriteHeader(http.StatusBadRequest)
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": "invoice has no outstanding balance"})
 		default:
+			slog.Error("razorpay order creation failed", "invoice_id", canonicalID, "error", err)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": "failed to create razorpay order", "details": err.Error()})
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "failed to create razorpay order"})
 		}
 		return
 	}
@@ -226,7 +231,7 @@ func (h *PaymentHandlers) PublicRazorpayVerify(w http.ResponseWriter, r *http.Re
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, paymentapp.ErrRazorpayNotConfigured):
+		case errors.Is(err, paymentapp.ErrRazorpayNotConfigured), errors.Is(err, paymentapp.ErrRazorpayGatewayNotConfigured):
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusServiceUnavailable)
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": "razorpay not configured"})
@@ -245,7 +250,7 @@ func (h *PaymentHandlers) PublicRazorpayVerify(w http.ResponseWriter, r *http.Re
 		default:
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": "failed to verify razorpay payment", "details": err.Error()})
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "failed to verify razorpay payment"})
 		}
 		return
 	}
@@ -272,6 +277,8 @@ func (h *PaymentHandlers) loadPublicPayData(ctx context.Context, invoiceID strin
 	if h.Config != nil {
 		data.RazorpayKeyID = h.Config.RazorpayKeyID
 	}
+	// H2 branding (company_settings id=1 vs per-tenant profile) is resolved in
+	// the read model, where the invoice tenant is already known.
 	return data, nil
 }
 
@@ -295,10 +302,12 @@ func (h *PaymentHandlers) renderPublicPaymentTemplate(w http.ResponseWriter, r *
 	}
 	tmpl := h.App.templatesFor(r).Lookup(name)
 	if tmpl == nil {
-		http.Error(w, fmt.Sprintf("template %q not found", name), http.StatusInternalServerError)
+		slog.Error("template not found", "template", name)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	if err := tmpl.Execute(w, data); err != nil {
-		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
+		slog.Error("template execution failed", "template", name, "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }

@@ -2,7 +2,10 @@ package service
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
+	"strings"
 	"time"
 
 	"transport-app/internal/auth"
@@ -32,7 +35,10 @@ func (s *AuthService) tenantActive(ctx context.Context, userID string) error {
 	var status string
 	if err := row.Scan(&status); err != nil {
 		if err == sql.ErrNoRows {
-			return nil
+			// Fail closed: a user whose tenant row is absent must not log in.
+			// The previous nil return treated a deleted/suspended-without-row
+			// organization as legacy and allowed authentication.
+			return auth.ErrTenantMissing
 		}
 		return err
 	}
@@ -40,6 +46,97 @@ func (s *AuthService) tenantActive(ctx context.Context, userID string) error {
 		return auth.ErrTenantSuspended
 	}
 	return nil
+}
+
+const (
+	loginMaxFailures = 5
+	loginLockout     = 15 * time.Minute
+	loginAttemptTTL  = 24 * time.Hour
+)
+
+// loginThrottleKey hashes the normalized email so raw addresses are not
+// stored in the throttle table.
+func loginThrottleKey(email string) string {
+	sum := sha256.Sum256([]byte(strings.ToLower(strings.TrimSpace(email))))
+	return hex.EncodeToString(sum[:])
+}
+
+func (s *AuthService) loginThrottleDB() *sql.DB {
+	getter, ok := s.store.(repository.DBGetter)
+	if !ok || getter == nil {
+		return nil
+	}
+	return getter.DB()
+}
+
+// loginLocked reports whether the account is inside a lockout window. A
+// throttle storage error is logged and treated as unlocked: a database
+// hiccup must not lock every operator out, and per-IP limits still apply.
+func (s *AuthService) loginLocked(ctx context.Context, email string) bool {
+	db := s.loginThrottleDB()
+	if db == nil {
+		return false
+	}
+	var lockedUntil sql.NullTime
+	err := db.QueryRowContext(ctx,
+		"SELECT locked_until FROM login_throttle WHERE email_key = $1",
+		loginThrottleKey(email)).Scan(&lockedUntil)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			s.log.Warn("login throttle lookup failed", "error", err)
+		}
+		return false
+	}
+	return lockedUntil.Valid && time.Now().Before(lockedUntil.Time)
+}
+
+// recordLoginFailure increments the failure counter, locks after
+// loginMaxFailures, and expires stale counters after loginAttemptTTL.
+func (s *AuthService) recordLoginFailure(ctx context.Context, email string) {
+	db := s.loginThrottleDB()
+	if db == nil {
+		return
+	}
+	key := loginThrottleKey(email)
+	now := time.Now()
+
+	var failures int
+	var updated time.Time
+	err := db.QueryRowContext(ctx,
+		"SELECT failures, updated_at FROM login_throttle WHERE email_key = $1", key).
+		Scan(&failures, &updated)
+	if err != nil && err != sql.ErrNoRows {
+		s.log.Warn("login throttle read failed", "error", err)
+		return
+	}
+	if err == nil && now.Sub(updated) > loginAttemptTTL {
+		failures = 0
+	}
+	failures++
+
+	var lockedUntil interface{}
+	if failures >= loginMaxFailures {
+		lockedUntil = now.Add(loginLockout)
+	}
+
+	if _, err := db.ExecContext(ctx, "INSERT INTO login_throttle (email_key, failures, locked_until, updated_at) VALUES ($1, $2, $3, $4) ON CONFLICT (email_key) DO UPDATE SET failures = excluded.failures, locked_until = excluded.locked_until, updated_at = excluded.updated_at",
+		key, failures, lockedUntil, now); err != nil {
+		s.log.Warn("login throttle write failed", "error", err)
+	}
+
+	// Opportunistic cleanup of stale counters (indexed by updated_at).
+	_, _ = db.ExecContext(ctx, "DELETE FROM login_throttle WHERE updated_at < $1", now.Add(-loginAttemptTTL))
+}
+
+func (s *AuthService) clearLoginFailures(ctx context.Context, email string) {
+	db := s.loginThrottleDB()
+	if db == nil {
+		return
+	}
+	if _, err := db.ExecContext(ctx,
+		"DELETE FROM login_throttle WHERE email_key = $1", loginThrottleKey(email)); err != nil {
+		s.log.Warn("login throttle clear failed", "error", err)
+	}
 }
 
 // LoginRequest contains the credentials for login.
@@ -57,13 +154,19 @@ type LoginResult struct {
 
 // Login authenticates a user by email and password, creating a session.
 func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginResult, error) {
+	if s.loginLocked(ctx, req.Email) {
+		return nil, auth.ErrAccountLocked
+	}
+
 	user, err := s.store.GetUserByEmail(ctx, req.Email)
 	if err != nil {
+		s.recordLoginFailure(ctx, req.Email)
 		s.log.Warn("login failed: invalid credentials")
 		return nil, domain.ErrInvalidCredentials
 	}
 
 	if err := auth.CheckPassword(req.Password, user.PasswordHash); err != nil {
+		s.recordLoginFailure(ctx, req.Email)
 		s.log.Warn("login failed: invalid credentials", "user_id", user.ID)
 		return nil, domain.ErrInvalidCredentials
 	}
@@ -83,6 +186,8 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginResult
 	} else if withdrawn {
 		return nil, auth.ErrConsentWithdrawn
 	}
+
+	s.clearLoginFailures(ctx, req.Email)
 
 	// Update last login
 	if _, err := s.store.UpdateUserLastLogin(ctx, user.ID); err != nil {

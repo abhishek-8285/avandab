@@ -117,7 +117,7 @@ func TestOrgAdmin_RBACGrants(t *testing.T) {
 			{"errors", "read"}, {"errors", "update"},
 			{"ewaybill", "read"}, {"ewaybill", "create"}, {"ewaybill", "update"},
 			{"ewaybill", "write"}, {"esg", "read"}, {"esg", "write"},
-			{"fuel", "write"}, {"fuel", "create"}, {"kharcha", "approve"},
+			{"fuel", "write"}, {"fuel", "create"}, {"kharcha", "approve"}, {"kharcha", "read"},
 			{"alerts", "write"}, {"rag", "read"}, {"dashboard", "read"},
 			{"fastag", "read"}, {"fastag", "update"}, {"trips", "cancel"},
 			{"scorecard", "update"}, {"accounting", "read"}, {"accounting", "sync"},
@@ -131,7 +131,7 @@ func TestOrgAdmin_RBACGrants(t *testing.T) {
 		"u-disp": {
 			{"trips", "read"}, {"ewaybill", "read"}, {"ewaybill", "create"},
 			{"errors", "read"}, {"esg", "read"}, {"trips", "cancel"},
-			{"fastag", "read"}, {"fuel", "create"}, {"integrations", "gstn"},
+			{"fastag", "read"}, {"fuel", "create"}, {"integrations", "gstn"}, {"kharcha", "read"},
 			{"tyres", "read"}, {"tyres", "write"},
 			{"inventory", "read"}, {"inventory", "write"},
 			{"freight_audit", "read"}, {"freight_audit", "write"},

@@ -45,3 +45,26 @@ func LookupUserDriver(ctx context.Context, db *sql.DB, userID string) (*DriverRe
 	ref.DriverCode = code.String
 	return &ref, nil
 }
+
+// DriverOwnsTrip reports whether tripID is assigned to driverID inside tenantID.
+// The tenant filter is intentional: a driver must not file expenses against a
+// trip that belongs to another org even if ids collide across tenants.
+func DriverOwnsTrip(ctx context.Context, db *sql.DB, tenantID, driverID, tripID string) (bool, error) {
+	if tripID == "" {
+		return true, nil
+	}
+	if db == nil {
+		return false, nil
+	}
+	var assigned string
+	err := db.QueryRowContext(ctx, `
+		SELECT COALESCE(driver_id, '') FROM trips
+		WHERE id = $1 AND tenant_id = $2`, tripID, tenantID).Scan(&assigned)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return assigned == driverID, nil
+}

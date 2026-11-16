@@ -144,7 +144,7 @@ func TestRegisterUser_GrantsAuthorizerRole(t *testing.T) {
 	logger := slog.New(slog.DiscardHandler)
 	svcs := service.NewServices(
 		repoSQLite.NewRepository(db),
-		&config.Config{AppEnv: "testing", CookieSecret: "test-cookie-secret-32-chars-long!"},
+		&config.Config{AppEnv: "testing", CookieSecret: "test-cookie-secret-32-chars-long!", MultiTenant: config.MultiTenantConfig{Enabled: true}},
 		logger,
 		events.NewInMemoryBus(),
 	)

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -223,7 +224,7 @@ func (h *AuthHandlers) ResetPasswordAPI(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := h.Services.Users.SetPasswordByEmail(r.Context(), email, req.Password); err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeJSONError(w, http.StatusBadRequest, resetPasswordErrorMessage(err))
 		return
 	}
 
@@ -735,8 +736,13 @@ func requestScheme(r *http.Request) string {
 	if r.TLS != nil {
 		return "https"
 	}
-	if proto := r.Header.Get("X-Forwarded-Proto"); proto != "" {
-		return proto
+	// X-Forwarded-Proto is client-controlled unless the request arrived from
+	// a trusted proxy. Never let an arbitrary caller downgrade reset links.
+	if auth.IsTrustedProxy(r.RemoteAddr) {
+		switch proto := strings.ToLower(strings.TrimSpace(r.Header.Get("X-Forwarded-Proto"))); proto {
+		case "http", "https":
+			return proto
+		}
 	}
 	return "http"
 }
@@ -784,7 +790,7 @@ func (h *AuthHandlers) SubmitResetPassword(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := h.Services.Users.SetPasswordByEmail(r.Context(), email, newPassword); err != nil {
-		pd.Extra["Error"] = err.Error()
+		pd.Extra["Error"] = resetPasswordErrorMessage(err)
 		h.renderAuthPage(w, r, "reset_password.html", pd)
 		return
 	}
@@ -1007,4 +1013,18 @@ func (h *AuthHandlers) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   10,
 	})
 	http.Redirect(w, r, "/profile", http.StatusSeeOther)
+}
+
+// resetPasswordErrorMessage keeps password-policy feedback but hides storage
+// and hashing internals from the reset form/API.
+func resetPasswordErrorMessage(err error) string {
+	switch {
+	case errors.Is(err, auth.ErrWeakPassword), errors.Is(err, domain.ErrWeakPassword):
+		return auth.ErrWeakPassword.Error()
+	case errors.Is(err, domain.ErrUserNotFound):
+		return "this reset link is no longer valid"
+	default:
+		slog.Error("password reset failed", "error", err)
+		return "could not update the password; please try again"
+	}
 }

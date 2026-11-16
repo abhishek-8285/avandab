@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 
 	invoiceDomain "transport-app/internal/invoice/domain"
 	invoiceAgg "transport-app/internal/invoice/domain/aggregate"
@@ -21,6 +22,23 @@ var (
 	ErrRazorpayInvalidSignature = errors.New("invalid razorpay signature")
 	// ErrInvoiceAlreadySettled signals an invoice with no outstanding balance.
 	ErrInvoiceAlreadySettled = errors.New("invoice has no outstanding balance")
+	// ErrRazorpayGatewayNotConfigured signals the verify use case has no
+	// gateway reader wired; verification fails closed rather than trusting the
+	// signature tuple alone.
+	ErrRazorpayGatewayNotConfigured = errors.New("razorpay gateway verification not configured")
+	// ErrRazorpayPaymentNotFound signals the gateway has no such payment.
+	ErrRazorpayPaymentNotFound = errors.New("razorpay payment not found")
+	// ErrRazorpayPaymentNotCaptured signals an authorized/failed payment that
+	// must not be recorded as collected money.
+	ErrRazorpayPaymentNotCaptured = errors.New("razorpay payment not captured")
+	// ErrRazorpayOrderMismatch signals the payment belongs to a different order.
+	ErrRazorpayOrderMismatch = errors.New("razorpay payment does not belong to the supplied order")
+	// ErrRazorpayInvoiceMismatch signals the order was created for a different
+	// invoice than the one being credited.
+	ErrRazorpayInvoiceMismatch = errors.New("razorpay order does not belong to the supplied invoice")
+	// ErrRazorpayAmountMismatch signals the captured amount differs from the
+	// order amount (tampered or partial capture).
+	ErrRazorpayAmountMismatch = errors.New("razorpay payment amount does not match the order")
 )
 
 // CreateRazorpayOrderCommand requests a checkout order for an invoice.
@@ -116,6 +134,7 @@ type VerifyRazorpayPaymentUseCase struct {
 	uow       ports.UnitOfWork
 	recordUC  *RecordPaymentUseCase
 	verifier  razorpay.SignatureVerifier
+	gateway   razorpay.PaymentGateway
 	keySecret string
 	clock     ports.Clock
 }
@@ -125,9 +144,17 @@ func NewVerifyRazorpayPaymentUseCase(uow ports.UnitOfWork, recordUC *RecordPayme
 	return &VerifyRazorpayPaymentUseCase{uow: uow, recordUC: recordUC, verifier: verifier, keySecret: keySecret, clock: clock}
 }
 
-// Execute verifies the HMAC signature, deduplicates against the Razorpay
-// payment ID, and records the payment. The amount comes from the invoice
-// balance — never from the client.
+// WithPaymentGateway wires the gateway reader used to prove the payment
+// belongs to the invoice. Without it verification fails closed.
+func (uc *VerifyRazorpayPaymentUseCase) WithPaymentGateway(gw razorpay.PaymentGateway) *VerifyRazorpayPaymentUseCase {
+	uc.gateway = gw
+	return uc
+}
+
+// Execute verifies the HMAC signature AND the gateway-side binding, then
+// records the captured amount. The amount recorded is the captured payment
+// amount — never the client and never the invoice balance (which may have
+// changed since the order was created).
 func (uc *VerifyRazorpayPaymentUseCase) Execute(ctx context.Context, cmd VerifyRazorpayPaymentCommand) (paymentagg.PaymentID, error) {
 	if uc.keySecret == "" {
 		return "", ErrRazorpayNotConfigured
@@ -178,12 +205,54 @@ func (uc *VerifyRazorpayPaymentUseCase) Execute(ctx context.Context, cmd VerifyR
 		return "", ErrInvoiceAlreadySettled
 	}
 
+	// Fail closed: signature verification alone is not enough to credit an
+	// invoice. Retries of an already-recorded payment returned above, so a
+	// fresh verification must prove the binding with the gateway.
+	if uc.gateway == nil {
+		return "", ErrRazorpayGatewayNotConfigured
+	}
+	payment, err := uc.gateway.FetchPayment(cmd.PaymentID)
+	if err != nil {
+		return "", err
+	}
+	if payment == nil || payment.ID == "" {
+		return "", ErrRazorpayPaymentNotFound
+	}
+	if payment.OrderID != cmd.OrderID {
+		return "", ErrRazorpayOrderMismatch
+	}
+	if !payment.Captured() {
+		return "", ErrRazorpayPaymentNotCaptured
+	}
+
+	order, err := uc.gateway.FetchOrder(cmd.OrderID)
+	if err != nil {
+		return "", err
+	}
+	if order == nil || order.ID == "" {
+		return "", ErrRazorpayOrderMismatch
+	}
+	orderInvoiceID := order.Notes["invoice_id"]
+	if orderInvoiceID == "" {
+		orderInvoiceID = strings.TrimPrefix(order.Receipt, "rcpt_")
+	}
+	if orderInvoiceID != cmd.InvoiceID {
+		return "", ErrRazorpayInvoiceMismatch
+	}
+	if payment.Amount <= 0 || order.Amount <= 0 || payment.Amount != order.Amount {
+		return "", ErrRazorpayAmountMismatch
+	}
+	if payment.Currency != "" && order.Currency != "" && payment.Currency != order.Currency {
+		return "", ErrRazorpayAmountMismatch
+	}
+
+	capturedAmount := float64(payment.Amount) / 100
 	reference := cmd.PaymentID
 	return uc.recordUC.Execute(ctx, RecordPaymentCommand{
 		TenantID:          tenantID,
 		InvoiceID:         cmd.InvoiceID,
 		PaymentDate:       uc.clock.Now(),
-		Amount:            balance,
+		Amount:            capturedAmount,
 		Method:            paymentagg.PaymentMethodRazorpay,
 		Reference:         &reference,
 		RazorpayOrderID:   cmd.OrderID,

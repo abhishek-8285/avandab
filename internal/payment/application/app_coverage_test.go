@@ -571,9 +571,10 @@ func TestVerifyRazorpayPayment_Success_App(t *testing.T) {
 	uow := newFakeUnitOfWork()
 	invID := seedInvoice(t, uow.repos.invoices, clock, 1000)
 	recordUC := NewRecordPaymentUseCase(uow, &fakeIDGen{}, clock)
-	uc := NewVerifyRazorpayPaymentUseCase(uow, recordUC, &fakeVerifier{ok: true}, "secret", clock)
+	uc := NewVerifyRazorpayPaymentUseCase(uow, recordUC, &fakeVerifier{ok: true}, "secret", clock).
+		WithPaymentGateway(boundGateway(string(invID)))
 	ctx := context.WithValue(context.Background(), shared.TenantIDKey, shared.TenantID("1"))
-	id, err := uc.Execute(ctx, VerifyRazorpayPaymentCommand{TenantID: "1", InvoiceID: string(invID), OrderID: "order_999", PaymentID: "pay_999", Signature: "sig_999"})
+	id, err := uc.Execute(ctx, VerifyRazorpayPaymentCommand{TenantID: "1", InvoiceID: string(invID), OrderID: "order_bound", PaymentID: "pay_bound", Signature: "sig_bound"})
 	require.NoError(t, err)
 	assert.NotEmpty(t, id)
 }

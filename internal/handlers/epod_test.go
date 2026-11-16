@@ -372,6 +372,14 @@ func TestPublicEPODCertificate_RenderHTMLAndJSON(t *testing.T) {
 	assert.Contains(t, jsonView.SignatureURL, "/uploads/pod/consignee_signature.png?exp=", "JSON SignatureURL must be signed")
 	assert.NotEmpty(t, jsonView.VerificationHash)
 
+	// The JSON twin is login-free too: every Stops[] entry must carry the
+	// same masked contacts as the rendered page (audit 2026-11-12).
+	require.Len(t, jsonView.Stops, 1)
+	assert.Equal(t, "••••••6780", jsonView.Stops[0].ConsigneePhone, "stop phone must be masked in JSON")
+	assert.Equal(t, "a***@example.com", jsonView.Stops[0].ConsigneeEmail, "stop email must be masked in JSON")
+	assert.NotContains(t, jsonView.Stops[0].ConsigneePhone, "9123456780")
+	assert.NotContains(t, jsonView.Stops[0].ConsigneeEmail, "amit.patel@example.com")
+
 	// 3. Test 404 for unknown trip
 	req404 := httptest.NewRequest("GET", "/epod/unknown_trip_9999", nil)
 	rctx404 := chi.NewRouteContext()

@@ -279,6 +279,17 @@ func main() {
 	logging.Setup(cfg.LogLevel, cfg.AppEnv)
 
 	logger := slog.Default()
+	// APP_ENV unset defaults to "development" (config.Load). That default
+	// silently downgrades the secret guard below, so refuse to start when a
+	// deployment is both unset and relying on committed default secrets.
+	_, appEnvExplicit := config.AppEnvFromEnv()
+	if !appEnvExplicit && cfg.UsingKnownDefaultSecret() {
+		logger.Error("APP_ENV is unset and secrets are default; set APP_ENV explicitly (development|staging|production) and provide strong, unique COOKIE_SECRET and API_SECRET values.")
+		os.Exit(1)
+	}
+	if !appEnvExplicit {
+		logger.Warn("APP_ENV is unset; defaulting to development. Set APP_ENV explicitly in deployed environments.")
+	}
 	// Guard extends beyond production: any non-development deployment
 	// (staging, smoke, prod) must never run on committed default secrets.
 	if !cfg.IsDevelopment() && cfg.UsingKnownDefaultSecret() {
@@ -383,6 +394,28 @@ func main() {
 	// status page reads them back for a real 30-day uptime instead of the
 	// fabricated percentages removed in the P0 stop-fake-data pass.
 	go availability.NewSampler(database, cfg.UptimeSampleInterval, logger).Run(sigCtx)
+
+	// Fail closed on a multi-tenant dataset behind a single-tenant resolver.
+	// With MULTI_TENANT_ENABLED=false every request is pinned to DefaultTenant,
+	// so other orgs' rows would be served as tenant '1' and their users would
+	// never resolve. Development keeps the convenience; deployed environments
+	// must opt in (or clean the data) before starting.
+	if !cfg.MultiTenant.Enabled && !cfg.IsDevelopment() {
+		var foreignTenants, foreignUsers int
+		if err := database.QueryRowContext(ctx, "SELECT COUNT(*) FROM tenants WHERE id <> $1", string(shared.DefaultTenant)).Scan(&foreignTenants); err != nil { //nolint:tenant-default // boot posture check against the bootstrap tenant
+			logger.Error("Failed to verify single-tenant data posture", "error", err)
+			os.Exit(1)
+		}
+		if err := database.QueryRowContext(ctx, "SELECT COUNT(*) FROM users WHERE tenant_id <> $1", string(shared.DefaultTenant)).Scan(&foreignUsers); err != nil { //nolint:tenant-default // boot posture check against the bootstrap tenant
+			logger.Error("Failed to verify single-tenant user posture", "error", err)
+			os.Exit(1)
+		}
+		if foreignTenants > 0 || foreignUsers > 0 {
+			logger.Error("Multi-tenant data present while MULTI_TENANT_ENABLED=false; refusing to serve every org as tenant '1'",
+				"tenants", foreignTenants, "users", foreignUsers)
+			os.Exit(1)
+		}
+	}
 
 	// Initialize repository
 	repo := sqlite.NewRepository(database)
@@ -522,6 +555,7 @@ func main() {
 
 	// Initialize auth store
 	authStore := auth.NewSessionStore(cfg.CookieSecret, cfg.CookieSecure)
+	authStore.SetMaxAge(cfg.SessionMaxAge)
 	authStore.SetValidator(services.Auth)
 
 	// Initialize Casbin authorization service
@@ -558,12 +592,12 @@ func main() {
 	bootstrapAdmin(shared.WithGlobalScope(ctx), services, authSvc, cfg, logger)
 
 	// Initialize handlers app
-	resetTokens := auth.NewResetTokenStore(0)
+	resetTokens := auth.NewResetTokenStore(0).WithPersistence(database, "password_reset")
 	app := handlers.NewApp(services, cfg, authStore, database, authSvc, resetTokens)
 	app.OTPStore = auth.NewOTPStore(0)
 	// Email-verification tokens live apart from password-reset tokens (a
 	// verify link must never redeem as a reset). 24h window: inbox delays.
-	app.VerifyTokens = auth.NewResetTokenStore(24 * time.Hour)
+	app.VerifyTokens = auth.NewResetTokenStore(24*time.Hour).WithPersistence(database, "email_verify")
 	// Spec 22 S9 — compliance radar (docs 30/7/1d + EWB 12/4h) fed by the
 	// existing pipeline; sweep is leader-elected hourly below.
 	complianceRadar := service.NewComplianceRadarService(database, alertEngine, logger)
@@ -740,7 +774,8 @@ func main() {
 	razorpayWebhookUC := paymentApp.NewRazorpayWebhookUseCase(recordPayment, sqlUoW, cfg.RazorpayWebhook, realClock)
 	razorpayClient := razorpay.NewRazorpayClient(cfg.RazorpayKeyID, cfg.RazorpayKeySecret)
 	razorpayOrderUC := paymentApp.NewCreateRazorpayOrderUseCase(sqlUoW, razorpayClient, cfg.RazorpayKeyID)
-	razorpayVerifyUC := paymentApp.NewVerifyRazorpayPaymentUseCase(sqlUoW, recordPayment, razorpayClient, cfg.RazorpayKeySecret, realClock)
+	razorpayVerifyUC := paymentApp.NewVerifyRazorpayPaymentUseCase(sqlUoW, recordPayment, razorpayClient, cfg.RazorpayKeySecret, realClock).
+		WithPaymentGateway(razorpayClient)
 	paymentAPIHandler := paymentHandlers.NewAPIPaymentHandler(recordPayment, getPayment, listPayments, reversePayment, listPaymentsByInvoice, razorpayWebhookUC, razorpayOrderUC, razorpayVerifyUC, authSvc)
 	if app.Payments != nil {
 		app.Payments.SetRazorpayUseCases(razorpayOrderUC, razorpayVerifyUC)
@@ -849,11 +884,8 @@ func main() {
 	// METRICS_TOKEN. Without a token the endpoint is not exposed publicly.
 	r.Get("/metrics", metrics.Guard(os.Getenv("METRICS_TOKEN"), metrics.Handler()).ServeHTTP)
 
-	// Direct SEO Endpoints
-	r.Get("/sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
-		serveSitemap(w)
-	})
-
+	// SEO endpoints (robots, sitemap, llms) are registered in the public route
+	// group below; registering /sitemap.xml twice makes chi panic at boot.
 	// API discovery and OpenAPI spec (public)
 	r.Get("/api/versions", apiversion.VersionsHandler)
 	openapispec.RegisterRoutes(r)
@@ -875,7 +907,10 @@ func main() {
 	// tenants.status; suspended orgs are rejected at the edge. Gate off is an
 	// explicit single-org opt-out (MULTI_TENANT_ENABLED=false) and warns loudly
 	// because every request then collapses onto the bootstrap tenant.
-	tenantResolver := middleware.TenantResolver(middleware.DefaultTenantResolver)
+	// Single-tenant mode must not trust the session/token identity alone: a
+	// public self-registration creates a new tenant while the flag is off, and
+	// the constant default resolver would serve that org admin as tenant "1".
+	tenantResolver := middleware.SingleTenantResolver(database)
 	if cfg.MultiTenant.Enabled {
 		logger.Info("multi-tenant mode enabled: per-user tenant resolution active")
 		tenantResolver = middleware.TenantForUserResolver(func(ctx context.Context, userID string) (string, string, error) {
@@ -1217,9 +1252,9 @@ func main() {
 		r.With(middleware.ResourcePermission(authSvc, "trips", "update")).Post("/api/v1/kharcha/expense", app.Kharcha.CreateExpenseAPI)
 		// Manager/Owner Mobile App (P3.7) endpoints
 		r.With(middleware.ResourcePermission(authSvc, "trips", "read")).Get("/api/v1/manager/dashboard", app.Dashboard.SummaryAPI)
-		r.With(middleware.ResourcePermission(authSvc, "trips", "read")).Get("/api/v1/kharcha/pending", app.Kharcha.PendingAPI)
-		r.With(middleware.ResourcePermission(authSvc, "trips", "update")).Post("/api/v1/kharcha/{id}/approve", app.Kharcha.ApproveAPI)
-		r.With(middleware.ResourcePermission(authSvc, "trips", "update")).Post("/api/v1/kharcha/{id}/reject", app.Kharcha.RejectAPI)
+		r.With(middleware.ResourcePermission(authSvc, "kharcha", "read")).Get("/api/v1/kharcha/pending", app.Kharcha.PendingAPI)
+		r.With(middleware.ResourcePermission(authSvc, "kharcha", "approve")).Post("/api/v1/kharcha/{id}/approve", app.Kharcha.ApproveAPI)
+		r.With(middleware.ResourcePermission(authSvc, "kharcha", "approve")).Post("/api/v1/kharcha/{id}/reject", app.Kharcha.RejectAPI)
 		r.Get("/api/v1/users/me/preferences", app.Users.GetMyPreferences)
 		r.Patch("/api/v1/users/me/preferences", app.Users.UpdateMyPreferences)
 		r.Post("/api/v1/users/me/preferences", app.Users.UpdateMyPreferences)
@@ -1431,8 +1466,9 @@ func main() {
 		fileServer.ServeHTTP(w, r)
 	})))
 
-	// Uploaded files (pod photos, signatures, company logos, documents)
-	uploadsServer := http.FileServer(http.Dir(cfg.UploadDir))
+	// Uploaded files (pod photos, signatures, company logos, documents) are
+	// served through the tenant-scoped files ACL below; POD keeps its own
+	// signed public mount.
 
 	// POD assets (proof-of-delivery photos and consignee signatures) are the
 	// one upload class served to ANAUTHENTICATED callers: the public e-POD
@@ -1468,11 +1504,8 @@ func main() {
 		// escape the pod directory.
 		http.ServeFile(w, r, filepath.Join(cfg.UploadDir, "pod", filename))
 	}))
-	r.With(middleware.RequireAuth(authStore, tenantResolver)).Handle("/uploads/*", http.StripPrefix("/uploads/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "private, no-cache")
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		uploadsServer.ServeHTTP(w, r)
-	})))
+	r.With(middleware.RequireAuth(authStore, tenantResolver)).
+		Handle("/uploads/*", handlers.TenantUploadsHandler(database, cfg.UploadDir))
 
 	// All application routes
 	r.Group(func(r chi.Router) {

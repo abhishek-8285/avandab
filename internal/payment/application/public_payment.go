@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"transport-app/internal/privacy"
+	"transport-app/internal/shared"
 )
 
 // PublicInvoiceLineItemView is a line item displayed on the public payment page.
@@ -104,6 +105,9 @@ type PublicPayData struct {
 	Success       bool                        `json:"success"`
 	ErrorMessage  string                      `json:"error_message,omitempty"`
 	Lang          string                      `json:"-"`
+	// TenantID carries the invoice tenant for server-side branding lookup.
+	// Never serialized: the tenant registry key stays inside the perimeter.
+	TenantID string `json:"-"`
 }
 
 // PublicPaymentQueries is the read model behind the login-free payment
@@ -128,8 +132,8 @@ func (q *PublicPaymentQueries) ResolvePublicInvoice(ctx context.Context, invoice
 		return "", "", sql.ErrNoRows
 	}
 	err = q.db.QueryRowContext(ctx, `
-		SELECT id, tenant_id FROM invoices WHERE id = $1 OR invoice_number = $2 LIMIT 1
-	`, invoiceRef, invoiceRef).Scan(&canonicalID, &tenantID)
+		SELECT id, tenant_id FROM invoices WHERE id = $1 LIMIT 1
+	`, invoiceRef).Scan(&canonicalID, &tenantID)
 	if err != nil {
 		return "", "", err
 	}
@@ -173,9 +177,9 @@ func (q *PublicPaymentQueries) LoadPublicPay(ctx context.Context, invoiceID stri
 		LEFT JOIN bookings b ON b.id = i.booking_id
 		LEFT JOIN routes r ON r.id = b.route_id
 		LEFT JOIN trips t ON t.id = i.trip_id
-		WHERE i.id = $1 OR i.invoice_number = $2
+		WHERE i.id = $1
 		LIMIT 1
-	`, invoiceID, invoiceID).Scan(
+	`, invoiceID).Scan(
 		&id, &invoiceNumber, &bookingID, &customerID, &tripIDNull,
 		&subtotal, &tax, &discount, &total, &paidAmount, &paymentStatus,
 		&status, &dueDateNull, &createdAt, &tenantID,
@@ -284,48 +288,10 @@ func (q *PublicPaymentQueries) LoadPublicPay(ctx context.Context, invoiceID stri
 		})
 	}
 
-	// Load Company Settings
-	company := PublicCompanyView{
-		Name:      "Avandab Logistics Network",
-		GSTIN:     "27AAACA1234A1Z5",
-		Address:   "101 Freight Terminal Hub, Mumbai, Maharashtra",
-		StateCode: "27",
-	}
-
-	var cName, cGst, cAddr, cPhone, cEmail, cLogo, cState sql.NullString
-	if err := q.db.QueryRowContext(ctx, `
-		SELECT company_name, gst_number, address, phone, email, logo_path, state_code
-		FROM company_settings WHERE id = 1 LIMIT 1
-	`).Scan(&cName, &cGst, &cAddr, &cPhone, &cEmail, &cLogo, &cState); err == nil {
-		if cName.Valid && cName.String != "" {
-			company.Name = cName.String
-		}
-		if cGst.Valid && cGst.String != "" {
-			company.GSTIN = cGst.String
-		}
-		if cAddr.Valid && cAddr.String != "" {
-			company.Address = cAddr.String
-		}
-		if cPhone.Valid && cPhone.String != "" {
-			company.Phone = cPhone.String
-		}
-		if cEmail.Valid && cEmail.String != "" {
-			company.Email = cEmail.String
-		}
-		if cLogo.Valid && cLogo.String != "" {
-			company.LogoURL = cLogo.String
-		}
-		if cState.Valid && cState.String != "" {
-			company.StateCode = cState.String
-		}
-	}
-
-	if tenantID != "" {
-		var tName sql.NullString
-		if err := q.db.QueryRowContext(ctx, `SELECT name FROM tenants WHERE id = $1`, tenantID).Scan(&tName); err == nil && tName.Valid && tName.String != "" {
-			company.Name = tName.String
-		}
-	}
+	// H2: company_settings(id=1) is the platform-global singleton; only the
+	// bootstrap tenant may render it. Every other tenant renders its own
+	// tenant_company_profiles row, falling back to its tenant display name.
+	company := LoadPublicCompanyProfile(ctx, q.db, tenantID)
 
 	// Load Payment History
 	payments := make([]PublicPaymentRecordView, 0)
@@ -362,5 +328,74 @@ func (q *PublicPaymentQueries) LoadPublicPay(ctx context.Context, invoiceID stri
 		Payments:      payments,
 		LatestPayment: latestPayment,
 		IsPaid:        isPaid,
+		TenantID:      tenantID,
 	}, nil
+}
+
+// LoadPublicCompanyProfile resolves the company identity shown on the public
+// invoice page. company_settings (id=1) is the platform-global singleton: it
+// only backs the bootstrap tenant so single-tenant deployments keep working.
+// Every other tenant reads its own tenant_company_profiles row and falls back
+// to its tenant display name — never to another org's branding, GSTIN or
+// address.
+func LoadPublicCompanyProfile(ctx context.Context, db *sql.DB, tenantID string) PublicCompanyView {
+	company := PublicCompanyView{StateCode: "27"}
+	if db == nil {
+		return company
+	}
+	if tenantID == "" {
+		tenantID = string(shared.DefaultTenant) //nolint:tenant-default // bootstrap fallback for legacy invoices without a tenant
+	}
+	const cols = "SELECT company_name, gst_number, address, phone, email, logo_path, state_code FROM "
+	if tenantID == string(shared.DefaultTenant) { //nolint:tenant-default // bootstrap tenant is intentionally global-backed
+		company.Name = "Avandab Logistics Network"
+		company.GSTIN = "27AAACA1234A1Z5"
+		company.Address = "101 Freight Terminal Hub, Mumbai, Maharashtra"
+		company = scanPublicCompany(ctx, db, company, cols+"company_settings WHERE id = 1 LIMIT 1")
+	} else {
+		company = scanPublicCompany(ctx, db, company, cols+"tenant_company_profiles WHERE tenant_id = $1 LIMIT 1", tenantID)
+	}
+
+	var displayName sql.NullString
+	if err := db.QueryRowContext(ctx, "SELECT name FROM tenants WHERE id = $1", tenantID).Scan(&displayName); err == nil && displayName.Valid && displayName.String != "" {
+		// Bootstrap keeps its historical name override. Other tenants get the
+		// profile's company_name first; the tenant name only fills a blank
+		// profile so a customised name is not clobbered.
+		if tenantID == string(shared.DefaultTenant) || company.Name == "" { //nolint:tenant-default // bootstrap override preserved
+			company.Name = displayName.String
+		}
+	}
+	if company.Name == "" {
+		company.Name = "Avandab Logistics Network"
+	}
+	return company
+}
+
+func scanPublicCompany(ctx context.Context, db *sql.DB, company PublicCompanyView, query string, args ...interface{}) PublicCompanyView {
+	var cName, cGst, cAddr, cPhone, cEmail, cLogo, cState sql.NullString
+	if err := db.QueryRowContext(ctx, query, args...).Scan(&cName, &cGst, &cAddr, &cPhone, &cEmail, &cLogo, &cState); err != nil {
+		return company
+	}
+	if cName.Valid && cName.String != "" {
+		company.Name = cName.String
+	}
+	if cGst.Valid && cGst.String != "" {
+		company.GSTIN = cGst.String
+	}
+	if cAddr.Valid && cAddr.String != "" {
+		company.Address = cAddr.String
+	}
+	if cPhone.Valid && cPhone.String != "" {
+		company.Phone = cPhone.String
+	}
+	if cEmail.Valid && cEmail.String != "" {
+		company.Email = cEmail.String
+	}
+	if cLogo.Valid && cLogo.String != "" {
+		company.LogoURL = cLogo.String
+	}
+	if cState.Valid && cState.String != "" {
+		company.StateCode = cState.String
+	}
+	return company
 }

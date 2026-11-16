@@ -379,15 +379,7 @@ func parseTemplatesLang(authSrv auth.AuthorizationService, lang string) (*templa
 			}
 			return template.JS(strings.ReplaceAll(string(b), "</", "<\\/"))
 		},
-		"abbr": func(s string, max int) string {
-			if len(s) <= max {
-				return s
-			}
-			if max <= 3 {
-				return s[:max] + "..."
-			}
-			return s[:max-3] + "..."
-		},
+		"abbr":    abbrString,
 		"fileExt": filepath.Ext,
 		// Template arithmetic coerces int/int64/float mixes: dashboards pass
 		// int64 counts, pagination passes ints, geofences pass float64 radii.
@@ -885,13 +877,14 @@ func (a *App) renderPage(w http.ResponseWriter, r *http.Request, name string, da
 
 	layout := a.templatesFor(r).Lookup("layout.html")
 	if layout == nil {
-		http.Error(w, "layout template not found", http.StatusInternalServerError)
+		slog.Error("template not found", "template", "layout.html")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	contentTmpl := a.templatesFor(r).Lookup(name)
 	if contentTmpl == nil {
-		a.renderError(w, http.StatusNotFound, "Page Not Found", fmt.Sprintf("Template %q could not be located.", name), data.User)
+		a.renderError(w, http.StatusNotFound, "Page Not Found", "The requested page could not be located.", data.User)
 		return
 	}
 
@@ -964,7 +957,8 @@ func (a *App) renderPage(w http.ResponseWriter, r *http.Request, name string, da
 
 	var buf strings.Builder
 	if err := contentTmpl.Execute(&buf, templateData); err != nil {
-		a.renderError(w, http.StatusInternalServerError, "Template Execution Error", err.Error(), data.User)
+		slog.Error("content template execution failed", "template", name, "error", err)
+		a.renderError(w, http.StatusInternalServerError, "Template Execution Error", "An internal error occurred while rendering this page.", data.User)
 		return
 	}
 
@@ -1051,7 +1045,7 @@ func (a *App) renderPage(w http.ResponseWriter, r *http.Request, name string, da
 	}
 
 	if err := layout.Execute(w, pd); err != nil {
-		http.Error(w, fmt.Sprintf("layout template error: %v", err), http.StatusInternalServerError)
+		templateFailure(w, "layout.html", err)
 	}
 }
 
@@ -1065,13 +1059,15 @@ func (a *App) renderAuthPage(w http.ResponseWriter, r *http.Request, name string
 	tmplSet := a.templatesFor(r)
 	authLayout := tmplSet.Lookup("auth_layout.html")
 	if authLayout == nil {
-		http.Error(w, "auth layout template not found", http.StatusInternalServerError)
+		slog.Error("template not found", "template", "auth_layout.html")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	contentTmpl := tmplSet.Lookup(name)
 	if contentTmpl == nil {
-		http.Error(w, fmt.Sprintf("template %q not found", name), http.StatusInternalServerError)
+		slog.Error("template not found", "template", name)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -1080,7 +1076,7 @@ func (a *App) renderAuthPage(w http.ResponseWriter, r *http.Request, name string
 
 	var buf strings.Builder
 	if err := contentTmpl.Execute(&buf, templateData); err != nil {
-		http.Error(w, fmt.Sprintf("content template error: %v", err), http.StatusInternalServerError)
+		templateFailure(w, name, err)
 		return
 	}
 
@@ -1117,7 +1113,7 @@ func (a *App) renderAuthPage(w http.ResponseWriter, r *http.Request, name string
 	}
 
 	if err := authLayout.Execute(w, pd); err != nil {
-		http.Error(w, fmt.Sprintf("auth layout template error: %v", err), http.StatusInternalServerError)
+		templateFailure(w, "auth_layout.html", err)
 	}
 }
 
@@ -1148,8 +1144,8 @@ func (a *App) templatesFor(r *http.Request) *template.Template {
 // same-origin path.
 func (a *App) SetLang(w http.ResponseWriter, r *http.Request) {
 	to := i18n.Normalize(r.URL.Query().Get("to"))
-	next := r.URL.Query().Get("next")
-	if next == "" || next[0] != '/' || strings.HasPrefix(next, "//") {
+	next := shared.SafeRedirect(r.URL.Query().Get("next"))
+	if next == "" {
 		next = "/"
 	}
 	http.SetCookie(w, &http.Cookie{
@@ -1169,7 +1165,8 @@ func (a *App) renderFragment(w http.ResponseWriter, r *http.Request, name string
 		tmpl = tmplSet.Lookup(fallbackName)
 	}
 	if tmpl == nil {
-		http.Error(w, fmt.Sprintf("template %q not found", name), http.StatusInternalServerError)
+		slog.Error("template not found", "template", name)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -1179,7 +1176,7 @@ func (a *App) renderFragment(w http.ResponseWriter, r *http.Request, name string
 	}
 
 	if err := tmpl.Execute(w, data); err != nil {
-		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
+		templateFailure(w, name, err)
 	}
 }
 
@@ -1271,11 +1268,12 @@ func (a *App) Marketing(w http.ResponseWriter, r *http.Request) {
 
 	tmpl := a.templatesFor(r).Lookup("home.html")
 	if tmpl == nil {
-		http.Error(w, "home template not found", http.StatusInternalServerError)
+		slog.Error("template not found", "template", "home.html")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	if err := tmpl.Execute(w, a.homeData(lang)); err != nil {
-		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
+		templateFailure(w, "home.html", err)
 	}
 }
 
@@ -1298,7 +1296,8 @@ func (a *App) homeData(lang string) map[string]interface{} {
 func (a *App) PolicyPage(w http.ResponseWriter, r *http.Request, name string) {
 	tmpl := a.templatesFor(r).Lookup(name)
 	if tmpl == nil {
-		http.Error(w, name+" template not found", http.StatusInternalServerError)
+		slog.Error("template not found", "template", name)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -1328,7 +1327,7 @@ func (a *App) PolicyPage(w http.ResponseWriter, r *http.Request, name string) {
 		"Lang":           langOf(r),
 	}
 	if err := tmpl.Execute(w, data); err != nil {
-		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
+		templateFailure(w, name, err)
 	}
 }
 
@@ -1393,11 +1392,12 @@ func (a *App) FeaturePage(w http.ResponseWriter, r *http.Request) {
 	}
 	tmpl := a.templatesFor(r).Lookup("feature.html")
 	if tmpl == nil {
-		http.Error(w, "feature.html template not found", http.StatusInternalServerError)
+		slog.Error("template not found", "template", "feature.html")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	if err := tmpl.Execute(w, data); err != nil {
-		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
+		templateFailure(w, "feature.html", err)
 	}
 }
 
@@ -1667,6 +1667,13 @@ func (a *App) renderErrorInfo(w http.ResponseWriter, r *http.Request, info Error
 	}
 }
 
+// templateFailure logs the template execution error server-side and answers
+// a generic 500 so internal template paths/errors never reach the client.
+func templateFailure(w http.ResponseWriter, templateName string, err error) {
+	slog.Error("template execution failed", "template", templateName, "error", err)
+	http.Error(w, "Internal server error", http.StatusInternalServerError)
+}
+
 // renderError renders a friendly user-facing error screen using error.html and layout.html.
 func (a *App) renderError(w http.ResponseWriter, statusCode int, title string, message string, user *auth.SessionData) {
 	a.renderErrorInfo(w, nil, ErrorInfo{
@@ -1761,4 +1768,21 @@ func (a *App) MountPWARoutes(r chi.Router) {
 	}
 	r.Get("/sw.js", swHandler)
 	r.Head("/sw.js", swHandler)
+}
+
+// abbrString truncates s to at most max runes, appending an ellipsis. Rune
+// slicing keeps multi-byte scripts (Hindi) intact; the previous byte slice
+// could split a UTF-8 sequence and render replacement characters.
+func abbrString(s string, max int) string {
+	if max < 0 {
+		max = 0
+	}
+	r := []rune(s)
+	if len(r) <= max {
+		return s
+	}
+	if max <= 3 {
+		return string(r[:max]) + "..."
+	}
+	return string(r[:max-3]) + "..."
 }
