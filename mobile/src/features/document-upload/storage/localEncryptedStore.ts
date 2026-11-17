@@ -165,7 +165,11 @@ export class LocalDocumentStore {
   async saveTasks(tasks: DocumentUploadTask[]): Promise<void> {
     try {
       await this.persist(tasks);
-    } catch {}
+    } catch (err) {
+      // Keep callers alive, but never lose the failure silently: a SecureStore
+      // write failure drops queued uploads, so surface it to crash reporting.
+      console.warn('[DocUploadStore] failed to persist upload queue:', err);
+    }
   }
 
   async upsertTask(task: DocumentUploadTask): Promise<void> {
