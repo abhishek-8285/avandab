@@ -52,9 +52,9 @@ func TestMoneyTools_RegisteredRBACTags(t *testing.T) {
 		"list_unpaid_invoices": {"invoices", "read"},
 		"record_payment":       {"payments", "create"},
 		"get_revenue":          {"reports", "read"},
-		"list_pending_kharcha": {"trips", "read"},
-		"approve_kharcha":      {"trips", "update"},
-		"reject_kharcha":       {"trips", "update"},
+		"list_pending_kharcha": {"kharcha", "read"},
+		"approve_kharcha":      {"kharcha", "approve"},
+		"reject_kharcha":       {"kharcha", "approve"},
 	} {
 		tl, ok := byName[name]
 		require.True(t, ok, "tool %s registered", name)

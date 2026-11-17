@@ -14,7 +14,7 @@ import (
 // leak does not expose usable links.
 //
 // By default tokens live in process memory (single-replica convenience). Call
-// WithPersistence to store them in auth_one_time_tokens (migration 00181), so
+// WithPersistence to store them in auth_one_time_tokens (migration 00187), so
 // links survive restarts and work across replicas.
 type ResetTokenStore struct {
 	mu      sync.Mutex
@@ -65,9 +65,12 @@ func (s *ResetTokenStore) Create(email string) (string, error) {
 
 	if s.db != nil {
 		// Opportunistic cleanup: expired rows are useless and the
-		// (purpose, expires_at) index keeps this bounded.
-		_, _ = s.db.ExecContext(context.Background(),
-			`DELETE FROM auth_one_time_tokens WHERE expires_at < $1`, now)
+		// (purpose, expires_at) index keeps this bounded. A cleanup failure
+		// must not block issuing the token, but it must not vanish silently.
+		if _, err := s.db.ExecContext(context.Background(),
+			`DELETE FROM auth_one_time_tokens WHERE expires_at < $1`, now); err != nil {
+			slog.Warn("one-time token cleanup failed", "purpose", s.purpose, "error", err)
+		}
 		if _, err := s.db.ExecContext(context.Background(),
 			`INSERT INTO auth_one_time_tokens (token_hash, email, purpose, expires_at)
 			 VALUES ($1, $2, $3, $4)`,

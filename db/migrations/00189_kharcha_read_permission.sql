@@ -1,12 +1,12 @@
 -- +goose Up
--- 00183: the kharcha dashboard, pending queue, ledger, and manager API are
+-- 00189: the kharcha dashboard, pending queue, ledger, and manager API are
 -- manager surfaces. The driver role (5) holds trips:read (00027), which
 -- previously opened every pending expense claim in the tenant — including
 -- other drivers' amounts, notes, and receipt URLs. Split read access into its
 -- own permission so drivers keep trips:read without seeing tenant-wide money.
 --
 -- Approval stays stricter: kharcha:approve is admin (1) + org_admin (6) only
--- (00180), so dispatcher and driver remain denied by the RBAC ratchet.
+-- (00186), so dispatcher and driver remain denied by the RBAC ratchet.
 INSERT OR IGNORE INTO permissions (name, description)
 VALUES ('kharcha:read', 'View driver expense ledger and pending claims');
 

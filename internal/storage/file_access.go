@@ -20,3 +20,31 @@ func TenantFileExists(ctx context.Context, db *sql.DB, key, tenantID string) boo
 	}
 	return true
 }
+
+// TenantLegacyUploadExists reports whether key is a pre-files-table upload that
+// the tenant still references from its own business rows: customer logos
+// (customers.photo_url stores "/uploads/<key>") and company logos
+// (company_settings / tenant_company_profiles.logo_path store "<key>").
+//
+// The /uploads ACL must not break those legacy assets when it starts requiring
+// a files row, but it must still refuse paths no row references. The
+// bootstrap-tenant company_settings row is the platform-global singleton, so it
+// only backs the bootstrap tenant.
+func TenantLegacyUploadExists(ctx context.Context, db *sql.DB, key, tenantID string) bool {
+	if db == nil || key == "" || tenantID == "" {
+		return false
+	}
+	var exists int
+	err := db.QueryRowContext(ctx, `
+		SELECT 1 WHERE EXISTS (
+		    SELECT 1 FROM customers WHERE tenant_id = $1 AND photo_url = '/uploads/' || $2
+		) OR EXISTS (
+		    SELECT 1 FROM tenant_company_profiles WHERE tenant_id = $1 AND logo_path = $2
+		) OR EXISTS (
+		    SELECT 1 FROM company_settings WHERE logo_path = $2 AND $1 = '1'
+		) LIMIT 1`, tenantID, key).Scan(&exists)
+	if err != nil {
+		return false
+	}
+	return exists == 1
+}

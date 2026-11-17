@@ -63,8 +63,10 @@ func (h *KharchaHandlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 // GET /kharcha/pending — HTMX partial: live-refresh the queue every 30s.
 func (h *KharchaHandlers) PendingQueue(w http.ResponseWriter, r *http.Request) {
 	pending, _ := h.Services.Kharcha.ListPendingExpenses(r.Context())
+	session, _ := h.getUserFromContext(r)
 	h.renderFragment(w, r, "kharcha_queue.html", map[string]interface{}{
 		"PendingExpenses": pending,
+		"User":            session,
 	})
 }
 
@@ -292,6 +294,7 @@ func (h *KharchaHandlers) DeliverWithPOD(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartBodyBytes)
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		writePODJSONError(w, "form parse error", http.StatusBadRequest)
 		return

@@ -16,14 +16,18 @@
             </div>
             <p class="text-sm text-secondary mt-1">{{t "mo.kha.page_sub"}}</p>
         </div>
+        {{if can .User "trips" "update"}}
         <button onclick="document.getElementById('new-expense-form').classList.toggle('hidden')"
                 class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
             {{t "mo.kha.new"}}
         </button>
+        {{end}}
     </div>
 
-    <!-- New Expense Form (toggle) -->
+    <!-- New Expense Form (toggle). The /kharcha/create route needs
+         trips:update, so do not render the form (or its toggle) otherwise. -->
+    {{if can .User "trips" "update"}}
     <div id="new-expense-form" class="hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
@@ -94,6 +98,7 @@
             </div>
         </form>
     </div>
+    {{end}}
 
     <!-- KPI HERO -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

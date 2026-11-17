@@ -1,8 +1,9 @@
 -- +goose Up
--- 00181 — persistent one-time tokens (password reset + email verification).
+-- 00187 — persistent one-time tokens (password reset + email verification).
 -- Audit 2026-11-12 M1: tokens lived only in process memory, so a restart
 -- invalidated every outstanding link and multi-replica deployments rejected
--- links issued by another replica. Only the HMAC hash is stored.
+-- links issued by another replica. Only the HMAC hash of the token value is
+-- stored; the email address is stored as the lookup key (PII).
 
 CREATE TABLE IF NOT EXISTS auth_one_time_tokens (
     token_hash TEXT PRIMARY KEY,

@@ -11,11 +11,11 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// TestMigration00183_KharchaReadGrant proves the read surface is granted to
+// TestMigration00189_KharchaReadGrant proves the read surface is granted to
 // every manager role and denied to drivers, whose trips:read previously opened
 // the tenant-wide expense queue. Down must remove the permission and grants.
 func TestMigration00189_KharchaReadGrant(t *testing.T) {
-	name := fmt.Sprintf("test_mig_00183_%d", time.Now().UnixNano())
+	name := fmt.Sprintf("test_mig_00189_%d", time.Now().UnixNano())
 	db, err := sql.Open("sqlite", "file:"+name+"?mode=memory&cache=shared&_pragma=journal_mode(WAL)")
 	require.NoError(t, err)
 	defer db.Close()

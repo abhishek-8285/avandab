@@ -381,6 +381,7 @@ func (h *DriverHandlers) ReportIssue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartBodyBytes)
 	if err := r.ParseMultipartForm(10 << 20); err != nil && err != http.ErrNotMultipart {
 		writeJSONError(w, http.StatusBadRequest, "invalid form")
 		return

@@ -47,6 +47,7 @@ func (h *DocumentHandlers) Mount(r chi.Router) {
 // UploadDriverDoc handles multipart upload for a driver document.
 func (h *DocumentHandlers) UploadDriverDoc(w http.ResponseWriter, r *http.Request) {
 	driverID := chi.URLParam(r, "driver_id")
+	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartBodyBytes)
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		http.Error(w, `{"error":"invalid_form","message":"failed to parse multipart form"}`, http.StatusBadRequest)
 		return
@@ -89,6 +90,7 @@ func (h *DocumentHandlers) UploadDriverDoc(w http.ResponseWriter, r *http.Reques
 // UploadVehicleDoc handles multipart upload for a vehicle document.
 func (h *DocumentHandlers) UploadVehicleDoc(w http.ResponseWriter, r *http.Request) {
 	vehicleID := chi.URLParam(r, "vehicle_id")
+	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartBodyBytes)
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		http.Error(w, `{"error":"invalid_form","message":"failed to parse multipart form"}`, http.StatusBadRequest)
 		return

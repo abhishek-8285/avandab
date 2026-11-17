@@ -31,3 +31,9 @@ func abbrString(s string, max int) string {
 	}
 	return string(r[:max-3]) + "..."
 }
+
+// maxMultipartBodyBytes bounds request bodies for handlers that call
+// ParseMultipartForm. ParseMultipartForm's maxMemory argument is only the
+// in-memory spill threshold, so without MaxBytesReader an oversized upload
+// still exhausts temp disk (gosec G120).
+const maxMultipartBodyBytes = 12 << 20

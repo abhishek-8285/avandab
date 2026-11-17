@@ -1,7 +1,8 @@
 -- +goose Up
 -- PG port of 00187_auth_one_time_tokens.sql
 -- Persistent one-time tokens (password reset + email verification).
--- Only the HMAC hash is stored.
+-- Only the HMAC hash of the token value is stored; the email address is
+-- stored as the lookup key (PII).
 
 CREATE TABLE IF NOT EXISTS auth_one_time_tokens (
     token_hash TEXT PRIMARY KEY,

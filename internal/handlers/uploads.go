@@ -49,7 +49,12 @@ func TenantUploadsHandler(db *sql.DB, uploadDir string) http.Handler {
 			return
 		}
 
-		if !storage.TenantFileExists(r.Context(), db, rel, string(tenantID)) {
+		// A files row is the normal ACL. Pre-files-table assets (customer and
+		// company logos written straight to disk) are still referenced from
+		// the tenant's own rows, so those are served only to their owner too;
+		// every other path stays invisible.
+		if !storage.TenantFileExists(r.Context(), db, rel, string(tenantID)) &&
+			!storage.TenantLegacyUploadExists(r.Context(), db, rel, string(tenantID)) {
 			// Unknown path or another tenant's file: never reveal which.
 			http.NotFound(w, r)
 			return

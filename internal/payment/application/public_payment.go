@@ -3,7 +3,8 @@ package application
 // Public invoice payment portal read model, extracted from
 // internal/handlers/public_payment.go (handlers-end-state ADR, Phase 2). The
 // /pay/{invoiceId} portal is login-free and rate-limited by the server: the
-// invoice id or invoice_number carried by the link is the capability, so the
+// random invoice UUID carried by the link is the capability (sequential
+// invoice numbers are enumerable and are NOT accepted — audit C1), so the
 // legacy queries stay intentionally free of tenant filters. The tenant is
 // derived from the invoice row for branding only. The handler keeps HTTP,
 // rate limiting, JSON/HTML rendering and the Razorpay checkout use-cases.
@@ -121,12 +122,13 @@ func NewPublicPaymentQueries(db *sql.DB) *PublicPaymentQueries {
 	return &PublicPaymentQueries{db: db}
 }
 
-// ResolvePublicInvoice resolves a public payment reference (invoice id or
-// invoice_number) to the canonical invoice id and its tenant id. The
-// Razorpay order/verify use-cases need the tenant context, so the handler
-// resolves it from the same login-free link. Not tenant-scoped by design:
-// the link is the capability. sql.ErrNoRows surfaces for unknown references
-// (the handler maps it to 404).
+// ResolvePublicInvoice resolves the random invoice UUID from a public payment
+// link to the canonical invoice id and its tenant id. Invoice numbers are not
+// accepted: they are enumerable, so accepting them was the C1 public-payment
+// enumeration hole. The Razorpay order/verify use-cases need the tenant
+// context, so the handler resolves it from the same login-free link. Not
+// tenant-scoped by design: the link is the capability. sql.ErrNoRows surfaces
+// for unknown references (the handler maps it to 404).
 func (q *PublicPaymentQueries) ResolvePublicInvoice(ctx context.Context, invoiceRef string) (canonicalID, tenantID string, err error) {
 	if q.db == nil {
 		return "", "", sql.ErrNoRows

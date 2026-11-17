@@ -270,7 +270,7 @@
                 </div>
                 <div class="flex items-center gap-3">
                     {{if .Kharcha}}<span class="text-sm font-bold text-on-surface tabular-nums" data-numeric>₹{{printf "%.2f" .KharchaTotal}} <span class="text-xs font-normal text-text-muted">{{t "tr.recorded"}}</span></span>{{end}}
-                    <a href="/kharcha/ledger" onclick="event.stopPropagation()" class="text-xs font-semibold text-primary hover:underline text-decoration-none">{{t "tr.full_ledger"}}</a>
+                    {{if can .User "kharcha" "read"}}<a href="/kharcha/ledger" onclick="event.stopPropagation()" class="text-xs font-semibold text-primary hover:underline text-decoration-none">{{t "tr.full_ledger"}}</a>{{end}}
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="vsec-chev w-4 h-4 shrink-0 text-text-muted"><path d="m6 9 6 6 6-6"/></svg>
                 </div>
             </summary>

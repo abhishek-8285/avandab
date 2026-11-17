@@ -885,7 +885,9 @@ func main() {
 	r.Get("/metrics", metrics.Guard(os.Getenv("METRICS_TOKEN"), metrics.Handler()).ServeHTTP)
 
 	// SEO endpoints (robots, sitemap, llms) are registered in the public route
-	// group below; registering /sitemap.xml twice makes chi panic at boot.
+	// group below. Keep a single owner for /sitemap.xml: a duplicate
+	// registration silently shadows the first one in chi, which hides routing
+	// mistakes at boot.
 	// API discovery and OpenAPI spec (public)
 	r.Get("/api/versions", apiversion.VersionsHandler)
 	openapispec.RegisterRoutes(r)

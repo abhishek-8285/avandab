@@ -1,5 +1,5 @@
 -- +goose Up
--- 00182 — per-account login throttle (audit 2026-11-12 M3).
+-- 00188 — per-account login throttle (audit 2026-11-12 M3).
 -- Per-IP limits alone let credential stuffing from many IPs bypass /login.
 -- key is sha256(lower(trim(email))) so raw addresses are not stored.
 

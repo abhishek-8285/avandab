@@ -68,7 +68,9 @@
             <p class="text-title-md font-bold text-on-surface tabular-nums">₹{{priceFormat .Amount}}</p>
         </div>
 
-        <!-- Actions (reveal on hover) -->
+        <!-- Actions (reveal on hover). Only roles that may actually approve
+             money get the controls; the route also enforces kharcha:approve. -->
+        {{if can $.User "kharcha" "approve"}}
         <div class="flex items-center gap-2 opacity-0 sm:opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
             <button
                 hx-post="/kharcha/{{.ID}}/approve"
@@ -91,6 +93,7 @@
                 </svg>
             </div>
         </div>
+        {{end}}
     </div>
     {{end}}
 {{else}}

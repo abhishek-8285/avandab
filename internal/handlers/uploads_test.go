@@ -56,3 +56,55 @@ func TestTenantUploadsHandler_EnforcesTenantACL(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, serve("", "/uploads/"+rel).Code,
 		"missing tenant in context must fail closed")
 }
+
+// TestTenantUploadsHandler_ServesTenantLogos guards the regression the files-row
+// ACL introduced: customer and company logos are written straight to disk and
+// referenced from customers.photo_url / tenant_company_profiles.logo_path (and
+// the bootstrap-only company_settings.logo_path), never from a files row. Those
+// assets must keep rendering for their owner while staying invisible to other
+// tenants.
+func TestTenantUploadsHandler_ServesTenantLogos(t *testing.T) {
+	db := handlerTestDB(t)
+	uploadDir := t.TempDir()
+
+	for _, rel := range []string{"customers/cust-logo.png", "company/co-logo.png"} {
+		full := filepath.Join(uploadDir, filepath.FromSlash(rel))
+		require.NoError(t, os.MkdirAll(filepath.Dir(full), 0o750))
+		require.NoError(t, os.WriteFile(full, []byte("logo-bytes"), 0o600))
+	}
+
+	_, err := db.Exec(`INSERT INTO tenants (id, name, slug, status)
+		VALUES ('tenant-logo', 'Logo Tenant', 'logo-tenant', 'active')`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO customers (id, name, phone, tenant_id, photo_url)
+		VALUES ('cust-logo', 'Logo Customer', '+919000000009', '1', '/uploads/customers/cust-logo.png')`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO company_settings (id, company_name, logo_path)
+		VALUES (1, 'Platform Co', 'company/co-logo.png')`)
+	if err != nil {
+		// Migrations seed the singleton row; set the logo on it instead.
+		_, err = db.Exec(`UPDATE company_settings SET logo_path = 'company/co-logo.png' WHERE id = 1`)
+	}
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO tenant_company_profiles (tenant_id, company_name, logo_path)
+		VALUES ('tenant-logo', 'Logo Tenant Co', 'company/co-logo.png')`)
+	require.NoError(t, err)
+
+	h := TenantUploadsHandler(db, uploadDir)
+	serve := func(tenant, target string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodGet, target, nil)
+		req = req.WithContext(shared.ContextWithTenantID(req.Context(), shared.TenantID(tenant)))
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec
+	}
+
+	assert.Equal(t, http.StatusOK, serve("1", "/uploads/customers/cust-logo.png").Code,
+		"the owning tenant must still render its customer logo")
+	assert.Equal(t, http.StatusNotFound, serve("tenant-logo", "/uploads/customers/cust-logo.png").Code,
+		"another tenant must not fetch a customer logo it does not own")
+	assert.Equal(t, http.StatusOK, serve("tenant-logo", "/uploads/company/co-logo.png").Code,
+		"a tenant profile logo must render for its own tenant")
+	assert.Equal(t, http.StatusNotFound, serve("tenant-logo", "/uploads/customers/unknown-logo.png").Code,
+		"paths no row references must stay 404")
+}

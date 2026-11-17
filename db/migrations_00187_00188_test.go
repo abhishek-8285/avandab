@@ -11,11 +11,11 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// TestMigrations00181_00182_AuthTables proves the persistent one-time token
+// TestMigrations00187_00188_AuthTables proves the persistent one-time token
 // table (M1) and login throttle table (M3) apply and roll back, and that both
 // are usable with the columns the Go stores query.
 func TestMigrations00187_00188_AuthTables(t *testing.T) {
-	name := fmt.Sprintf("test_mig_00181_%d", time.Now().UnixNano())
+	name := fmt.Sprintf("test_mig_00187_%d", time.Now().UnixNano())
 	db, err := sql.Open("sqlite", "file:"+name+"?mode=memory&cache=shared&_pragma=journal_mode(WAL)")
 	require.NoError(t, err)
 	defer db.Close()
@@ -29,8 +29,8 @@ func TestMigrations00187_00188_AuthTables(t *testing.T) {
 			`SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?`, table).Scan(&n))
 		return n == 1
 	}
-	require.True(t, tableExists("auth_one_time_tokens"), "00181 must create auth_one_time_tokens")
-	require.True(t, tableExists("login_throttle"), "00182 must create login_throttle")
+	require.True(t, tableExists("auth_one_time_tokens"), "00187 must create auth_one_time_tokens")
+	require.True(t, tableExists("login_throttle"), "00188 must create login_throttle")
 
 	// Prove the schemas are writable with the store's columns.
 	_, err = db.Exec(`INSERT INTO auth_one_time_tokens (token_hash, email, purpose, expires_at)

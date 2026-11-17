@@ -1,5 +1,5 @@
 -- +goose Up
--- 00180: kharcha approval is a money-authorization step, not a trip update.
+-- 00186: kharcha approval is a money-authorization step, not a trip update.
 -- The driver role (5) holds trips:update (00027), so approve/reject routes
 -- MUST NOT be gated on it. The permission row pre-exists via 00092, but
 -- partial migrations may lack it, so seed it idempotently first;

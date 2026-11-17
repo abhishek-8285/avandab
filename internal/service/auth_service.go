@@ -20,8 +20,8 @@ type AuthService struct {
 }
 
 // tenantActive rejects authentication for users whose tenant organization is
-// not 'active'. A user with no tenant row is treated as legacy/default and
-// allowed through.
+// not 'active'. A user whose tenant row is missing fails closed (ErrTenantMissing):
+// a deleted or half-provisioned org must never authenticate.
 func (s *AuthService) tenantActive(ctx context.Context, userID string) error {
 	getter, ok := s.store.(repository.DBGetter)
 	if !ok || getter == nil {
@@ -61,6 +61,16 @@ func loginThrottleKey(email string) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// sessionTTL is the configured session lifetime for BOTH the cookie Max-Age
+// (auth.SessionStore.SetMaxAge) and the DB session row. Defaults to 24h when
+// the service has no config (tests/fakes) or SESSION_MAX_AGE was not set.
+func (s *AuthService) sessionTTL() time.Duration {
+	if s.cfg != nil && s.cfg.SessionMaxAge > 0 {
+		return s.cfg.SessionMaxAge
+	}
+	return 24 * time.Hour
+}
+
 func (s *AuthService) loginThrottleDB() *sql.DB {
 	getter, ok := s.store.(repository.DBGetter)
 	if !ok || getter == nil {
@@ -90,8 +100,13 @@ func (s *AuthService) loginLocked(ctx context.Context, email string) bool {
 	return lockedUntil.Valid && time.Now().Before(lockedUntil.Time)
 }
 
-// recordLoginFailure increments the failure counter, locks after
+// recordLoginFailure atomically increments the failure counter, locks after
 // loginMaxFailures, and expires stale counters after loginAttemptTTL.
+//
+// The increment is a single upsert with RETURNING: the previous
+// select-then-write lost increments under concurrent attempts, so a parallel
+// credential-stuffing burst (the exact M3 threat model) could exceed the
+// failure budget without ever tripping the lock.
 func (s *AuthService) recordLoginFailure(ctx context.Context, email string) {
 	db := s.loginThrottleDB()
 	if db == nil {
@@ -101,31 +116,32 @@ func (s *AuthService) recordLoginFailure(ctx context.Context, email string) {
 	now := time.Now()
 
 	var failures int
-	var updated time.Time
-	err := db.QueryRowContext(ctx,
-		"SELECT failures, updated_at FROM login_throttle WHERE email_key = $1", key).
-		Scan(&failures, &updated)
-	if err != nil && err != sql.ErrNoRows {
-		s.log.Warn("login throttle read failed", "error", err)
+	err := db.QueryRowContext(ctx, `
+		INSERT INTO login_throttle (email_key, failures, locked_until, updated_at)
+		VALUES ($1, 1, NULL, $2)
+		ON CONFLICT (email_key) DO UPDATE SET
+		  failures = CASE
+		    WHEN login_throttle.updated_at < $3 THEN 1
+		    ELSE login_throttle.failures + 1
+		  END,
+		  updated_at = $2
+		RETURNING failures`, key, now, now.Add(-loginAttemptTTL)).Scan(&failures)
+	if err != nil {
+		s.log.Warn("login throttle write failed", "error", err)
 		return
 	}
-	if err == nil && now.Sub(updated) > loginAttemptTTL {
-		failures = 0
-	}
-	failures++
-
-	var lockedUntil interface{}
 	if failures >= loginMaxFailures {
-		lockedUntil = now.Add(loginLockout)
+		if _, err := db.ExecContext(ctx,
+			"UPDATE login_throttle SET locked_until = $1 WHERE email_key = $2", now.Add(loginLockout), key); err != nil {
+			s.log.Warn("login throttle lock failed", "error", err)
+		}
 	}
 
-	if _, err := db.ExecContext(ctx, "INSERT INTO login_throttle (email_key, failures, locked_until, updated_at) VALUES ($1, $2, $3, $4) ON CONFLICT (email_key) DO UPDATE SET failures = excluded.failures, locked_until = excluded.locked_until, updated_at = excluded.updated_at",
-		key, failures, lockedUntil, now); err != nil {
-		s.log.Warn("login throttle write failed", "error", err)
+	// Opportunistic cleanup of stale counters (indexed by updated_at). A
+	// failure here must not break login, but it must not vanish silently.
+	if _, err := db.ExecContext(ctx, "DELETE FROM login_throttle WHERE updated_at < $1", now.Add(-loginAttemptTTL)); err != nil {
+		s.log.Warn("login throttle cleanup failed", "error", err)
 	}
-
-	// Opportunistic cleanup of stale counters (indexed by updated_at).
-	_, _ = db.ExecContext(ctx, "DELETE FROM login_throttle WHERE updated_at < $1", now.Add(-loginAttemptTTL))
 }
 
 func (s *AuthService) clearLoginFailures(ctx context.Context, email string) {
@@ -205,7 +221,7 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginResult
 		ID:        domain.SessionID(generateID()),
 		UserID:    user.ID,
 		TokenHash: tokenHash,
-		ExpiresAt: time.Now().Add(24 * time.Hour),
+		ExpiresAt: time.Now().Add(s.sessionTTL()),
 	}
 	if _, err := s.store.CreateSession(ctx, session); err != nil {
 		return nil, err
@@ -249,10 +265,7 @@ func (s *AuthService) CreateSessionForUser(ctx context.Context, userID domain.Us
 	}
 	tokenHash := auth.HashToken(token)
 
-	maxAge := 24 * time.Hour
-	if s.cfg != nil && s.cfg.SessionMaxAge > 0 {
-		maxAge = s.cfg.SessionMaxAge
-	}
+	maxAge := s.sessionTTL()
 
 	session := domain.Session{
 		ID:        domain.SessionID(generateID()),
