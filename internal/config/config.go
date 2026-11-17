@@ -843,3 +843,15 @@ func (c *Config) UsingKnownDefaultSecret() bool {
 	}
 	return false
 }
+
+// AppEnvFromEnv returns the effective APP_ENV and whether the operator set it.
+// Load keeps the historical "development" default so local runs work; main uses
+// the explicit signal to refuse a deployment that silently downgraded the
+// known-default-secret guard by leaving APP_ENV unset.
+func AppEnvFromEnv() (string, bool) {
+	raw := os.Getenv("APP_ENV")
+	if raw == "" {
+		return "development", false
+	}
+	return raw, true
+}

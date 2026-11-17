@@ -575,7 +575,7 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "list_pending_kharcha",
 			Description: "List driver expenses (kharcha) waiting for approval.",
-			Resource:    "trips",
+			Resource:    "kharcha",
 			Action:      "read",
 			Parameters: map[string]any{
 				"type":       "object",
@@ -599,8 +599,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "approve_kharcha",
 			Description: "Approve a pending driver expense (kharcha). Requires expense id.",
-			Resource:    "trips",
-			Action:      "update",
+			Resource:    "kharcha",
+			Action:      "approve",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -632,8 +632,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "reject_kharcha",
 			Description: "Reject a pending driver expense (kharcha). Requires expense id and reason.",
-			Resource:    "trips",
-			Action:      "update",
+			Resource:    "kharcha",
+			Action:      "approve",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{

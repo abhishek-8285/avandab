@@ -13,8 +13,8 @@
     "test:cover": "go test -coverprofile=coverage.out -covermode=atomic ./test",
     "test:cover:html": "go tool cover -html=coverage.out",
     "test:ui": "playwright test",
-    "android": "expo run:android",
-    "ios": "expo run:ios"
+    "android": "npm --prefix mobile run android",
+    "ios": "npm --prefix mobile run ios"
   },
   "keywords": [],
   "author": "",

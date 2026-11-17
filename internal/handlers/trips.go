@@ -1820,6 +1820,14 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
+	// The e-POD page and its JSON twin are login-free. Mask every stop's
+	// contacts AFTER the top-level fields were read from selectedStop, so the
+	// view masks exactly once and Stops[] cannot leak raw phone/email.
+	for i := range stops {
+		stops[i].ConsigneePhone = privacy.MaskPhone(stops[i].ConsigneePhone)
+		stops[i].ConsigneeEmail = privacy.MaskEmail(stops[i].ConsigneeEmail)
+	}
+
 	delivTimestamp := ""
 	if deliveredAt != nil {
 		delivTimestamp = deliveredAt.Format("02 Jan 2006, 15:04 MST")
@@ -1881,27 +1889,6 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 	}
 
 	h.renderStandalone(w, r, "epod_receipt.html", view)
-}
-
-func (h *TripHandlers) renderStandalone(w http.ResponseWriter, r *http.Request, name string, data interface{}) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-
-	if h.App == nil || h.App.Templates == nil {
-		http.Error(w, "templates not initialized", http.StatusInternalServerError)
-		return
-	}
-	if m, ok := data.(map[string]interface{}); ok {
-		m["Lang"] = langOf(r)
-	}
-	tmpl := h.App.templatesFor(r).Lookup(name)
-	if tmpl == nil {
-		http.Error(w, fmt.Sprintf("template %q not found", name), http.StatusInternalServerError)
-		return
-	}
-	if err := tmpl.Execute(w, data); err != nil {
-		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
-	}
 }
 
 func (h *TripHandlers) CompleteStop(w http.ResponseWriter, r *http.Request) {

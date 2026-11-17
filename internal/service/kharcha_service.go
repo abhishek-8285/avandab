@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 	appdb "transport-app/internal/database"
@@ -12,6 +13,11 @@ import (
 	"transport-app/internal/events"
 	"transport-app/internal/repository"
 )
+
+// ErrSelfApproval is returned when the acting user is the driver who filed the
+// expense. Segregation of duties is enforced server-side even though the route
+// is already gated on kharcha:approve.
+var ErrSelfApproval = errors.New("cannot approve or reject your own expense")
 
 // KharchaExpense is the service-layer view of a driver expense with joined trip/driver data.
 type KharchaExpense struct {
@@ -220,6 +226,10 @@ func (s *KharchaService) ApproveExpense(ctx context.Context, expenseID, approved
 
 	now := time.Now()
 
+	if err := assertNotSelfDecision(ctx, tx, expenseID, approvedByUserID, string(tenantIDFor(ctx))); err != nil {
+		return err
+	}
+
 	// Fuel audit enforce gate (Spec 03 §3.2 step 4). MUST run BEFORE the
 	// status UPDATE: in enforce mode a claim flagged needs_review must never
 	// flip to approved, so the gate is a pre-flight check, not a post-check.
@@ -263,7 +273,17 @@ func (s *KharchaService) ApproveExpense(ctx context.Context, expenseID, approved
 		var category string
 		_ = tx.QueryRowContext(ctx, `SELECT COALESCE(category, 'kharcha') FROM driver_expenses WHERE id = $1 AND tenant_id = $2`, expenseID, tenantIDFor(ctx)).Scan(&category)
 
-		err := tx.QueryRowContext(ctx, `SELECT id FROM driver_settlements WHERE trip_id = $1 AND driver_id = $2`, tripID, driverID).Scan(&settlementID)
+		// Tenant guard: only settle against a trip the caller's org owns.
+		// The trip join is the authority (legacy settlements were written with
+		// the column default tenant '1' or ''), so another org's settlement is
+		// never adjusted even if trip+driver ids line up.
+		err := tx.QueryRowContext(ctx, `SELECT s.id FROM driver_settlements s
+			JOIN trips t ON t.id = s.trip_id
+			WHERE s.trip_id = $1 AND s.driver_id = $2
+			  AND (t.tenant_id = $3 OR s.tenant_id = $3 OR COALESCE(s.tenant_id, '') = '')`,
+			tripID, driverID, tenantIDFor(ctx)).Scan(&settlementID)
+		// Missing settlement is a normal state (trip not settled yet); the
+		// expense still approves, it just has no payout row to adjust.
 		if err == nil && settlementID != "" {
 			_, _ = tx.ExecContext(ctx,
 				`UPDATE driver_settlements
@@ -301,7 +321,17 @@ func (s *KharchaService) RejectExpense(ctx context.Context, expenseID, rejectedB
 	}
 	db := getter.DB()
 
-	res, err := db.ExecContext(ctx,
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if err := assertNotSelfDecision(ctx, tx, expenseID, rejectedByUserID, string(tenantIDFor(ctx))); err != nil {
+		return err
+	}
+
+	res, err := tx.ExecContext(ctx,
 		`UPDATE driver_expenses
 		 SET status = 'rejected', approved_by = $1, rejected_reason = $2
 		 WHERE id = $3 AND tenant_id = $4 AND COALESCE(status, 'pending') = 'pending'`,
@@ -311,6 +341,9 @@ func (s *KharchaService) RejectExpense(ctx context.Context, expenseID, rejectedB
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return fmt.Errorf("expense already processed or not found")
+	}
+	if err := tx.Commit(); err != nil {
+		return err
 	}
 
 	s.logAudit(ctx, nil, "reject_kharcha", "driver_expenses", expenseID, nil, &reason)
@@ -381,6 +414,13 @@ func (s *KharchaService) CreateExpenseWithOpts(ctx context.Context, o CreateExpe
 		return "", fmt.Errorf("store does not support raw DB access")
 	}
 	db := getter.DB()
+
+	// Referenced trip/driver must belong to the filing tenant: ids are UUIDs
+	// but they are not an authorization boundary, and a claim filed against
+	// another org's trip would follow that trip's settlement on approval.
+	if err := assertTenantOwnsExpenseRefs(ctx, db, o.TripID, o.DriverID); err != nil {
+		return "", err
+	}
 
 	expID := generateID()
 	var recURL interface{} = nil
@@ -509,4 +549,73 @@ func scanKharchaRows(rows kharchaScanner) ([]KharchaExpense, error) {
 		expenses = append(expenses, e)
 	}
 	return expenses, rows.Close()
+}
+
+// assertNotSelfDecision refuses an approval/rejection when the acting user is
+// linked to the driver who filed the claim. The link is the same one the
+// mobile app uses to attribute a claim: users.id == drivers.id, or matching
+// email (drivers has no user_id column). Runs inside the caller's transaction
+// so the ownership check and the status transition are atomic.
+func assertNotSelfDecision(ctx context.Context, tx *sql.Tx, expenseID, actorUserID, tenantID string) error {
+	// No sentinel bypass: every approval/rejection must name a real acting
+	// user. Empty or placeholder actors fail closed instead of skipping the
+	// segregation-of-duties check.
+	if actorUserID == "" || actorUserID == "system" {
+		return errors.New("approval actor is required")
+	}
+	var n int
+	err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM driver_expenses de
+		JOIN drivers d ON (d.id = de.driver_id OR d.id = de.requested_by)
+		WHERE de.id = $1 AND de.tenant_id = $2
+		  AND d.tenant_id = $2
+		  AND (
+		    d.id = $3
+		    OR (d.email IS NOT NULL AND LOWER(d.email) = (
+		        SELECT LOWER(u.email) FROM users u WHERE u.id = $3
+		    ))
+		  )`, expenseID, tenantID, actorUserID).Scan(&n)
+	if err != nil {
+		return err
+	}
+	if n > 0 {
+		return ErrSelfApproval
+	}
+	return nil
+}
+
+// assertTenantOwnsExpenseRefs refuses trip/driver references that exist in
+// ANOTHER tenant. Ids are UUIDs, not an authorization boundary: a claim filed
+// against another org's trip would ride that trip's settlement on approval,
+// and a foreign driver_id would leak that driver through tenant-wide joins.
+// Unknown ids stay legal (legacy free-form attribution and off-trip claims);
+// every real row is tenant-owned, so a cross-tenant reference is refused.
+func assertTenantOwnsExpenseRefs(ctx context.Context, db *sql.DB, tripID, driverID string) error {
+	tenant := tenantIDFor(ctx)
+	refTenant := func(query, id, label string) error {
+		var owner string
+		err := db.QueryRowContext(ctx, query, id).Scan(&owner)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if owner != "" && owner != tenant {
+			return fmt.Errorf("%s not found in this organization", label)
+		}
+		return nil
+	}
+	if tripID != "" {
+		if err := refTenant(`SELECT tenant_id FROM trips WHERE id = $1`, tripID, "trip"); err != nil {
+			return err
+		}
+	}
+	if driverID != "" {
+		if err := refTenant(`SELECT tenant_id FROM drivers WHERE id = $1`, driverID, "driver"); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -27,6 +27,14 @@ code { background: #1e293b; padding: 0.1rem 0.35rem; border-radius: 3px; font-si
 </head>
 <body>
 
+<div style="border:2px solid #fbbf24;background:#3b2f0b;color:#fde68a;padding:1rem;margin-bottom:1.5rem;border-radius:6px">
+<strong>Historical review — superseded 2026-11-12.</strong> Findings 1–2 are resolved:
+<code>internal/templates/booking_list_table.html</code> exists and
+<code>POST /bookings/{id}/complete</code> is registered
+(<code>internal/handlers/bookings.go</code>). Treat this document as a visual-design
+critique only; do not use findings 1–2 as blockers.
+</div>
+
 <h1>Design Review: Booking Module — MVTMS</h1>
 
 <p><strong>Scope:</strong> Booking module web UI (server-rendered templates) + REST API handlers.</p>

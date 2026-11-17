@@ -42,8 +42,9 @@ type PaymentRepository interface {
 	SetRazorpayFields(ctx context.Context, id aggregate.PaymentID, tenantID shared.TenantID, orderID, paymentID, signature string) error
 
 	// ExistsRazorpayPayment returns the payment ID already recorded against a
-	// Razorpay payment ID, or sql.ErrNoRows when none exists. Arbiter for the
-	// /verify-vs-webhook race (UNIQUE partial index idx_payments_razorpay_payment).
+	// Razorpay payment ID, or sql.ErrNoRows when none exists. The lookup is
+	// platform-scoped: a payment ID recorded under another tenant is a
+	// cross-tenant conflict, not a cache miss.
 	ExistsRazorpayPayment(ctx context.Context, tenantID shared.TenantID, paymentID string) (aggregate.PaymentID, error)
 
 	// ExistsWebhookEvent returns the payment ID already processed for a Razorpay

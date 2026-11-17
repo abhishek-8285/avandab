@@ -550,6 +550,14 @@ func TestCreateExpenseAPI_SuccessAndErrors(t *testing.T) {
 
 		INSERT INTO drivers (id, driver_id, first_name, last_name, phone, email, license_number, license_expiry, status, tenant_id)
 		VALUES ('d-1', 'DRV-1', 'Rajesh', 'Kumar', '+919820011223', 'rajesh@example.com', 'DL-1', '2030-01-01', 'available', '1');
+
+		-- Increment 6 binds the claim to the session driver and to a trip that
+		-- driver actually holds; t-1 must be assigned to d-1.
+		INSERT INTO routes (id, tenant_id, source, destination, distance, estimated_hours, standard_fare, source_normalized, dest_normalized)
+		VALUES ('rt-exp-1', '1', 'Delhi', 'Jaipur', 280, 5, 10000, 'delhi', 'jaipur');
+
+		INSERT INTO trips (id, tenant_id, trip_number, driver_id, route_id, departure_time, status)
+		VALUES ('t-1', '1', 'TRP-EXP-1', 'd-1', 'rt-exp-1', '2026-11-01', 'in_transit');
 	`)
 	require.NoError(t, err)
 

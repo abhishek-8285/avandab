@@ -96,7 +96,12 @@ func Recoverer(reporter ...*errors.Reporter) func(http.Handler) http.Handler {
 					reqID, _ := r.Context().Value(auth.ContextReqID).(string)
 					tenantID := shared.TenantIDFromContext(r.Context())
 					var userID string
-					if u, ok := r.Context().Value(auth.ContextUser).(domain.User); ok {
+					switch u := r.Context().Value(auth.ContextUser).(type) {
+					case *auth.SessionData:
+						if u != nil {
+							userID = u.UserID
+						}
+					case domain.User:
 						userID = string(u.ID)
 					}
 

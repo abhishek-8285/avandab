@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"log/slog"
@@ -23,12 +24,16 @@ type KharchaHandlers struct {
 }
 
 func (h *KharchaHandlers) Routes(r chi.Router) {
-	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "read")).Get("/", h.Dashboard)
-	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "read")).Get("/pending", h.PendingQueue)
-	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "read")).Get("/ledger", h.Ledger)
+	// kharcha:read, not trips:read: the driver role (00027) holds trips:read,
+	// and the dashboard/queue/ledger expose every driver's claims.
+	r.With(middleware.ResourcePermission(h.AuthSrv, "kharcha", "read")).Get("/", h.Dashboard)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "kharcha", "read")).Get("/pending", h.PendingQueue)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "kharcha", "read")).Get("/ledger", h.Ledger)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/create", h.Create)
-	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/approve", h.Approve)
-	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/reject", h.Reject)
+	// kharcha:approve, not trips:update: the driver role (00027) holds
+	// trips:update, and expense approval is a money-authorization step.
+	r.With(middleware.ResourcePermission(h.AuthSrv, "kharcha", "approve")).Post("/{id}/approve", h.Approve)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "kharcha", "approve")).Post("/{id}/reject", h.Reject)
 }
 
 // GET /kharcha — full dashboard (pending queue + ledger).
@@ -58,8 +63,10 @@ func (h *KharchaHandlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 // GET /kharcha/pending — HTMX partial: live-refresh the queue every 30s.
 func (h *KharchaHandlers) PendingQueue(w http.ResponseWriter, r *http.Request) {
 	pending, _ := h.Services.Kharcha.ListPendingExpenses(r.Context())
+	session, _ := h.getUserFromContext(r)
 	h.renderFragment(w, r, "kharcha_queue.html", map[string]interface{}{
 		"PendingExpenses": pending,
+		"User":            session,
 	})
 }
 
@@ -76,7 +83,7 @@ func (h *KharchaHandlers) Ledger(w http.ResponseWriter, r *http.Request) {
 // Fuel claims capture fuel_litres for the audit flow (Spec 03 §3.2 step 1).
 func (h *KharchaHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	_, ok := h.getUserFromContext(r)
+	session, ok := h.getUserFromContext(r)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -89,6 +96,33 @@ func (h *KharchaHandlers) Create(w http.ResponseWriter, r *http.Request) {
 
 	tripID := r.FormValue("trip_id")
 	driverID := r.FormValue("driver_id")
+	if session.Role == "driver" {
+		ownID, ownErr := h.actingDriverID(ctx, session.UserID)
+		if ownErr != nil {
+			slog.WarnContext(ctx, "driver resolution for kharcha create failed", slog.Any("error", ownErr))
+			http.Error(w, "could not resolve driver profile", http.StatusInternalServerError)
+			return
+		}
+		if ownID == "" {
+			http.Error(w, "forbidden: no driver profile for this account", http.StatusForbidden)
+			return
+		}
+		if driverID != "" && driverID != ownID {
+			http.Error(w, "forbidden: cannot file an expense for another driver", http.StatusForbidden)
+			return
+		}
+		owned, ownErr := h.driverOwnsTrip(ctx, ownID, tripID)
+		if ownErr != nil {
+			slog.WarnContext(ctx, "trip ownership check failed", slog.Any("error", ownErr))
+			http.Error(w, "could not verify trip assignment", http.StatusInternalServerError)
+			return
+		}
+		if !owned {
+			http.Error(w, "forbidden: trip is not assigned to this driver", http.StatusForbidden)
+			return
+		}
+		driverID = ownID
+	}
 	category := r.FormValue("category")
 	description := r.FormValue("description")
 	receiptURL := r.FormValue("receipt_url")
@@ -132,94 +166,6 @@ func (h *KharchaHandlers) Create(w http.ResponseWriter, r *http.Request) {
 // Multipart fields mirror ExpenseScreen.tsx: trip_id, type/expense_type,
 // amount, notes, receipt_photo (file), latitude/longitude (accepted but not
 // persisted — driver_expenses has no geo columns yet).
-func (h *KharchaHandlers) CreateExpenseAPI(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	session, ok := h.getUserFromContext(r)
-	if !ok || session == nil || session.UserID == "" {
-		writePODJSONError(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		writePODJSONError(w, "form parse error", http.StatusBadRequest)
-		return
-	}
-
-	tripID := r.FormValue("trip_id")
-	category := r.FormValue("expense_type")
-	if category == "" {
-		category = r.FormValue("type")
-	}
-	description := r.FormValue("notes")
-
-	amount, err := strconv.ParseFloat(r.FormValue("amount"), 64)
-	if err != nil {
-		writePODJSONError(w, "invalid amount", http.StatusBadRequest)
-		return
-	}
-
-	// Resolve the acting driver from the authenticated user (same mapping
-	// as DeliverWithPOD): drivers.id or drivers.email via the users table.
-	driverID := session.UserID
-	if h.DB != nil {
-		if ref, qErr := kharchaapp.LookupUserDriver(ctx, h.DB, session.UserID); qErr != nil {
-			// Handled fallback: the expense stays under the auth user id, but
-			// the lookup must not fail silently (AGENTS.md no-silent-failures).
-			slog.WarnContext(ctx, "driver resolution from auth user failed", slog.Any("error", qErr))
-		} else if ref != nil && ref.ID != "" {
-			driverID = ref.ID
-		}
-	}
-
-	var receiptURL string
-	if _, fh, fErr := r.FormFile("receipt_photo"); fErr == nil {
-		fileRec, saveErr := h.Services.Files.UploadFile(ctx, fh, "expense_receipt", tripID)
-		if saveErr != nil {
-			writePODJSONError(w, "file upload failed: "+saveErr.Error(), http.StatusBadRequest)
-			return
-		}
-		receiptURL = "/files/" + string(fileRec.ID)
-	}
-
-	opts := service.CreateExpenseOpts{
-		TripID:         tripID,
-		DriverID:       driverID,
-		Category:       category,
-		Amount:         amount,
-		Description:    description,
-		ReceiptURL:     receiptURL,
-		IdempotencyKey: r.FormValue("idempotency_key"),
-	}
-	if v, pErr := strconv.ParseFloat(r.FormValue("latitude"), 64); pErr == nil {
-		opts.Latitude = &v
-	}
-	if v, pErr := strconv.ParseFloat(r.FormValue("longitude"), 64); pErr == nil {
-		opts.Longitude = &v
-	}
-
-	expenseID, err := h.Services.Kharcha.CreateExpenseWithOpts(ctx, opts)
-	if err != nil {
-		writePODJSONError(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Fuel claims enter the audit queue immediately (parity with web create).
-	if category == "fuel" && h.Services.FuelAudit != nil {
-		if _, aErr := h.Services.FuelAudit.AuditPendingClaims(ctx); aErr != nil {
-			slog.WarnContext(ctx, "fuel audit pass failed after expense create", slog.Any("error", aErr))
-		}
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":     "created",
-		"id":         expenseID,
-		"expense_id": expenseID,
-	})
-}
-
-// POST /kharcha/{id}/approve — HTMX inline swap: approve and replace the row.
 func (h *KharchaHandlers) Approve(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	expenseID := chi.URLParam(r, "id")
@@ -230,6 +176,10 @@ func (h *KharchaHandlers) Approve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.Services.Kharcha.ApproveExpense(ctx, expenseID, session.UserID); err != nil {
+		if errors.Is(err, service.ErrSelfApproval) {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
 		if isDatastarRequest(r) {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.WriteHeader(http.StatusBadRequest)
@@ -289,6 +239,10 @@ func (h *KharchaHandlers) Reject(w http.ResponseWriter, r *http.Request) {
 	reason := r.FormValue("reason")
 
 	if err := h.Services.Kharcha.RejectExpense(ctx, expenseID, session.UserID, reason); err != nil {
+		if errors.Is(err, service.ErrSelfApproval) {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
 		if isDatastarRequest(r) {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.WriteHeader(http.StatusBadRequest)
@@ -340,6 +294,7 @@ func (h *KharchaHandlers) DeliverWithPOD(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartBodyBytes)
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		writePODJSONError(w, "form parse error", http.StatusBadRequest)
 		return
@@ -391,7 +346,8 @@ func (h *KharchaHandlers) DeliverWithPOD(w http.ResponseWriter, r *http.Request)
 		if fileRec, saveErr := h.Services.Files.UploadFile(ctx, fh, "trip_pod", tripID); saveErr == nil {
 			podPhotoURL = "/files/" + string(fileRec.ID)
 		} else {
-			writePODJSONError(w, "file upload failed: "+saveErr.Error(), http.StatusBadRequest)
+			slog.Warn("kharcha POD upload failed", "trip_id", tripID, "error", saveErr)
+			writePODJSONError(w, "file upload failed", http.StatusBadRequest)
 			return
 		}
 	} else if existingURL := r.FormValue("pod_url"); existingURL != "" {
@@ -455,12 +411,16 @@ func (h *KharchaHandlers) ApproveAPI(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	expenseID := chi.URLParam(r, "id")
 	session, ok := h.getUserFromContext(r)
-	userID := "system"
-	if ok && session != nil {
-		userID = session.UserID
+	if !ok || session == nil || session.UserID == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
 	}
 
-	if err := h.Services.Kharcha.ApproveExpense(ctx, expenseID, userID); err != nil {
+	if err := h.Services.Kharcha.ApproveExpense(ctx, expenseID, session.UserID); err != nil {
+		if errors.Is(err, service.ErrSelfApproval) {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -477,9 +437,9 @@ func (h *KharchaHandlers) RejectAPI(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	expenseID := chi.URLParam(r, "id")
 	session, ok := h.getUserFromContext(r)
-	userID := "system"
-	if ok && session != nil {
-		userID = session.UserID
+	if !ok || session == nil || session.UserID == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
 	}
 
 	var body struct {
@@ -490,7 +450,11 @@ func (h *KharchaHandlers) RejectAPI(w http.ResponseWriter, r *http.Request) {
 		body.Reason = r.FormValue("reason")
 	}
 
-	if err := h.Services.Kharcha.RejectExpense(ctx, expenseID, userID, body.Reason); err != nil {
+	if err := h.Services.Kharcha.RejectExpense(ctx, expenseID, session.UserID, body.Reason); err != nil {
+		if errors.Is(err, service.ErrSelfApproval) {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

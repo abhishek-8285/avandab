@@ -24,6 +24,8 @@ var (
 	ErrTokenExpired     = errors.New("api token expired")
 	ErrTokenRevoked     = errors.New("api token revoked or user inactive")
 	ErrTenantSuspended  = errors.New("organization account is suspended")
+	ErrAccountLocked    = errors.New("too many failed sign-in attempts; try again later")
+	ErrTenantMissing    = errors.New("organization account not found")
 	ErrConsentWithdrawn = errors.New("data consent withdrawn — please re-confirm consent to continue")
 )
 

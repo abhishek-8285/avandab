@@ -223,7 +223,7 @@ func (h *AuthHandlers) ResetPasswordAPI(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := h.Services.Users.SetPasswordByEmail(r.Context(), email, req.Password); err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeJSONError(w, http.StatusBadRequest, resetPasswordErrorMessage(err))
 		return
 	}
 
@@ -730,17 +730,6 @@ func (h *AuthHandlers) enqueueResetEmail(r *http.Request, user domain.User, link
 	return true
 }
 
-// requestScheme returns http or https based on the request context.
-func requestScheme(r *http.Request) string {
-	if r.TLS != nil {
-		return "https"
-	}
-	if proto := r.Header.Get("X-Forwarded-Proto"); proto != "" {
-		return proto
-	}
-	return "http"
-}
-
 // ResetPasswordPage renders the password reset form for a valid token.
 func (h *AuthHandlers) ResetPasswordPage(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
@@ -784,7 +773,7 @@ func (h *AuthHandlers) SubmitResetPassword(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := h.Services.Users.SetPasswordByEmail(r.Context(), email, newPassword); err != nil {
-		pd.Extra["Error"] = err.Error()
+		pd.Extra["Error"] = resetPasswordErrorMessage(err)
 		h.renderAuthPage(w, r, "reset_password.html", pd)
 		return
 	}

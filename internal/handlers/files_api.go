@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -96,7 +97,8 @@ func toFileResource(f domain.File) fileResource {
 func (h *FilesAPIHandlers) Upload(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxFileUploadBytes+1<<20)
 	if err := r.ParseMultipartForm(maxFileUploadBytes); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_multipart", "message": err.Error()})
+		slog.Warn("files api: multipart parse failed", "error", err)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_multipart", "message": "multipart form could not be parsed"})
 		return
 	}
 
@@ -115,7 +117,8 @@ func (h *FilesAPIHandlers) Upload(w http.ResponseWriter, r *http.Request) {
 
 	fileRec, err := h.files.UploadFile(r.Context(), fh, uploadableType, uploadableID)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "upload_failed", "message": err.Error()})
+		slog.Warn("files api: upload failed", "error", err)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "upload_failed", "message": "upload failed"})
 		return
 	}
 
@@ -133,7 +136,8 @@ func (h *FilesAPIHandlers) List(w http.ResponseWriter, r *http.Request) {
 
 	files, err := h.files.GetFilesByEntity(r.Context(), uploadableType, uploadableID)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "list_failed", "message": err.Error()})
+		slog.Warn("files api: list failed", "error", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "list_failed", "message": "could not list files"})
 		return
 	}
 
@@ -163,7 +167,8 @@ func (h *FilesAPIHandlers) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.files.DeleteFile(r.Context(), domain.FileID(id)); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "delete_failed", "message": err.Error()})
+		slog.Warn("files api: delete failed", "error", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "delete_failed", "message": "could not delete file"})
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

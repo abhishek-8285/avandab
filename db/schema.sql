@@ -118,6 +118,13 @@ CREATE TABLE audit_logs (
     created_at  DATETIME NOT NULL DEFAULT (datetime('now')), location TEXT, tenant_id TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
+CREATE TABLE auth_one_time_tokens (
+    token_hash TEXT PRIMARY KEY,
+    email      TEXT NOT NULL,
+    purpose    TEXT NOT NULL,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT (datetime('now'))
+);
 CREATE TABLE availability_samples (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     sampled_at  DATETIME NOT NULL DEFAULT (datetime('now')),
@@ -1426,6 +1433,12 @@ CREATE TABLE load_board_listings (
     created_at              DATETIME NOT NULL DEFAULT (datetime('now')),
     updated_at              DATETIME NOT NULL DEFAULT (datetime('now')),
     CHECK (sto_id IS NOT NULL OR booking_id IS NOT NULL)
+);
+CREATE TABLE login_throttle (
+    email_key    TEXT PRIMARY KEY,
+    failures     INTEGER NOT NULL DEFAULT 0,
+    locked_until DATETIME,
+    updated_at   DATETIME NOT NULL DEFAULT (datetime('now'))
 );
 CREATE TABLE maintenance_plans (
     id                    TEXT PRIMARY KEY,
@@ -2841,6 +2854,8 @@ CREATE INDEX idx_alerts_user_status  ON alerts(user_id, status);
 CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at DESC);
 CREATE INDEX idx_audit_logs_record ON audit_logs(table_name, record_id);
 CREATE INDEX idx_audit_logs_tenant ON audit_logs(tenant_id);
+CREATE INDEX idx_auth_one_time_tokens_purpose_expires
+    ON auth_one_time_tokens(purpose, expires_at);
 CREATE INDEX idx_availability_samples_sampled_at
     ON availability_samples(sampled_at);
 CREATE INDEX idx_bookings_drop_facility
@@ -3046,6 +3061,8 @@ CREATE INDEX idx_loadboard_bids_listing
     ON load_board_bids(tenant_id, listing_id, status);
 CREATE INDEX idx_loadboard_tenant_status
     ON load_board_listings(tenant_id, status, expires_at);
+CREATE INDEX idx_login_throttle_updated
+    ON login_throttle(updated_at);
 CREATE INDEX idx_maint_plans_tenant_status  ON maintenance_plans(tenant_id, status);
 CREATE INDEX idx_maint_plans_tenant_vehicle ON maintenance_plans(tenant_id, vehicle_id);
 CREATE INDEX idx_maint_rec_vehicle ON maintenance_records(vehicle_id, performed_at);

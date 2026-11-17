@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -71,7 +72,7 @@ func (h *APIAuthHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 
 	user, isAdmin, err := h.userSvc.RegisterSelfServiceAccount(r.Context(), req.Email, req.Name, req.Phone, req.Password, req.CompanyName)
 	if err != nil {
-		apiError(w, http.StatusBadRequest, err.Error())
+		apiError(w, http.StatusBadRequest, registrationErrorMessage(err))
 		return
 	}
 	roleName := string(domain.RoleViewer)
@@ -166,6 +167,10 @@ func (h *APIAuthHandler) IssueToken(w http.ResponseWriter, r *http.Request) {
 		Password: req.Password,
 	})
 	if err != nil {
+		if errors.Is(err, auth.ErrAccountLocked) {
+			apiError(w, http.StatusTooManyRequests, auth.ErrAccountLocked.Error())
+			return
+		}
 		// Don't distinguish "not found" from "wrong password" to prevent enumeration.
 		apiError(w, http.StatusUnauthorized, "invalid credentials")
 		return
@@ -269,4 +274,20 @@ func (h *APIAuthHandler) linkDriverProfile(ctx context.Context, user domain.User
 	}
 
 	return tx.Commit()
+}
+
+// registrationErrorMessage maps known user-actionable failures to safe text
+// and hides transaction/storage internals behind a generic message.
+func registrationErrorMessage(err error) string {
+	switch {
+	case errors.Is(err, domain.ErrUserEmailExists):
+		return "an account with this email already exists"
+	case errors.Is(err, service.ErrSelfRegistrationDisabled):
+		return service.ErrSelfRegistrationDisabled.Error()
+	case errors.Is(err, auth.ErrWeakPassword), errors.Is(err, domain.ErrWeakPassword):
+		return "password must be at least 8 characters and include at least one letter and one digit"
+	default:
+		slog.Error("registration failed", "error", err)
+		return "registration failed; please try again"
+	}
 }

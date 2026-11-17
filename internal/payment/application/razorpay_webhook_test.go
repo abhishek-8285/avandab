@@ -503,7 +503,12 @@ func TestRazorpayVerify_ThenWebhook_NoDoubleCount(t *testing.T) {
 	ctx, uow, _, _, webhookUC, clock, idGen := setupWebhookUnitTest(t)
 	invID := seedInvoice(t, uow.repos.invoices, clock, 1000)
 
-	verifyUC := NewVerifyRazorpayPaymentUseCase(uow, webhookUC.recordUC, &fakeVerifier{ok: true}, "key_secret", clock)
+	gw := boundGateway(string(invID))
+	gw.payment.ID = "pay_v_1"
+	gw.payment.OrderID = "order_v_1"
+	gw.order.ID = "order_v_1"
+	verifyUC := NewVerifyRazorpayPaymentUseCase(uow, webhookUC.recordUC, &fakeVerifier{ok: true}, "key_secret", clock).
+		WithPaymentGateway(gw)
 	_ = idGen
 
 	verifyID, err := verifyUC.Execute(ctx, VerifyRazorpayPaymentCommand{

@@ -1,7 +1,7 @@
 # Migration Ownership Index
 
 Single source of truth for `db/migrations/` version numbers. Repo head is
-`00167_audit_logs_tenant_scope.sql`; next free slot is `00168`.
+`00189_kharcha_read_permission.sql`; next free slot is `00190`.
 (`00039_experiments.sql` remains TAKEN — never edit.) Every new migration
 appends the next free number. **This table is authoritative; spec §3 numbers
 MUST match it.**
@@ -181,7 +181,11 @@ which always allocate head-ward from the maximum above.
 | 00183 | Retention purge indexes: event_time/created_at/detected_at indexes on video_safety_events, video_livestream_sessions, breach_incidents, user_consents, privacy_dsar_requests so the business-retention worker deletes by range scan instead of table scan | Ops / published DPDP retention schedule |
 | 00184 | Stuck-payout alert rule: `settlement` alert source + `rule_payout_stuck` (critical, 1h cooldown, 3-step escalation) so payouts parked in initiated/processing past PAYOUT_STUCK_AFTER raise a real alert | Money movement safety / Spec 05 §4 |
 | 00185 | Driver KYC post-tenure retention: `drivers.deactivated_at`/`kyc_purged_at` + index; retention worker clears KYC fields/documents `KYC_POST_TENURE_RETENTION` (default 3y) after deactivation, per published DPDP schedule | Privacy / published retention schedule |
-| 00186+ | future specs | reserved |
+| 00186 | kharcha:approve seeded + granted to admin (1) and org_admin (6); dispatcher (2) and driver (5) denied by the RBAC ratchet; approve/reject routes moved off trips:update | Money-authorization fix |
+| 00187 | auth_one_time_tokens — persistent password-reset / email-verify tokens; HMAC hash of the token value only, email stored as the lookup key (PII) | Audit M1 |
+| 00188 | login_throttle — per-account failed-login lockout keyed by sha256(email) | Audit M3 |
+| 00189 | kharcha:read seeded + granted to admin (1), dispatcher (2), accountant (3), viewer (4), org_admin (6); driver (5) denied; kharcha dashboard/queue/ledger/API read routes moved off trips:read | Audit follow-up (H1 read surface) |
+| 00190+ | future specs | reserved |
 
 ## Implementation rule
 Pick the number from this table for your feature and update the spec's §3 to

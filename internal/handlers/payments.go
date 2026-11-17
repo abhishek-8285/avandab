@@ -64,7 +64,8 @@ func (h *PaymentHandlers) init() {
 			keySecret = h.Config.RazorpayKeySecret
 		}
 		client := razorpay.NewRazorpayClient(keyID, keySecret)
-		h.verifyUC = paymentapp.NewVerifyRazorpayPaymentUseCase(uowImpl, h.recordUC, client, keySecret, clockImpl)
+		h.verifyUC = paymentapp.NewVerifyRazorpayPaymentUseCase(uowImpl, h.recordUC, client, keySecret, clockImpl).
+			WithPaymentGateway(client)
 	}
 	if h.publicPay == nil {
 		h.publicPay = paymentapp.NewPublicPaymentQueries(h.DB)

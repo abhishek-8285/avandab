@@ -41,6 +41,7 @@ type SessionStore struct {
 	cookieName string
 	signer     *securecookie.SecureCookie
 	secure     bool
+	maxAge     time.Duration
 	validator  SessionValidator
 }
 
@@ -53,6 +54,15 @@ func NewSessionStore(cookieSecret string, secure bool) *SessionStore {
 		cookieName: "session",
 		signer:     securecookie.New([]byte(cookieSecret), nil),
 		secure:     secure,
+		maxAge:     24 * time.Hour,
+	}
+}
+
+// SetMaxAge overrides the session lifetime used for both the cookie
+// Max-Age and the signed Expires claim. Non-positive values are ignored.
+func (s *SessionStore) SetMaxAge(d time.Duration) {
+	if d > 0 {
+		s.maxAge = d
 	}
 }
 
@@ -90,11 +100,15 @@ func (s *SessionStore) CreateSession(w http.ResponseWriter, userID, roleName, na
 
 // CreateSessionWithToken creates and signs a session cookie bound to a server-side session token.
 func (s *SessionStore) CreateSessionWithToken(w http.ResponseWriter, userID, roleName, name, token string) {
+	maxAge := s.maxAge
+	if maxAge <= 0 {
+		maxAge = 24 * time.Hour
+	}
 	data := &SessionData{
 		UserID:  userID,
 		Role:    roleName,
 		Name:    name,
-		Expires: time.Now().Add(24 * time.Hour).Unix(),
+		Expires: time.Now().Add(maxAge).Unix(),
 		Token:   token,
 	}
 
@@ -103,9 +117,9 @@ func (s *SessionStore) CreateSessionWithToken(w http.ResponseWriter, userID, rol
 		Value:    s.mustEncode(data),
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   s.secure,
 		SameSite: http.SameSiteLaxMode,
-		MaxAge:   86400,
+		MaxAge:   int(maxAge.Seconds()),
 	})
 }
 
@@ -160,7 +174,7 @@ func (s *SessionStore) ClearSession(w http.ResponseWriter) {
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   s.secure,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	})
@@ -321,6 +335,17 @@ func CompareToken(token, hash string) bool {
 
 // HasPermission checks if a role can perform a given action on a resource.
 func HasPermission(roleID int64, resource string, action string) bool {
+	// Legacy helper: it models resource-level privilege, not per-action
+	// grants (Casbin is the authoritative authorizer). The action vocabulary is
+	// the RBAC registry's full set; anything outside it fails closed so a typo
+	// cannot silently grant access.
+	switch action {
+	case "read", "write", "create", "update", "delete", "export", "assign",
+		"approve", "cancel", "manage", "revoke", "sync", "read-self", "write-self",
+		"view", "list", "download", "upload", "verify", "close", "resolve":
+	default:
+		return false
+	}
 	permissions := map[string]map[int64]bool{
 		"users":     {1: true, 6: true, 2: false, 3: false, 4: false, 5: false},
 		"drivers":   {1: true, 6: true, 2: true, 3: false, 4: false, 5: false},
@@ -372,7 +397,9 @@ func RoleNameForID(roleID int64) domain.RoleName {
 	case 6:
 		return domain.RoleOrgAdmin
 	default:
-		return domain.RoleDispatcher
+		// Unknown role IDs must fail closed to the least-privileged role.
+		// Mapping them to dispatcher handed out write privileges.
+		return domain.RoleViewer
 	}
 }
 

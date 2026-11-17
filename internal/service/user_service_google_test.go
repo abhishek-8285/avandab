@@ -43,7 +43,7 @@ func newGoogleTestService(t *testing.T) *UserService {
 	t.Helper()
 	db := newGoogleTestDB(t)
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	cfg := &config.Config{AppEnv: "testing"}
+	cfg := &config.Config{AppEnv: "testing", MultiTenant: config.MultiTenantConfig{Enabled: true}}
 	svcs := NewServices(sqlite.NewRepository(db), cfg, logger, nil)
 	return svcs.Users
 }

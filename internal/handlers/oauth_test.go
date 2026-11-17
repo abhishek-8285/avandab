@@ -45,7 +45,7 @@ func newGoogleTestHarness(t *testing.T, oauthCfg *auth.OAuthConfig) (*GoogleOAut
 	tmpl, err := parseTemplates(&mockAuthSvc{})
 	require.NoError(t, err)
 
-	cfg := &config.Config{AppEnv: "development", CookieSecure: false}
+	cfg := &config.Config{AppEnv: "development", CookieSecure: false, MultiTenant: config.MultiTenantConfig{Enabled: true}}
 	db := newGoogleDB(t)
 	app := &App{
 		Templates:   tmpl,

@@ -10,6 +10,7 @@ package application
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -17,6 +18,10 @@ import (
 
 	"transport-app/internal/shared"
 )
+
+// ErrSelfApproval mirrors service.ErrSelfApproval for the agent facade: an
+// approval/rejection must never be decided by the driver who filed it.
+var ErrSelfApproval = errors.New("cannot approve or reject your own expense")
 
 // PendingExpense is one expense awaiting approval (tool JSON source).
 type PendingExpense struct {
@@ -88,6 +93,12 @@ func (s *AgentExpenseStore) Approve(ctx context.Context, tenantID shared.TenantI
 	tenant := string(tenantID)
 	now := time.Now()
 
+	// The agent path must not be a second, weaker door: enforce the same
+	// segregation of duties as KharchaService.ApproveExpense.
+	if err := assertNotSelfDecision(ctx, tx, expenseID, tenant, actor); err != nil {
+		return err
+	}
+
 	if s.fuelAuditEnforce(ctx, tenant) {
 		var auditStatus string
 		if err := tx.QueryRowContext(ctx,
@@ -122,8 +133,11 @@ func (s *AgentExpenseStore) Approve(ctx context.Context, tenantID shared.TenantI
 	if tripID != "" && driverID != "" {
 		var settlementID string
 		if err := tx.QueryRowContext(ctx,
-			`SELECT id FROM driver_settlements WHERE trip_id = $1 AND driver_id = $2`,
-			tripID, driverID).Scan(&settlementID); err == nil && settlementID != "" {
+			`SELECT s.id FROM driver_settlements s
+			 JOIN trips t ON t.id = s.trip_id
+			 WHERE s.trip_id = $1 AND s.driver_id = $2
+			   AND (t.tenant_id = $3 OR s.tenant_id = $3 OR COALESCE(s.tenant_id, '') = '')`,
+			tripID, driverID, tenant).Scan(&settlementID); err == nil && settlementID != "" {
 			_, _ = tx.ExecContext(ctx,
 				`UPDATE driver_settlements
 				 SET advances_kharcha = advances_kharcha + $1,
@@ -154,6 +168,9 @@ func (s *AgentExpenseStore) Reject(ctx context.Context, tenantID shared.TenantID
 	}
 	if s == nil || s.db == nil {
 		return sql.ErrNoRows
+	}
+	if err := assertNotSelfDecision(ctx, s.db, expenseID, string(tenantID), actor); err != nil {
+		return err
 	}
 	res, err := s.db.ExecContext(ctx,
 		`UPDATE driver_expenses
@@ -191,4 +208,40 @@ func (s *AgentExpenseStore) writeAudit(ctx context.Context, tenantID, action, ex
 		`INSERT INTO audit_logs (id, user_id, action, table_name, record_id, old_values, new_values, ip_address, location, tenant_id)
 		 VALUES (?, NULL, ?, 'driver_expenses', ?, NULL, ?, NULL, NULL, ?)`,
 		uuid.NewString(), action, expenseID, newValues, tenantID)
+}
+
+// rowQuerier is satisfied by both *sql.DB and *sql.Tx so the self-decision
+// check can run inside the approval transaction.
+type rowQuerier interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
+// assertNotSelfDecision refuses an agent approval/rejection when the acting
+// user resolves to the driver who filed the claim (drivers.id == users.id or
+// matching email, the legacy attribution rule). The same rule is enforced in
+// internal/service.KharchaService so the agent cannot bypass it.
+func assertNotSelfDecision(ctx context.Context, q rowQuerier, expenseID, tenantID, actor string) error {
+	if actor == "" || actor == "system" {
+		return errors.New("approval actor is required")
+	}
+	var n int
+	err := q.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM driver_expenses de
+		JOIN drivers d ON (d.id = de.driver_id OR d.id = de.requested_by)
+		WHERE de.id = $1 AND de.tenant_id = $2
+		  AND d.tenant_id = $2
+		  AND (
+		    d.id = $3
+		    OR (d.email IS NOT NULL AND LOWER(d.email) = (
+		        SELECT LOWER(u.email) FROM users u WHERE u.id = $3
+		    ))
+		  )`, expenseID, tenantID, actor).Scan(&n)
+	if err != nil {
+		return err
+	}
+	if n > 0 {
+		return ErrSelfApproval
+	}
+	return nil
 }

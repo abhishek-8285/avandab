@@ -6,7 +6,7 @@
 
 **Stack** (`docs/01`): pure-Go binary, Chi router, SQLite WAL (`modernc.org/sqlite`), goose migrations, server-rendered HTML (`html/template`, HTMX islands on 13/162 templates, hand-rolled SSE/fetch for live surfaces; Datastar JS vendored but unloaded) + live map (OSM/Google gl=IN tiles, config-driven), in-memory event bus + transactional outbox, TCP `:5023` GPS ingest, MQTT `:1883`, Expo SDK 52 mobile app.
 
-**Migrations:** `db/migrations/` = 179 files, head `00185_driver_kyc_retention.sql`; `db/migrations_pg/` mirrors at 179. Next free slot **`00186`**. *(2026-11-10: verified on disk; index header matches.)* `00068–00072` confirmed ABSENT (RESERVED-UNBUILT still true).
+**Migrations:** `db/migrations/` = 183 files, head `00189_kharcha_read_permission.sql`; `db/migrations_pg/` mirrors at 183. Next free slot **`00190`**. *(2026-11-17: kharcha RBAC split + audit migrations 00186–00189; index header matches.)* `00068–00072` confirmed ABSENT (RESERVED-UNBUILT still true).
 
 **Recent direction:** tenant fail-closed hardening + `DefaultTenant` fallback removal (`e74c040`); vehicle compliance hard-block restore (`e9c23ad`); founder-signal tenant scoping; PG dual-engine parity + CI gate; per-tenant company profiles (`00125`); self-registration → `org_admin`.
 

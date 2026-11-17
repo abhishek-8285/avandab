@@ -461,9 +461,9 @@ func TestRoleNameForID_Complete(t *testing.T) {
 	assert.Equal(t, "viewer", string(RoleNameForID(4)))
 	assert.Equal(t, "driver", string(RoleNameForID(5)))
 	assert.Equal(t, "org_admin", string(RoleNameForID(6)))
-	assert.Equal(t, "dispatcher", string(RoleNameForID(99)), "default should be dispatcher")
-	assert.Equal(t, "dispatcher", string(RoleNameForID(0)))
-	assert.Equal(t, "dispatcher", string(RoleNameForID(-1)))
+	assert.Equal(t, "viewer", string(RoleNameForID(99)), "unknown role IDs must fail closed to viewer")
+	assert.Equal(t, "viewer", string(RoleNameForID(0)))
+	assert.Equal(t, "viewer", string(RoleNameForID(-1)))
 }
 
 func TestGenerateSecureToken_Properties(t *testing.T) {

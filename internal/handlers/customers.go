@@ -145,6 +145,7 @@ func (h *CustomerHandlers) New(w http.ResponseWriter, r *http.Request) {
 func (h *CustomerHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	// Support both multipart (file upload) and urlencoded (tests / simple forms)
 	if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
+		r.Body = http.MaxBytesReader(w, r.Body, maxMultipartBodyBytes)
 		if err := r.ParseMultipartForm(10 << 20); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -267,6 +268,7 @@ func (h *CustomerHandlers) Edit(w http.ResponseWriter, r *http.Request) {
 
 func (h *CustomerHandlers) Update(w http.ResponseWriter, r *http.Request) {
 	if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
+		r.Body = http.MaxBytesReader(w, r.Body, maxMultipartBodyBytes)
 		if err := r.ParseMultipartForm(10 << 20); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

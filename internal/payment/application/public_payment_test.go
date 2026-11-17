@@ -193,11 +193,10 @@ func TestPublicPaymentQueries_ResolvePublicInvoice(t *testing.T) {
 	assert.Equal(t, "inv-1", canonical)
 	assert.Equal(t, "1", tenant)
 
-	// The link may carry the invoice NUMBER instead of the id.
-	canonical, tenant, err = reads.ResolvePublicInvoice(ctx, "INV-2026-002")
-	require.NoError(t, err)
-	assert.Equal(t, "inv-2", canonical)
-	assert.Equal(t, "2", tenant, "tenant is derived from the invoice row (the link is the capability)")
+	// Sequential invoice numbers are enumerable, so a /pay/<number> link must
+	// not resolve: only the random UUID id is a capability (audit M11).
+	_, _, err = reads.ResolvePublicInvoice(ctx, "INV-2026-002")
+	assert.ErrorIs(t, err, sql.ErrNoRows)
 
 	// Unknown reference: handler maps sql.ErrNoRows to 404.
 	_, _, err = reads.ResolvePublicInvoice(ctx, "inv-ghost")
@@ -277,10 +276,10 @@ func TestPublicPaymentQueries_LoadPublicPay_UnpaidLink(t *testing.T) {
 	assert.Empty(t, data.Payments)
 	assert.Nil(t, data.LatestPayment)
 
-	// The link may carry the invoice number too.
-	byNumber, err := reads.LoadPublicPay(ctx, "INV-2026-001")
-	require.NoError(t, err)
-	assert.Equal(t, "inv-unpaid", byNumber.Invoice.ID)
+	// Sequential invoice numbers are enumerable: the public page must not
+	// resolve them, only the UUID id (audit M11).
+	_, err = reads.LoadPublicPay(ctx, "INV-2026-001")
+	assert.ErrorIs(t, err, sql.ErrNoRows)
 
 	// Unknown link -> sql.ErrNoRows (handler maps to 404).
 	_, err = reads.LoadPublicPay(ctx, "inv-ghost")
@@ -302,9 +301,11 @@ func TestPublicPaymentQueries_LoadPublicPay_FallbackLineItemAndCompanyDefaults(t
 	require.NoError(t, err)
 
 	assert.Equal(t, "Pay Invoice INV-BARE-001 · Avandab Logistics Network", data.Title)
+	// H2: unknown/tenantless invoices fall back to the neutral house identity,
+	// never to the platform-global company_settings row.
 	assert.Equal(t, "Avandab Logistics Network", data.Company.Name)
-	assert.Equal(t, "27AAACA1234A1Z5", data.Company.GSTIN)
-	assert.Equal(t, "101 Freight Terminal Hub, Mumbai, Maharashtra", data.Company.Address)
+	assert.Empty(t, data.Company.GSTIN)
+	assert.Empty(t, data.Company.Address)
 	assert.Equal(t, "27", data.Company.StateCode)
 	assert.Empty(t, data.Company.Phone)
 	assert.Empty(t, data.Company.Email)
@@ -426,7 +427,12 @@ func TestPublicPaymentQueries_TenantDerivationAndInvoiceIsolation(t *testing.T) 
 	require.NoError(t, err)
 	// Branding follows the invoice tenant, not the handler acting tenant.
 	assert.Equal(t, "Second Tenant Carriers", data.Company.Name)
-	assert.Equal(t, "27AAACA1234A1Z5", data.Company.GSTIN, "other branding fields still come from the legacy global settings")
+	// H2: a tenant without its own profile must NOT inherit the platform-global
+	// GSTIN/address from company_settings id=1 - that leaked another org's
+	// identity onto the public page.
+	assert.Empty(t, data.Company.GSTIN)
+	assert.Empty(t, data.Company.Address)
+	assert.Equal(t, "27", data.Company.StateCode)
 	assert.Empty(t, data.Invoice.TenantID)
 	require.Len(t, data.LineItems, 1)
 	assert.Equal(t, "Tenant two freight", data.LineItems[0].Description)

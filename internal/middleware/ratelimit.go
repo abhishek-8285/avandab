@@ -81,7 +81,14 @@ func (rl *rateLimiter) reapLoop(window time.Duration) {
 // can run unthrottled. Production never sets these vars, so the limiter stays
 // active there.
 func rateLimitDisabled() bool {
-	return os.Getenv("RATE_LIMIT_DISABLED") == "1" || os.Getenv("AVANDAB_TEST_MODE") == "1"
+	// Test switches must never disable deployed limits. Empty APP_ENV is the
+	// documented development default; only development/testing may opt out.
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV"))) {
+	case "", "development", "testing":
+		return os.Getenv("RATE_LIMIT_DISABLED") == "1" || os.Getenv("AVANDAB_TEST_MODE") == "1"
+	default:
+		return false
+	}
 }
 
 // RateLimit returns middleware that limits requests per client IP to

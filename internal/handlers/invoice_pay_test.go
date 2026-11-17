@@ -125,6 +125,9 @@ func setupPublicPayTest(t *testing.T) (*sql.DB, *App, *PaymentHandlers, string, 
 
 	unpaidInvID := "inv_unpaid_101"
 	paidInvID := "inv_paid_202"
+	// Verify must read Razorpay's captured payment/order server-side; supply a
+	// deterministic fake instead of the network client.
+	verifyUC.WithPaymentGateway(&publicPayTestGateway{invoiceID: unpaidInvID})
 
 	// Create unpaid invoice (10000 subtotal + 1800 tax = 11800 total)
 	tripIDVal := "trip_pay_1"
@@ -190,6 +193,33 @@ func setupPublicPayTest(t *testing.T) (*sql.DB, *App, *PaymentHandlers, string, 
 	require.NoError(t, err)
 
 	return db, app, h, unpaidInvID, paidInvID
+}
+
+// publicPayTestGateway fakes Razorpay's server-side reads for the public pay
+// handler tests: one captured payment bound to the unpaid invoice's order.
+type publicPayTestGateway struct {
+	invoiceID string
+}
+
+func (g *publicPayTestGateway) FetchPayment(paymentID string) (*razorpay.PaymentDetails, error) {
+	return &razorpay.PaymentDetails{
+		ID:       paymentID,
+		OrderID:  "order_test_999",
+		Status:   "captured",
+		Currency: "INR",
+		Amount:   1180000,
+	}, nil
+}
+
+func (g *publicPayTestGateway) FetchOrder(orderID string) (*razorpay.OrderDetails, error) {
+	return &razorpay.OrderDetails{
+		ID:       orderID,
+		Status:   "paid",
+		Currency: "INR",
+		Amount:   1180000,
+		Receipt:  "rcpt_" + g.invoiceID,
+		Notes:    map[string]string{"invoice_id": g.invoiceID},
+	}, nil
 }
 
 type mockOrderCreator struct {

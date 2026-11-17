@@ -329,16 +329,30 @@ func (r *paymentRepository) SetRazorpayFields(ctx context.Context, id aggregate.
 }
 
 const findRazorpayPaymentSQL = `
-SELECT id FROM payments WHERE tenant_id = $1 AND razorpay_payment_id = $2 LIMIT 1
+SELECT id, tenant_id FROM payments
+WHERE razorpay_payment_id = $1
+ORDER BY CASE WHEN tenant_id = $2 THEN 0 ELSE 1 END
+LIMIT 1
 `
 
+// ErrRazorpayPaymentCrossTenant reports a Razorpay payment ID already recorded
+// for a different tenant. Dedup is platform-scoped: a gateway payment can only
+// ever fund one invoice, and replaying it across tenants must fail closed.
+var ErrRazorpayPaymentCrossTenant = errors.New("razorpay payment is already recorded for another tenant")
+
 // ExistsRazorpayPayment returns the payment ID recorded against a Razorpay
-// payment ID, or sql.ErrNoRows when none exists.
+// payment ID, or sql.ErrNoRows when none exists. The lookup is platform-scoped;
+// a row owned by another tenant returns ErrRazorpayPaymentCrossTenant instead
+// of leaking the foreign payment ID. A same-tenant row wins if legacy data
+// contains the same payment ID under more than one tenant.
 func (r *paymentRepository) ExistsRazorpayPayment(ctx context.Context, tenantID shared.TenantID, paymentID string) (aggregate.PaymentID, error) {
-	var id string
-	err := r.exec(ctx).QueryRowContext(ctx, findRazorpayPaymentSQL, string(tenantID), paymentID).Scan(&id)
+	var id, rowTenant string
+	err := r.exec(ctx).QueryRowContext(ctx, findRazorpayPaymentSQL, paymentID, string(tenantID)).Scan(&id, &rowTenant)
 	if err != nil {
 		return "", err
+	}
+	if shared.TenantID(rowTenant) != tenantID {
+		return "", ErrRazorpayPaymentCrossTenant
 	}
 	return aggregate.PaymentID(id), nil
 }

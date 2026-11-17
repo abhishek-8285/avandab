@@ -2,7 +2,10 @@ package service
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
+	"strings"
 	"time"
 
 	"transport-app/internal/auth"
@@ -17,8 +20,8 @@ type AuthService struct {
 }
 
 // tenantActive rejects authentication for users whose tenant organization is
-// not 'active'. A user with no tenant row is treated as legacy/default and
-// allowed through.
+// not 'active'. A user whose tenant row is missing fails closed (ErrTenantMissing):
+// a deleted or half-provisioned org must never authenticate.
 func (s *AuthService) tenantActive(ctx context.Context, userID string) error {
 	getter, ok := s.store.(repository.DBGetter)
 	if !ok || getter == nil {
@@ -32,7 +35,10 @@ func (s *AuthService) tenantActive(ctx context.Context, userID string) error {
 	var status string
 	if err := row.Scan(&status); err != nil {
 		if err == sql.ErrNoRows {
-			return nil
+			// Fail closed: a user whose tenant row is absent must not log in.
+			// The previous nil return treated a deleted/suspended-without-row
+			// organization as legacy and allowed authentication.
+			return auth.ErrTenantMissing
 		}
 		return err
 	}
@@ -40,6 +46,113 @@ func (s *AuthService) tenantActive(ctx context.Context, userID string) error {
 		return auth.ErrTenantSuspended
 	}
 	return nil
+}
+
+const (
+	loginMaxFailures = 5
+	loginLockout     = 15 * time.Minute
+	loginAttemptTTL  = 24 * time.Hour
+)
+
+// loginThrottleKey hashes the normalized email so raw addresses are not
+// stored in the throttle table.
+func loginThrottleKey(email string) string {
+	sum := sha256.Sum256([]byte(strings.ToLower(strings.TrimSpace(email))))
+	return hex.EncodeToString(sum[:])
+}
+
+// sessionTTL is the configured session lifetime for BOTH the cookie Max-Age
+// (auth.SessionStore.SetMaxAge) and the DB session row. Defaults to 24h when
+// the service has no config (tests/fakes) or SESSION_MAX_AGE was not set.
+func (s *AuthService) sessionTTL() time.Duration {
+	if s.cfg != nil && s.cfg.SessionMaxAge > 0 {
+		return s.cfg.SessionMaxAge
+	}
+	return 24 * time.Hour
+}
+
+func (s *AuthService) loginThrottleDB() *sql.DB {
+	getter, ok := s.store.(repository.DBGetter)
+	if !ok || getter == nil {
+		return nil
+	}
+	return getter.DB()
+}
+
+// loginLocked reports whether the account is inside a lockout window. A
+// throttle storage error is logged and treated as unlocked: a database
+// hiccup must not lock every operator out, and per-IP limits still apply.
+func (s *AuthService) loginLocked(ctx context.Context, email string) bool {
+	db := s.loginThrottleDB()
+	if db == nil {
+		return false
+	}
+	var lockedUntil sql.NullTime
+	err := db.QueryRowContext(ctx,
+		"SELECT locked_until FROM login_throttle WHERE email_key = $1",
+		loginThrottleKey(email)).Scan(&lockedUntil)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			s.log.Warn("login throttle lookup failed", "error", err)
+		}
+		return false
+	}
+	return lockedUntil.Valid && time.Now().Before(lockedUntil.Time)
+}
+
+// recordLoginFailure atomically increments the failure counter, locks after
+// loginMaxFailures, and expires stale counters after loginAttemptTTL.
+//
+// The increment is a single upsert with RETURNING: the previous
+// select-then-write lost increments under concurrent attempts, so a parallel
+// credential-stuffing burst (the exact M3 threat model) could exceed the
+// failure budget without ever tripping the lock.
+func (s *AuthService) recordLoginFailure(ctx context.Context, email string) {
+	db := s.loginThrottleDB()
+	if db == nil {
+		return
+	}
+	key := loginThrottleKey(email)
+	now := time.Now()
+
+	var failures int
+	err := db.QueryRowContext(ctx, `
+		INSERT INTO login_throttle (email_key, failures, locked_until, updated_at)
+		VALUES ($1, 1, NULL, $2)
+		ON CONFLICT (email_key) DO UPDATE SET
+		  failures = CASE
+		    WHEN login_throttle.updated_at < $3 THEN 1
+		    ELSE login_throttle.failures + 1
+		  END,
+		  updated_at = $2
+		RETURNING failures`, key, now, now.Add(-loginAttemptTTL)).Scan(&failures)
+	if err != nil {
+		s.log.Warn("login throttle write failed", "error", err)
+		return
+	}
+	if failures >= loginMaxFailures {
+		if _, err := db.ExecContext(ctx,
+			"UPDATE login_throttle SET locked_until = $1 WHERE email_key = $2", now.Add(loginLockout), key); err != nil {
+			s.log.Warn("login throttle lock failed", "error", err)
+		}
+	}
+
+	// Opportunistic cleanup of stale counters (indexed by updated_at). A
+	// failure here must not break login, but it must not vanish silently.
+	if _, err := db.ExecContext(ctx, "DELETE FROM login_throttle WHERE updated_at < $1", now.Add(-loginAttemptTTL)); err != nil {
+		s.log.Warn("login throttle cleanup failed", "error", err)
+	}
+}
+
+func (s *AuthService) clearLoginFailures(ctx context.Context, email string) {
+	db := s.loginThrottleDB()
+	if db == nil {
+		return
+	}
+	if _, err := db.ExecContext(ctx,
+		"DELETE FROM login_throttle WHERE email_key = $1", loginThrottleKey(email)); err != nil {
+		s.log.Warn("login throttle clear failed", "error", err)
+	}
 }
 
 // LoginRequest contains the credentials for login.
@@ -57,13 +170,19 @@ type LoginResult struct {
 
 // Login authenticates a user by email and password, creating a session.
 func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginResult, error) {
+	if s.loginLocked(ctx, req.Email) {
+		return nil, auth.ErrAccountLocked
+	}
+
 	user, err := s.store.GetUserByEmail(ctx, req.Email)
 	if err != nil {
+		s.recordLoginFailure(ctx, req.Email)
 		s.log.Warn("login failed: invalid credentials")
 		return nil, domain.ErrInvalidCredentials
 	}
 
 	if err := auth.CheckPassword(req.Password, user.PasswordHash); err != nil {
+		s.recordLoginFailure(ctx, req.Email)
 		s.log.Warn("login failed: invalid credentials", "user_id", user.ID)
 		return nil, domain.ErrInvalidCredentials
 	}
@@ -84,6 +203,8 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginResult
 		return nil, auth.ErrConsentWithdrawn
 	}
 
+	s.clearLoginFailures(ctx, req.Email)
+
 	// Update last login
 	if _, err := s.store.UpdateUserLastLogin(ctx, user.ID); err != nil {
 		s.log.Warn("failed to update last login", "user_id", user.ID, "error", err)
@@ -100,7 +221,7 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginResult
 		ID:        domain.SessionID(generateID()),
 		UserID:    user.ID,
 		TokenHash: tokenHash,
-		ExpiresAt: time.Now().Add(24 * time.Hour),
+		ExpiresAt: time.Now().Add(s.sessionTTL()),
 	}
 	if _, err := s.store.CreateSession(ctx, session); err != nil {
 		return nil, err
@@ -144,10 +265,7 @@ func (s *AuthService) CreateSessionForUser(ctx context.Context, userID domain.Us
 	}
 	tokenHash := auth.HashToken(token)
 
-	maxAge := 24 * time.Hour
-	if s.cfg != nil && s.cfg.SessionMaxAge > 0 {
-		maxAge = s.cfg.SessionMaxAge
-	}
+	maxAge := s.sessionTTL()
 
 	session := domain.Session{
 		ID:        domain.SessionID(generateID()),

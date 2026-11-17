@@ -30,9 +30,12 @@ func newRegisterTestApp(t *testing.T) *App {
 	tmpl, err := parseTemplates(&mockAuthSvc{})
 	require.NoError(t, err)
 	authStore := auth.NewSessionStore("test-secret-key-that-is-at-least-32-chars-long", false)
+	// Registration tests exercise the multi-tenant signup path; production
+	// single-tenant deployments refuse self-registration instead.
 	cfg := &config.Config{
 		AppEnv:       "testing",
 		CookieSecure: false,
+		MultiTenant:  config.MultiTenantConfig{Enabled: true},
 	}
 	services := service.NewServices(repoSQLite.NewRepository(db), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), events.NewInMemoryBus())
 	app := &App{

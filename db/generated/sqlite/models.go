@@ -133,6 +133,14 @@ type AuditLog struct {
 	TenantID  sql.NullString `json:"tenant_id"`
 }
 
+type AuthOneTimeToken struct {
+	TokenHash string    `json:"token_hash"`
+	Email     string    `json:"email"`
+	Purpose   string    `json:"purpose"`
+	ExpiresAt time.Time `json:"expires_at"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type AvailabilitySample struct {
 	ID        int64     `json:"id"`
 	SampledAt time.Time `json:"sampled_at"`
@@ -1497,6 +1505,13 @@ type LoadBoardListing struct {
 	ExpiresAt           time.Time      `json:"expires_at"`
 	CreatedAt           time.Time      `json:"created_at"`
 	UpdatedAt           time.Time      `json:"updated_at"`
+}
+
+type LoginThrottle struct {
+	EmailKey    string       `json:"email_key"`
+	Failures    int64        `json:"failures"`
+	LockedUntil sql.NullTime `json:"locked_until"`
+	UpdatedAt   time.Time    `json:"updated_at"`
 }
 
 type MaintenancePlan struct {

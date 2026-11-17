@@ -83,6 +83,7 @@ func (h *SettingsHandlers) SaveOnboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartBodyBytes)
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		if err := r.ParseForm(); err != nil {
 			h.failPage(w, r, err, http.StatusBadRequest, "Invalid Form Submission")
@@ -402,6 +403,7 @@ func (h *SettingsHandlers) Update(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartBodyBytes)
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		h.failPage(w, r, err, http.StatusBadRequest, "Invalid Form Submission")
 		return

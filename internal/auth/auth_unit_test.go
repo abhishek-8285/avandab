@@ -212,6 +212,14 @@ func TestHasPermissionAndRoleMapping(t *testing.T) {
 		t.Fatalf("expected role name org_admin for ID 6")
 	}
 
+	if auth.RoleNameForID(99) != "viewer" {
+		t.Fatalf("unknown role IDs must fail closed to viewer, got %s", auth.RoleNameForID(99))
+	}
+
+	if auth.HasPermission(1, "users", "typo") {
+		t.Fatalf("unknown actions must fail closed")
+	}
+
 	if auth.RoleIDForName("admin") != 1 {
 		t.Fatalf("expected role ID 1 for admin")
 	}

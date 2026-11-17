@@ -20,12 +20,13 @@ import (
 )
 
 const agentKharchaTestSchema = `
-CREATE TABLE trips (id TEXT PRIMARY KEY, trip_number TEXT);
-CREATE TABLE drivers (id TEXT PRIMARY KEY, first_name TEXT, last_name TEXT);
-CREATE TABLE driver_expenses (id TEXT PRIMARY KEY, trip_id TEXT, driver_id TEXT, expense_type TEXT NOT NULL,
+CREATE TABLE trips (id TEXT PRIMARY KEY, trip_number TEXT, tenant_id TEXT);
+CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT);
+CREATE TABLE drivers (id TEXT PRIMARY KEY, first_name TEXT, last_name TEXT, email TEXT, tenant_id TEXT);
+CREATE TABLE driver_expenses (id TEXT PRIMARY KEY, trip_id TEXT, driver_id TEXT, requested_by TEXT, expense_type TEXT NOT NULL,
  category TEXT, amount REAL NOT NULL, description TEXT, status TEXT, tenant_id TEXT NOT NULL,
  approved_by TEXT, approved_at DATETIME, rejected_reason TEXT, audit_status TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE driver_settlements (id TEXT PRIMARY KEY, trip_id TEXT, driver_id TEXT, advances_kharcha REAL DEFAULT 0, net_payout REAL DEFAULT 0);
+CREATE TABLE driver_settlements (id TEXT PRIMARY KEY, trip_id TEXT, driver_id TEXT, advances_kharcha REAL DEFAULT 0, net_payout REAL DEFAULT 0, tenant_id TEXT);
 CREATE TABLE settlement_lines (id TEXT PRIMARY KEY, settlement_id TEXT, trip_id TEXT, line_type TEXT, label TEXT, amount REAL, ref_id TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE company_config (tenant_id TEXT, key TEXT, value TEXT, PRIMARY KEY (tenant_id, key));
 CREATE TABLE audit_logs (id TEXT PRIMARY KEY, user_id TEXT, action TEXT, table_name TEXT, record_id TEXT, old_values TEXT, new_values TEXT, ip_address TEXT, location TEXT, tenant_id TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
@@ -44,14 +45,14 @@ func newAgentKharchaTestDB(t *testing.T) *sql.DB {
 
 func seedAgentKharcha(t *testing.T, db *sql.DB, tenant string) {
 	t.Helper()
-	_, err := db.Exec(`INSERT OR IGNORE INTO trips (id, trip_number) VALUES ('trip-1','TRP-1')`)
+	_, err := db.Exec(`INSERT OR IGNORE INTO trips (id, trip_number, tenant_id) VALUES ('trip-1','TRP-1', 'tenant-a')`)
 	require.NoError(t, err)
-	_, err = db.Exec(`INSERT OR IGNORE INTO drivers (id, first_name, last_name) VALUES ('drv-1','Asha','Rao')`)
+	_, err = db.Exec(`INSERT OR IGNORE INTO drivers (id, first_name, last_name, email, tenant_id) VALUES ('drv-1','Asha','Rao','asha@driver.test', 'tenant-a')`)
 	require.NoError(t, err)
 	_, err = db.Exec(`INSERT INTO driver_expenses (id, trip_id, driver_id, expense_type, category, amount, description, status, tenant_id)
 		VALUES ('exp-1', 'trip-1', 'drv-1', 'toll', 'toll', 250, 'Toll', 'pending', ?)`, tenant)
 	require.NoError(t, err)
-	_, err = db.Exec(`INSERT INTO driver_settlements (id, trip_id, driver_id, advances_kharcha, net_payout) VALUES ('stl-1','trip-1','drv-1', 10, 1000)`)
+	_, err = db.Exec(`INSERT INTO driver_settlements (id, trip_id, driver_id, advances_kharcha, net_payout, tenant_id) VALUES ('stl-1','trip-1','drv-1', 10, 1000, 'tenant-a')`)
 	require.NoError(t, err)
 }
 
@@ -136,4 +137,53 @@ func TestAgentExpenseStore_FuelGateAndReject(t *testing.T) {
 	assert.Equal(t, 1, audits)
 	err = store.Reject(ctx, shared.TenantID("tenant-a"), "exp-1", "admin-1", "again")
 	require.Error(t, err)
+}
+
+// TestAgentExpenseStore_RefusesSelfApproval pins the agent-path parity with
+// KharchaService: an acting driver who is the claimant cannot approve or
+// reject their own claim even when the tool permission was granted.
+func TestAgentExpenseStore_RefusesSelfApproval(t *testing.T) {
+	db := newAgentKharchaTestDB(t)
+	ctx := context.Background()
+	seedAgentKharcha(t, db, "tenant-a")
+	_, err := db.Exec(`INSERT INTO users (id, email) VALUES ('drv-1','asha@driver.test')`)
+	require.NoError(t, err)
+	store := NewAgentExpenseStore(db)
+
+	err = store.Approve(ctx, shared.TenantID("tenant-a"), "exp-1", "drv-1")
+	require.ErrorIs(t, err, ErrSelfApproval)
+	var status string
+	require.NoError(t, db.QueryRow(`SELECT status FROM driver_expenses WHERE id='exp-1'`).Scan(&status))
+	assert.Equal(t, "pending", status, "self-approval must not transition the row")
+
+	err = store.Reject(ctx, shared.TenantID("tenant-a"), "exp-1", "drv-1", "self")
+	require.ErrorIs(t, err, ErrSelfApproval)
+
+	// A different actor is still allowed.
+	require.NoError(t, store.Approve(ctx, shared.TenantID("tenant-a"), "exp-1", "admin-1"))
+}
+
+// TestAgentExpenseStore_DoesNotTouchForeignTenantSettlement proves the
+// settlement deduction is tenant-guarded: a claim in tenant-a that references
+// tenant-b's trip/driver ids must not mutate tenant-b's payout.
+func TestAgentExpenseStore_DoesNotTouchForeignTenantSettlement(t *testing.T) {
+	db := newAgentKharchaTestDB(t)
+	ctx := context.Background()
+	seedAgentKharcha(t, db, "tenant-a")
+	_, err := db.Exec(`INSERT INTO trips (id, trip_number, tenant_id) VALUES ('trip-b','TRP-B', 'tenant-b')`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO driver_settlements (id, trip_id, driver_id, advances_kharcha, net_payout, tenant_id)
+		VALUES ('stl-b','trip-b','drv-b', 0, 500, 'tenant-b')`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO driver_expenses (id, trip_id, driver_id, expense_type, category, amount, status, tenant_id)
+		VALUES ('exp-forged','trip-b','drv-b','toll','toll',300,'pending','tenant-a')`)
+	require.NoError(t, err)
+
+	store := NewAgentExpenseStore(db)
+	require.NoError(t, store.Approve(ctx, shared.TenantID("tenant-a"), "exp-forged", "admin-1"))
+
+	var advances, payout float64
+	require.NoError(t, db.QueryRow(`SELECT advances_kharcha, net_payout FROM driver_settlements WHERE id='stl-b'`).Scan(&advances, &payout))
+	assert.Zero(t, advances, "foreign tenant settlement must not be adjusted")
+	assert.Equal(t, 500.0, payout, "foreign tenant payout must not change")
 }

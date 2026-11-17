@@ -521,9 +521,11 @@ func TestPaymentRepository_RazorpayFields(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, paymentagg.PaymentID("pay-rzp-1"), id)
 
-	// tenant isolation
+	// platform-scope dedup: the same Razorpay payment ID cannot be claimed by
+	// another tenant; the lookup reports a cross-tenant conflict instead of
+	// pretending the payment is unseen.
 	_, err = repo.ExistsRazorpayPayment(ctx, "2", "pay_razor_123")
-	require.ErrorIs(t, err, sql.ErrNoRows)
+	require.ErrorIs(t, err, ErrRazorpayPaymentCrossTenant)
 
 	// verify persisted via raw query
 	var orderID, payID, sig sql.NullString
