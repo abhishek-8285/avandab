@@ -61,23 +61,17 @@ func handlerSQLCaps() map[string]int {
 }
 
 // handlerLineCaps pins the current god-files; they may only shrink.
-//
-// Re-baselined 2026-11-17 for the security audit increments 00186-00189:
-// kharcha.go (+86: session-bound expense filing + driver/trip ownership checks),
-// app.go (+24), auth.go (+20) and public_payment.go (+9: M11 invoice-number
-// enumeration guard). Raw SQL for all four stays at 0 - the queries live in
-// internal/kharcha/application and internal/payment/application.
 func handlerLineCaps() map[string]int {
 	return map[string]int{
-		"trips.go":                1941,
-		"app.go":                  1789,
+		"trips.go":                1931,
+		"app.go":                  1765,
 		"invoices_consolidate.go": 920,
 		"sto.go":                  1287,
 		"invoices.go":             952,
 		"zmotm_reports.go":        476,
 		"reports.go":              1146,
 		"maintenance.go":          1081,
-		"auth.go":                 1031,
+		"auth.go":                 1011,
 		"share.go":                826,
 		"vehicles.go":             770,
 		"maintenance_plans.go":    898,
@@ -85,14 +79,14 @@ func handlerLineCaps() map[string]int {
 		"customer_portal.go":      477,
 		"assignment.go":           78,
 		"tenants.go":              465,
-		"public_payment.go":       314,
+		"public_payment.go":       305,
 		"tenant_purge.go":         56,
 		"routes.go":               335,
 		"sos.go":                  165,
 		"ewaybill.go":             371,
 		"console.go":              321,
 		"work_orders_web.go":      139,
-		"kharcha.go":              591,
+		"kharcha.go":              505,
 		"driver_money.go":         160,
 		"kharcha_verify.go":       61,
 		"mqtt_credentials.go":     135,

@@ -1667,13 +1667,6 @@ func (a *App) renderErrorInfo(w http.ResponseWriter, r *http.Request, info Error
 	}
 }
 
-// templateFailure logs the template execution error server-side and answers
-// a generic 500 so internal template paths/errors never reach the client.
-func templateFailure(w http.ResponseWriter, templateName string, err error) {
-	slog.Error("template execution failed", "template", templateName, "error", err)
-	http.Error(w, "Internal server error", http.StatusInternalServerError)
-}
-
 // renderError renders a friendly user-facing error screen using error.html and layout.html.
 func (a *App) renderError(w http.ResponseWriter, statusCode int, title string, message string, user *auth.SessionData) {
 	a.renderErrorInfo(w, nil, ErrorInfo{
@@ -1768,21 +1761,4 @@ func (a *App) MountPWARoutes(r chi.Router) {
 	}
 	r.Get("/sw.js", swHandler)
 	r.Head("/sw.js", swHandler)
-}
-
-// abbrString truncates s to at most max runes, appending an ellipsis. Rune
-// slicing keeps multi-byte scripts (Hindi) intact; the previous byte slice
-// could split a UTF-8 sequence and render replacement characters.
-func abbrString(s string, max int) string {
-	if max < 0 {
-		max = 0
-	}
-	r := []rune(s)
-	if len(r) <= max {
-		return s
-	}
-	if max <= 3 {
-		return string(r[:max]) + "..."
-	}
-	return string(r[:max-3]) + "..."
 }
