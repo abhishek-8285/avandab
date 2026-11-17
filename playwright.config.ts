@@ -43,6 +43,10 @@ export default defineConfig({
     command: 'go run ./cmd/server/',
     env: {
       PORT: '8094',
+      // E2E is a development-mode run: the server refuses to boot when APP_ENV
+      // is unset and secrets are the committed defaults (silent downgrade of
+      // the secret guard), so state the mode explicitly.
+      APP_ENV: 'development',
       EXPERIMENT_ROLLOUT: '100',
       RATE_LIMIT_DISABLED: '1',
       // The suite asserts multi-tenant isolation (fresh signup sees only its

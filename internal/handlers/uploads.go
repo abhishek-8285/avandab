@@ -62,6 +62,20 @@ func TenantUploadsHandler(db *sql.DB, uploadDir string) http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		http.ServeFile(w, r, clean)
+		// Serve through an explicitly opened handle: the path is already
+		// containment-checked above, and ServeContent avoids handing a
+		// request-derived path to the filesystem layer.
+		f, err := os.Open(clean)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		defer func() { _ = f.Close() }()
+		info, err := f.Stat()
+		if err != nil || info.IsDir() {
+			http.NotFound(w, r)
+			return
+		}
+		http.ServeContent(w, r, info.Name(), info.ModTime(), f)
 	})
 }
