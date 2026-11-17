@@ -27,6 +27,8 @@ func (h *KharchaHandlers) CreateExpenseAPI(w http.ResponseWriter, r *http.Reques
 	// a request cap, so an unbounded body still exhausts disk/temp space.
 	const maxExpenseUpload = 10 << 20
 	r.Body = http.MaxBytesReader(w, r.Body, maxExpenseUpload)
+	// #nosec G120 -- the request body is bounded by http.MaxBytesReader above;
+	// maxMemory only controls when multipart parts spill to disk.
 	if err := r.ParseMultipartForm(maxExpenseUpload); err != nil {
 		writePODJSONError(w, "form parse error", http.StatusBadRequest)
 		return
