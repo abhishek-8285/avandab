@@ -181,7 +181,7 @@ Scope: truth passes, measured uptime + SLA alerting, fail-closed multi-tenancy, 
 
 ---
 
-## PR #49 — Audit H1/C1 security hardening (2026-11-17, head `1bc51d5`)
+## PR #49 — Audit H1/C1 security hardening (2026-11-17, head `d8a112f`; review pass on top of `1bc51d5`)
 
 Scope: close the 2026-11-12 audit's money-authorization (H1) and public-payment/replay (C1) gaps, harden auth/session/tenant resolution, and add migrations 00186–00189.
 
