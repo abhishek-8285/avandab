@@ -42,7 +42,7 @@ func (h *AuthHandlers) ForgotPasswordAPI(w http.ResponseWriter, r *http.Request)
 
 	if user, err := h.Services.Users.GetUserByEmail(r.Context(), req.Email); err == nil && user.Status == domain.UserStatusActive {
 		if token, err := h.App.ResetTokens.Create(req.Email); err == nil {
-			link := fmt.Sprintf("%s://%s/reset-password?token=%s", requestScheme(r), r.Host, token)
+			link := h.outOfBandURL("/reset-password?token=" + token)
 			slog.Info("password reset link generated (api)", "email", req.Email)
 			if !h.enqueueResetEmail(r, user, link) && h.Config.IsDevelopment() {
 				resp["reset_link"] = link
@@ -399,7 +399,8 @@ func (h *AuthHandlers) Register(w http.ResponseWriter, r *http.Request) {
 
 	if isDatastarRequest(r) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write([]byte("<script>window.location.href='" + targetURL + "'</script>"))
+		encoded, _ := json.Marshal(targetURL)
+		_, _ = w.Write([]byte("<script>window.location.href=" + string(encoded) + "</script>"))
 		return
 	}
 
@@ -581,7 +582,10 @@ func (h *AuthHandlers) Login(w http.ResponseWriter, r *http.Request) {
 
 // Logout handles user logout with server-side revocation.
 func (h *AuthHandlers) Logout(w http.ResponseWriter, r *http.Request) {
-	h.AuthStore.RevokeSession(r, w)
+	if err := h.AuthStore.RevokeSession(r, w); err != nil {
+		http.Error(w, "Could not sign out; please retry", http.StatusInternalServerError)
+		return
+	}
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
@@ -699,7 +703,7 @@ func (h *AuthHandlers) SubmitForgotPassword(w http.ResponseWriter, r *http.Reque
 	if user, err := h.Services.Users.GetUserByEmail(r.Context(), email); err == nil && user.Status == domain.UserStatusActive {
 		token, err := h.App.ResetTokens.Create(email)
 		if err == nil {
-			link := fmt.Sprintf("%s://%s/reset-password?token=%s", requestScheme(r), r.Host, token)
+			link := h.outOfBandURL("/reset-password?token=" + token)
 			slog.Info("password reset link generated", "email", email)
 			if !h.enqueueResetEmail(r, user, link) && h.Config.IsDevelopment() {
 				// No mailer configured: dev convenience shows the link on-page.
@@ -728,6 +732,21 @@ func (h *AuthHandlers) enqueueResetEmail(r *http.Request, user domain.User, link
 		slog.Error("password reset email enqueue failed", "email", user.Email, "error", err)
 	}
 	return true
+}
+
+// outOfBandURL builds an absolute link for email delivery. The origin comes
+// from configuration, never from r.Host or X-Forwarded-Proto: those are
+// attacker-controlled on an unauthenticated forgot-password request and were
+// used to send victims' reset tokens to an attacker host.
+func (h *AuthHandlers) outOfBandURL(path string) string {
+	base := ""
+	if h.App != nil && h.App.Config != nil {
+		base = strings.TrimRight(h.Config.PublicBaseURL, "/")
+	}
+	if base == "" {
+		base = "https://avandab.com" // safe default, matches config default
+	}
+	return base + path
 }
 
 // ResetPasswordPage renders the password reset form for a valid token.
@@ -904,7 +923,7 @@ func (h *AuthHandlers) SendVerificationEmail(w http.ResponseWriter, r *http.Requ
 		h.failPage(w, r, err, http.StatusInternalServerError, "Could Not Issue Link")
 		return
 	}
-	link := fmt.Sprintf("%s://%s/verify-email?token=%s", requestScheme(r), r.Host, token)
+	link := h.outOfBandURL("/verify-email?token=" + token)
 	if h.enqueueVerifyEmail(r, user, link) {
 		flash("Verification link sent to " + user.Email + ".")
 		return

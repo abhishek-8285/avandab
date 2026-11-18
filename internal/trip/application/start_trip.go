@@ -8,6 +8,7 @@ import (
 
 	driverDomain "transport-app/internal/driver/domain"
 	driverAgg "transport-app/internal/driver/domain/aggregate"
+	"transport-app/internal/service"
 	"transport-app/internal/shared"
 	"transport-app/internal/shared/ports"
 	"transport-app/internal/trip/domain"
@@ -111,7 +112,7 @@ func (uc *StartTripUseCase) checkDriverCompliance(ctx ports.TxContext, driverID 
 	if d.Status == driverAgg.DriverInactive || d.Status == driverAgg.DriverLeave {
 		return fmt.Errorf("driver %s is not assignable (status: %s)", driverID, d.Status)
 	}
-	now := uc.clock.Now().Truncate(24 * time.Hour)
+	now := service.LocalMidnight(uc.clock.Now())
 	if !d.LicenseExpiry.IsZero() && d.LicenseExpiry.Before(now) {
 		if isExempt(ctx, "driver", driverID, "license") {
 			return nil
@@ -133,7 +134,7 @@ func (uc *StartTripUseCase) checkVehicleCompliance(ctx ports.TxContext, vehicleI
 	if v.Status == vehicleAgg.VehicleInactive || v.Status == vehicleAgg.VehicleMaintenance {
 		return fmt.Errorf("vehicle %s is not assignable (status: %s)", vehicleID, v.Status)
 	}
-	now := uc.clock.Now().Truncate(24 * time.Hour)
+	now := service.LocalMidnight(uc.clock.Now())
 	for _, expiry := range []struct {
 		name string
 		when time.Time

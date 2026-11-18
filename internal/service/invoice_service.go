@@ -74,7 +74,7 @@ func (s *InvoiceService) GenerateInvoiceFromTrip(ctx context.Context, tripID dom
 
 	s.log.Info("invoice generated", "invoice_id", created.ID, "invoice_number", created.InvoiceNumber)
 	s.logAudit(ctx, nil, "create", "invoices", string(created.ID), nil, nil)
-	s.events.Publish(ctx, events.Event{
+	s.safePublish(ctx, events.Event{
 		Type: events.InvoiceGenerated,
 		Payload: invoiceevents.InvoiceGenerated{
 			InvoiceID:     created.ID,

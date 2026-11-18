@@ -3,6 +3,7 @@ package events
 import (
 	bookingevents "transport-app/internal/domain/booking"
 	tripevents "transport-app/internal/domain/trip"
+	tripagg "transport-app/internal/trip/domain/aggregate"
 )
 
 // Canonical event-type catalog. This is the SINGLE source of truth for
@@ -24,6 +25,10 @@ const (
 	TripDelivered     = "trip.delivered"
 	TripCompleted     = "trip.completed"
 	TripCancelled     = "trip.cancelled"
+
+	TripStopArrived     = "trip.stop_arrived"
+	TripStopCompleted   = "trip.stop_completed"
+	TripStopPODVerified = "trip.stop_pod_verified"
 
 	PaymentRecorded       = "payment.recorded"
 	DriverPayoutSettled   = "settlement.payout_settled"
@@ -61,4 +66,20 @@ var EventTypeOf = map[any]string{
 	tripevents.TripStartedEvent{}:   TripStarted,
 	tripevents.TripCompletedEvent{}: TripCompleted,
 	tripevents.TripCancelledEvent{}: TripCancelled,
+
+	// Aggregate trip events are the ones the trip repository actually writes;
+	// without these entries the outbox stored Go struct names and canonical
+	// subscribers never saw trip.delivered/completed.
+	tripagg.TripCreatedEvent{}:         TripCreated,
+	tripagg.TripScheduledEvent{}:       TripScheduled,
+	tripagg.TripAssignedEvent{}:        TripAssigned,
+	tripagg.TripStartedEvent{}:         TripStarted,
+	tripagg.TripReachedPickupEvent{}:   TripReachedPickup,
+	tripagg.TripInTransitEvent{}:       TripInTransit,
+	tripagg.TripDeliveredEvent{}:       TripDelivered,
+	tripagg.TripCompletedEvent{}:       TripCompleted,
+	tripagg.TripCancelledEvent{}:       TripCancelled,
+	tripagg.TripStopArrivedEvent{}:     TripStopArrived,
+	tripagg.TripStopCompletedEvent{}:   TripStopCompleted,
+	tripagg.TripStopPODVerifiedEvent{}: TripStopPODVerified,
 }

@@ -289,19 +289,19 @@ func (h *VehicleHandlers) Create(w http.ResponseWriter, r *http.Request) {
 
 func (h *VehicleHandlers) View(w http.ResponseWriter, r *http.Request) {
 	h.init()
-	id := chi.URLParam(r, "id")
+	vehicleID := chi.URLParam(r, "id")
 	tenantID := shared.TenantIDFromContext(r.Context())
 	vehicle, err := h.getUC.Execute(r.Context(), vehicleapp.GetVehicleQuery{
-		ID:       vehicleagg.VehicleID(id),
+		ID:       vehicleagg.VehicleID(vehicleID),
 		TenantID: tenantID,
 	})
 	if err != nil {
 		http.Error(w, "Vehicle not found", http.StatusNotFound)
 		return
 	}
-	files, _ := h.Services.Files.GetFilesByEntity(r.Context(), "vehicle_insurance", id)
+	files, _ := h.Services.Files.GetFilesByEntity(r.Context(), "vehicle_insurance", vehicleID)
 
-	detail := h.detailQ.Load(r.Context(), tenantID, id)
+	detail := h.detailQ.Load(r.Context(), tenantID, vehicleID)
 
 	extra := map[string]interface{}{
 		"Vehicle":                   vehicle,
@@ -358,9 +358,9 @@ func vehicleDocCards(vehicle vehicleapp.VehicleResponseDTO) []map[string]interfa
 
 func (h *VehicleHandlers) Edit(w http.ResponseWriter, r *http.Request) {
 	h.init()
-	id := chi.URLParam(r, "id")
+	vehicleID := chi.URLParam(r, "id")
 	vehicle, err := h.getUC.Execute(r.Context(), vehicleapp.GetVehicleQuery{
-		ID:       vehicleagg.VehicleID(id),
+		ID:       vehicleagg.VehicleID(vehicleID),
 		TenantID: shared.TenantIDFromContext(r.Context()),
 	})
 	if err != nil {
@@ -368,7 +368,7 @@ func (h *VehicleHandlers) Edit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	maintenance := h.detailQ.Maintenance(r.Context(), shared.TenantIDFromContext(r.Context()), id)
+	maintenance := h.detailQ.Maintenance(r.Context(), shared.TenantIDFromContext(r.Context()), vehicleID)
 
 	extra := map[string]interface{}{
 		"Vehicle":                   vehicle,
@@ -390,7 +390,7 @@ func (h *VehicleHandlers) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := chi.URLParam(r, "id")
+	vehicleID := chi.URLParam(r, "id")
 	capacity, _ := strconv.ParseInt(r.PostFormValue("capacity"), 10, 64)
 	status := vehicleagg.VehicleStatus(r.PostFormValue("status"))
 	if status == "" {
@@ -452,7 +452,21 @@ func (h *VehicleHandlers) Update(w http.ResponseWriter, r *http.Request) {
 	} else if currentMileage == nil && odometer > 0 {
 		currentMileage = &odometer
 	}
-	blocked := r.PostFormValue("blocked") == "1" || r.PostFormValue("blocked") == "on" || status == vehicleagg.VehicleBlocked
+	// The edit form has no blocked checkbox; derive the flag from the current
+	// row so editing other fields cannot silently lift a compliance block.
+	existing, err := h.getUC.Execute(r.Context(), vehicleapp.GetVehicleQuery{
+		ID:       vehicleagg.VehicleID(vehicleID),
+		TenantID: shared.TenantIDFromContext(r.Context()),
+	})
+	if err != nil {
+		h.failPage(w, r, err, http.StatusNotFound, "Vehicle Update Failed")
+		return
+	}
+	blocked := existing.Blocked || r.PostFormValue("blocked") == "1" || r.PostFormValue("blocked") == "on" || status == vehicleagg.VehicleBlocked
+	blockedReason := strings.TrimSpace(r.PostFormValue("blocked_reason"))
+	if blockedReason == "" {
+		blockedReason = existing.BlockedReason
+	}
 
 	regNum := strings.ToUpper(strings.TrimSpace(r.PostFormValue("registration_number")))
 	vehNum := strings.TrimSpace(r.PostFormValue("vehicle_number"))
@@ -468,7 +482,7 @@ func (h *VehicleHandlers) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = h.updateUC.Execute(r.Context(), vehicleapp.UpdateVehicleCommand{
-		ID:                 vehicleagg.VehicleID(id),
+		ID:                 vehicleagg.VehicleID(vehicleID),
 		TenantID:           shared.TenantIDFromContext(r.Context()),
 		RegistrationNumber: regNum,
 		VehicleNumber:      vehNum,
@@ -482,7 +496,7 @@ func (h *VehicleHandlers) Update(w http.ResponseWriter, r *http.Request) {
 		CurrentMileage:     currentMileage,
 		StandardKmpl:       standardKmpl,
 		Blocked:            blocked,
-		BlockedReason:      r.PostFormValue("blocked_reason"),
+		BlockedReason:      blockedReason,
 		RCExpiry:           rcExpiry,
 		PUCExpiry:          pucExpiry,
 		Odometer:           odometer,
@@ -492,12 +506,12 @@ func (h *VehicleHandlers) Update(w http.ResponseWriter, r *http.Request) {
 		h.failPage(w, r, err, http.StatusBadRequest, "Vehicle Update Failed")
 		return
 	}
-	http.Redirect(w, r, "/vehicles/"+id, http.StatusSeeOther)
+	http.Redirect(w, r, "/vehicles/"+vehicleID, http.StatusSeeOther)
 }
 
 func (h *VehicleHandlers) Delete(w http.ResponseWriter, r *http.Request) {
-	id := domain.VehicleID(chi.URLParam(r, "id"))
-	if err := h.Services.Vehicles.DeleteVehicle(r.Context(), id); err != nil {
+	vehicleID := domain.VehicleID(chi.URLParam(r, "id"))
+	if err := h.Services.Vehicles.DeleteVehicle(r.Context(), vehicleID); err != nil {
 		h.failPage(w, r, err, http.StatusInternalServerError, "Vehicle Action Failed")
 		return
 	}
@@ -510,11 +524,11 @@ func (h *VehicleHandlers) Delete(w http.ResponseWriter, r *http.Request) {
 
 func (h *VehicleHandlers) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	h.init()
-	id := chi.URLParam(r, "id")
+	vehicleID := chi.URLParam(r, "id")
 	status := r.PostFormValue("status")
 
 	vehicle, err := h.getUC.Execute(r.Context(), vehicleapp.GetVehicleQuery{
-		ID:       vehicleagg.VehicleID(id),
+		ID:       vehicleagg.VehicleID(vehicleID),
 		TenantID: shared.TenantIDFromContext(r.Context()),
 	})
 	if err != nil {
@@ -523,7 +537,7 @@ func (h *VehicleHandlers) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = h.updateUC.Execute(r.Context(), vehicleapp.UpdateVehicleCommand{
-		ID:                 vehicleagg.VehicleID(id),
+		ID:                 vehicleagg.VehicleID(vehicleID),
 		TenantID:           shared.TenantIDFromContext(r.Context()),
 		RegistrationNumber: vehicle.RegistrationNumber,
 		VehicleNumber:      vehicle.VehicleNumber,
@@ -551,7 +565,7 @@ func (h *VehicleHandlers) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 		h.renderFragment(w, r, "vehicle_view.html", nil)
 		return
 	}
-	http.Redirect(w, r, "/vehicles/"+id, http.StatusSeeOther)
+	http.Redirect(w, r, "/vehicles/"+vehicleID, http.StatusSeeOther)
 }
 
 // parseRequiredDate parses a mandatory YYYY-MM-DD compliance date. Empty or

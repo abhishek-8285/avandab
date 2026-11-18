@@ -42,6 +42,9 @@ func seedPhase6Base(t *testing.T, db *sql.DB) {
 	t.Helper()
 	// Supplier company in MH (27)
 	_, _ = db.Exec(`INSERT OR REPLACE INTO company_settings (id, tenant_id, company_name, gst_number, state_code, gst_rate) VALUES (1, '1', 'Avandab Logistics', '27AABCU9603R1ZX', '27', 18.0)`)
+	// E-invoicing fails closed without a real supplier GSTIN; seed the tenant
+	// profile explicitly instead of relying on the global singleton.
+	_, _ = db.Exec(`INSERT OR REPLACE INTO tenant_company_profiles (tenant_id, company_name, gst_number, state_code) VALUES ('1', 'Avandab Logistics', '27AABCU9603R1ZX', '27')`)
 
 	// Intra-state Customer (MH - 27)
 	_, _ = db.Exec(`INSERT OR REPLACE INTO customers (id, name, email, phone, gst) VALUES ('cust-mh', 'MH Customer Ltd', 'mh@cust.com', '9800000001', '27AAACP0000M1Z9')`)

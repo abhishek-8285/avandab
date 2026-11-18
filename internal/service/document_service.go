@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"transport-app/internal/repository"
+	"transport-app/internal/shared"
 )
 
 var (
@@ -216,12 +217,17 @@ func (s *DocumentService) ListDriverDocs(ctx context.Context, driverID string) (
 	}
 	db := getter.DB()
 
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		return nil, fmt.Errorf("tenant required to list driver documents")
+	}
 	rows, err := db.QueryContext(ctx, `
 		SELECT id, driver_id, doc_type, file_url, expiry_date, status, verified_by, verified_at, created_at
 		FROM driver_documents
 		WHERE driver_id = $1
+		  AND EXISTS (SELECT 1 FROM drivers WHERE id = $1 AND tenant_id = $2)
 		ORDER BY created_at DESC
-	`, driverID)
+	`, driverID, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -264,12 +270,17 @@ func (s *DocumentService) ListVehicleDocs(ctx context.Context, vehicleID string)
 	}
 	db := getter.DB()
 
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		return nil, fmt.Errorf("tenant required to list vehicle documents")
+	}
 	rows, err := db.QueryContext(ctx, `
 		SELECT id, vehicle_id, doc_type, file_url, expiry_date, status, verified_by, verified_at, created_at
 		FROM vehicle_documents
 		WHERE vehicle_id = $1
+		  AND EXISTS (SELECT 1 FROM vehicles WHERE id = $1 AND tenant_id = $2)
 		ORDER BY created_at DESC
-	`, vehicleID)
+	`, vehicleID, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -312,18 +323,24 @@ func (s *DocumentService) VerifyDocument(ctx context.Context, entityType, entity
 	}
 	db := getter.DB()
 
-	table := "driver_documents"
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		return ErrDocumentNotFound
+	}
+
+	table, entityColumn, parentTable := "driver_documents", "driver_id", "drivers"
 	if entityType == "vehicle" {
-		table = "vehicle_documents"
+		table, entityColumn, parentTable = "vehicle_documents", "vehicle_id", "vehicles"
 	}
 
 	query := fmt.Sprintf(`
 		UPDATE %s
 		SET status = 'verified', verified_by = $1, verified_at = CURRENT_TIMESTAMP
-		WHERE id = $2
-	`, table)
+		WHERE id = $2 AND %s = $3
+		  AND EXISTS (SELECT 1 FROM %s WHERE id = $3 AND tenant_id = $4)
+	`, table, entityColumn, parentTable)
 
-	res, err := db.ExecContext(ctx, query, verifiedBy, documentID)
+	res, err := db.ExecContext(ctx, query, verifiedBy, documentID, entityID, tenantID)
 	if err != nil {
 		return err
 	}

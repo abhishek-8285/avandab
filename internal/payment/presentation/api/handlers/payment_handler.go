@@ -92,7 +92,8 @@ func (h *APIPaymentHandler) RazorpayWebhook(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	id, err := h.webhookUC.ExecuteEvent(r.Context(), body, r.Header.Get("X-Razorpay-Signature"), r.Header.Get("X-Razorpay-Event-Id"), ev)
+	// Event id comes from the signed body, not the strippable header.
+	id, err := h.webhookUC.ExecuteEvent(r.Context(), body, r.Header.Get("X-Razorpay-Signature"), application.EventIDFromWebhook(ev), ev)
 	if err != nil {
 		switch {
 		case errors.Is(err, application.ErrWebhookNotConfigured):

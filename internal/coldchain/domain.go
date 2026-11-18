@@ -256,11 +256,14 @@ func (in *IngestReeferTelemetryInput) Validate() error {
 	}
 	in.DoorStatus = door
 
-	if in.ReeferFuelLevelPct <= 0 {
-		in.ReeferFuelLevelPct = 100.0
+	// 0% fuel / 0 V are valid measured values (a reefer that has run dry or
+	// lost battery). Rewriting them to 100%/12.6 V hid the failure; only
+	// negative placeholders mean "not reported".
+	if in.ReeferFuelLevelPct < 0 {
+		in.ReeferFuelLevelPct = 0
 	}
-	if in.ReeferBatteryV <= 0 {
-		in.ReeferBatteryV = 12.6
+	if in.ReeferBatteryV < 0 {
+		in.ReeferBatteryV = 0
 	}
 	return nil
 }

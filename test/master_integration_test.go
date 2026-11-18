@@ -308,6 +308,7 @@ func TestSec3_5_RBACPermissions(t *testing.T) {
 }
 
 func TestSec8_AuditLoggingWithClientIP(t *testing.T) {
+	t.Setenv("TRUST_PROXY", "true") // CF headers are trusted only by explicit config
 	req := httptest.NewRequest("POST", "/api/v1/drivers", nil)
 	req.Header.Set("CF-Connecting-IP", "203.0.113.199")
 	assert.Equal(t, "203.0.113.199", auth.ClientIP(req))

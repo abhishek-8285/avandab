@@ -10,6 +10,7 @@ import (
 
 	"transport-app/internal/auth"
 	"transport-app/internal/httpx"
+	"transport-app/internal/middleware"
 	"transport-app/internal/settlement/application"
 	"transport-app/internal/shared"
 )
@@ -22,14 +23,22 @@ func NewSettlementHandler(svc *application.SettlementAppService) *SettlementHand
 	return &SettlementHandler{svc: svc}
 }
 
-func (h *SettlementHandler) RegisterRoutes(r chi.Router) {
+func (h *SettlementHandler) RegisterRoutes(r chi.Router, authSvc auth.AuthorizationService) {
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Post("/settlements/calculate", h.CalculateSettlement)
+		// Money-mutating: driver/wallet data is derived from the trip, but the
+		// caller still needs the same settlements:write right as the web routes.
+		// Self-scoped /drivers/me/* routes stay open to any authenticated driver.
+		r.With(middleware.RequirePermission(authSvc, "settlements", "write")).
+			Post("/settlements/calculate", h.CalculateSettlement)
 		r.Get("/drivers/me/wallet", h.GetDriverWallet)
 		r.Get("/drivers/me/payouts", h.ListMyPayouts)
 		r.Post("/drivers/me/payouts", h.InitiatePayout)
 		r.Post("/drivers/me/payout-account/verify", h.VerifyPayoutAccount)
 	})
+
+	// Provider webhooks cannot carry a user session; mount separately so the
+	// router can expose it outside RequireAPIAuth. Signature verification and
+	// global payout lookup live in the use case (fail closed).
 }
 
 func (h *SettlementHandler) getTenantAndUser(r *http.Request) (string, string, bool) {
@@ -54,13 +63,22 @@ func (h *SettlementHandler) CalculateSettlement(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	var req application.CalculateSettlementRequest
+	// Only the trip id is accepted. Fare, driver, commission and deductions are
+	// derived server-side; accepting them from the body let any authenticated
+	// caller mint driver wallet credit.
+	var req struct {
+		TripID string `json:"trip_id"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON body"})
 		return
 	}
+	if req.TripID == "" {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "trip_id is required"})
+		return
+	}
 
-	settlement, err := h.svc.CalculateAndCreateSettlement(r.Context(), tenantID, req)
+	settlement, err := h.svc.CreateFromTrip(r.Context(), tenantID, req.TripID)
 	if err != nil {
 		httpx.JSON(w, http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
 		return

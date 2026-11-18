@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -184,12 +185,12 @@ func applyUpdateWithRollback(m *VersionManifest) error {
 	}
 	log.Printf("[Agent] SHA256 verified successfully")
 
-	// Step 1: Backup current working binary and assets before replacing
+	// Step 1: Back up every path the archive can overwrite, BEFORE stopping
+	// the server. A failed backup aborts with the live deployment untouched.
 	log.Printf("[Agent] Backing up current deployment before upgrade...")
-	_ = os.RemoveAll(backupDir)
-	_ = os.MkdirAll(backupDir, 0750)
-	_ = copyFile(filepath.Join(workDir, "server"), filepath.Join(backupDir, "server"))
-	_ = copyFile(versionFile, filepath.Join(backupDir, "current_version.txt"))
+	if err := backupDeployment(workDir, backupDir); err != nil {
+		return fmt.Errorf("backup failed: %w", err)
+	}
 
 	// Step 2: Stop old process cleanly using its PID file
 	log.Printf("[Agent] Terminating existing server process...")
@@ -227,15 +228,10 @@ func performRollback() error {
 	stopServerByPID()
 	time.Sleep(1 * time.Second)
 
-	if err := copyFile(backupServer, filepath.Join(workDir, "server")); err != nil {
-		return fmt.Errorf("failed to restore backup binary: %w", err)
+	if err := restoreBackup(workDir, backupDir); err != nil {
+		return fmt.Errorf("failed to restore backup: %w", err)
 	}
 	_ = os.Chmod(filepath.Join(workDir, "server"), 0755)
-
-	backupVer := filepath.Join(backupDir, "current_version.txt")
-	if data, err := os.ReadFile(backupVer); err == nil {
-		_ = os.WriteFile(versionFile, data, 0644)
-	}
 
 	restartServer()
 	log.Printf("[Agent] Restored previous server binary and restarted.")
@@ -327,8 +323,8 @@ func stopServerByPID() {
 	_ = os.Remove(pidFile)
 }
 
-func downloadFile(filepath string, url string) error {
-	out, err := os.Create(filepath)
+func downloadFile(path string, url string) error {
+	out, err := os.Create(path)
 	if err != nil {
 		return err
 	}
@@ -369,6 +365,61 @@ func fileSHA256(path string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
+// backupDeployment snapshots every regular file under root (except the backup
+// directory itself and the downloaded archive) so a failed update can restore
+// anything untarGz overwrites. Relative paths are preserved.
+func backupDeployment(root, backup string) error {
+	backupName := filepath.Base(backup)
+	if err := os.RemoveAll(backup); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(backup, 0750); err != nil {
+		return err
+	}
+	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		if rel == "." {
+			return nil
+		}
+		if rel == backupName || rel == "update.tar.gz" {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if d.IsDir() {
+			return os.MkdirAll(filepath.Join(backup, rel), 0750)
+		}
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		return copyFile(path, filepath.Join(backup, rel))
+	})
+}
+
+// restoreBackup writes every backed-up file back over root.
+func restoreBackup(root, backup string) error {
+	return filepath.WalkDir(backup, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !d.Type().IsRegular() {
+			return nil
+		}
+		rel, err := filepath.Rel(backup, path)
+		if err != nil {
+			return err
+		}
+		return copyFile(path, filepath.Join(root, rel))
+	})
+}
+
 func copyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
@@ -376,14 +427,25 @@ func copyFile(src, dst string) error {
 	}
 	defer func() { _ = in.Close() }()
 
-	out, err := os.Create(dst)
+	if err := os.MkdirAll(filepath.Dir(dst), 0750); err != nil {
+		return err
+	}
+	// Write to a temp file so a failed copy never leaves a truncated backup.
+	out, err := os.CreateTemp(filepath.Dir(dst), ".copy-")
 	if err != nil {
 		return err
 	}
-	defer func() { _ = out.Close() }()
+	tmp := out.Name()
+	defer func() { _ = os.Remove(tmp) }()
 
-	_, err = io.Copy(out, in)
-	return err
+	if _, err := io.Copy(out, in); err != nil {
+		_ = out.Close()
+		return err
+	}
+	if err := out.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp, dst)
 }
 
 func untarGz(src string, dest string) error {

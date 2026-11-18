@@ -10,6 +10,7 @@ import (
 
 	"transport-app/internal/alerts/domain"
 	"transport-app/internal/alerts/repository"
+	"transport-app/internal/shared"
 )
 
 type sqlAlertRepository struct {
@@ -356,12 +357,16 @@ func (r *sqlAlertRepository) GetOverrides(ctx context.Context, ruleID string, en
 }
 
 func (r *sqlAlertRepository) ListAlerts(ctx context.Context, status string, limit, offset int) ([]domain.Alert, error) {
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		return nil, errors.New("alert tenant is required")
+	}
 	query := `
 		SELECT ` + alertColumns + `
-		FROM alerts `
-	var args []interface{}
+		FROM alerts WHERE tenant_id = ? `
+	args := []interface{}{tenantID}
 	if status != "" {
-		query += "WHERE status = ? "
+		query += "AND status = ? "
 		args = append(args, status)
 	}
 	query += "ORDER BY last_seen_at DESC "

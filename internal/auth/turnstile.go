@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -36,10 +37,11 @@ type turnstileVerifyResponse struct {
 }
 
 // Verify checks the client token against Cloudflare's validation endpoint.
-// Returns true when secretKey is empty (disabled in development/testing).
+// Fails closed with no secret or a nil receiver: no secret means no real check
+// can happen, so pass-through would leave a visible-but-unenforced CAPTCHA.
 func (v *CloudflareTurnstileVerifier) Verify(ctx context.Context, token, remoteIP string) (bool, error) {
 	if v == nil || v.secretKey == "" {
-		return true, nil // self-heal / pass-through when unconfigured
+		return false, errors.New("turnstile: verifier not configured (missing secret)")
 	}
 	if token == "" {
 		return false, nil

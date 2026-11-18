@@ -20,6 +20,7 @@ func TestEpisodeRecordingAndRewards(t *testing.T) {
 
 	ep := &Episode{
 		ID:        svc.NewEpisodeID(),
+		TenantID:  "1",
 		UserID:    "usr-1",
 		AgentName: "ops",
 		Query:     "how many trips today",
@@ -35,7 +36,7 @@ func TestEpisodeRecordingAndRewards(t *testing.T) {
 	}
 
 	// 2 successful tools (+0.3) + 2 turns efficient (+0.2) = 0.5
-	examples := svc.ExamplesFor("ops", "trips today", 3)
+	examples := svc.ExamplesFor("1", "ops", "trips today", 3)
 	if len(examples) != 1 {
 		t.Fatalf("expected 1 example, got %d", len(examples))
 	}

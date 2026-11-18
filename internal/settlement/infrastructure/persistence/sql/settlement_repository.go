@@ -103,6 +103,23 @@ func (r *SQLSettlementRepository) createSettlementTx(ctx context.Context, tenant
 	return nil
 }
 
+// GetTripSettlementInputs returns the driver assigned to the trip and the
+// booking fare. Both are authoritative server-side values.
+func (r *SQLSettlementRepository) GetTripSettlementInputs(ctx context.Context, tenantID, tripID string) (string, float64, error) {
+	var driverID sql.NullString
+	var fare sql.NullFloat64
+	err := r.q(ctx).QueryRowContext(ctx, `
+		SELECT t.driver_id, b.price
+		FROM trips t
+		LEFT JOIN bookings b ON b.id = t.booking_id AND b.tenant_id = t.tenant_id
+		WHERE t.id = $1 AND t.tenant_id = $2`,
+		tripID, tenantID).Scan(&driverID, &fare)
+	if err != nil {
+		return "", 0, err
+	}
+	return driverID.String, fare.Float64, nil
+}
+
 func (r *SQLSettlementRepository) GetSettlementByTripID(ctx context.Context, tenantID, tripID string) (*domain.Settlement, error) {
 	var s domain.Settlement
 	var deductions float64

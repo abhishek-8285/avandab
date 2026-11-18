@@ -63,7 +63,6 @@ func currentDefaultOverlay() TenantOverlay {
 	return defaultOverlay
 }
 
-// SetTenantOverlay attaches a per-instance overlay (tests, alternate wiring).
 // GenerateInvoiceUseCase generates an invoice aggregate.
 type GenerateInvoiceUseCase struct {
 	uow   ports.UnitOfWork
@@ -75,6 +74,7 @@ type GenerateInvoiceUseCase struct {
 	overlay TenantOverlay
 }
 
+// SetTenantOverlay attaches a per-instance overlay (tests, alternate wiring).
 func (uc *GenerateInvoiceUseCase) SetTenantOverlay(o TenantOverlay) { uc.overlay = o }
 
 // effectiveOverlay prefers the instance overlay over the process default.
@@ -236,7 +236,7 @@ func attachLineItems(inv *aggregate.InvoiceAggregate, cmd GenerateInvoiceCommand
 
 	if !hasFreight {
 		freight := inv.Subtotal
-		inv.AddLineItem(aggregate.LineItem{
+		li := aggregate.LineItem{
 			ID:          idGen.GenerateUUID(),
 			TenantID:    inv.TenantID,
 			InvoiceID:   inv.ID,
@@ -246,14 +246,16 @@ func attachLineItems(inv *aggregate.InvoiceAggregate, cmd GenerateInvoiceCommand
 			Quantity:    1,
 			UnitPrice:   freight,
 			Amount:      freight,
-		})
+		}
+		applyLineTax(&li, inv)
+		inv.AddLineItem(li)
 	}
 
 	for _, in := range cmd.LineItems {
 		if in.RefID != nil && existingRefs[*in.RefID] {
 			continue
 		}
-		inv.AddLineItem(aggregate.LineItem{
+		li := aggregate.LineItem{
 			ID:          idGen.GenerateUUID(),
 			TenantID:    inv.TenantID,
 			InvoiceID:   inv.ID,
@@ -264,8 +266,40 @@ func attachLineItems(inv *aggregate.InvoiceAggregate, cmd GenerateInvoiceCommand
 			UnitPrice:   in.UnitPrice,
 			Amount:      aggregate.RoundMoney(in.Quantity * in.UnitPrice),
 			RefID:       in.RefID,
-		})
+		}
+		applyLineTax(&li, inv)
+		inv.AddLineItem(li)
 	}
+}
+
+// applyLineTax copies the invoice's effective GST onto a newly attached line.
+// Auto-generated freight/detention lines used to store zero tax and zero total,
+// so recomputing the header from lines collapsed the invoice to ₹0.
+func applyLineTax(li *aggregate.LineItem, inv *aggregate.InvoiceAggregate) {
+	li.TaxableValue = li.Amount
+	if inv.Subtotal <= 0 || inv.Tax <= 0 {
+		li.Total = li.Amount
+		return
+	}
+	rate := inv.Tax / inv.Subtotal * 100
+	switch {
+	case inv.Igst > 0:
+		li.IgstRate = rate
+		li.IgstAmount = aggregate.RoundMoney(li.Amount * rate / 100)
+	case inv.Cgst > 0 || inv.Sgst > 0:
+		li.CgstRate = inv.Cgst / inv.Subtotal * 100
+		li.SgstRate = inv.Sgst / inv.Subtotal * 100
+		li.CgstAmount = aggregate.RoundMoney(li.Amount * li.CgstRate / 100)
+		li.SgstAmount = aggregate.RoundMoney(li.Amount * li.SgstRate / 100)
+	default:
+		// New invoices carry an aggregate tax without a state split; the
+		// platform default is intra-state (CGST+SGST).
+		li.CgstRate = rate / 2
+		li.SgstRate = rate / 2
+		li.CgstAmount = aggregate.RoundMoney(li.Amount * li.CgstRate / 100)
+		li.SgstAmount = aggregate.RoundMoney(li.Amount * li.SgstRate / 100)
+	}
+	li.Total = aggregate.RoundMoney(li.Amount + li.CgstAmount + li.SgstAmount + li.IgstAmount)
 }
 
 // resolveBookingPricing derives invoice money from the booking price and

@@ -52,6 +52,7 @@ func TestLoginAudit_StoresClientIP(t *testing.T) {
 }
 
 func TestLoginAudit_HonorsProxyHeaders(t *testing.T) {
+	t.Setenv("TRUST_PROXY", "true") // CF headers are trusted only by explicit config
 	db := NewTestDB(t)
 	svc := NewTestServices(t, db)
 	_, password := createTestAdmin(t, svc)

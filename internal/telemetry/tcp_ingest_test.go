@@ -71,6 +71,38 @@ func TestTCPIngestServer_LifecycleAndPacketHandshake(t *testing.T) {
 	}
 }
 
+// TestTCPIngestServer_AllowlistRejectsUnlistedIMEI proves that hardware TCP
+// ingest cannot be driven by a self-declared IMEI outside the configured
+// allowlist: the login handshake gets no ACK and the socket is closed.
+func TestTCPIngestServer_AllowlistRejectsUnlistedIMEI(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	ingestor := &Ingestor{bus: events.NewInMemoryBus(), cfg: IngestConfig{}}
+	ingestor.SetQueue(NewAsyncIngestQueue(100, 1, nil, nil))
+	server := NewTCPIngestServer("127.0.0.1:0", ingestor, nil, nil)
+	server.SetAllowedIMEIs([]string{"999999999999999"})
+	if err := server.Start(ctx); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	defer server.Stop()
+
+	conn, err := net.DialTimeout("tcp", server.listener.Addr().String(), 2*time.Second)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+
+	loginBytes, _ := hex.DecodeString("78780d010864209048123456000184080d0a")
+	if _, err := conn.Write(loginBytes); err != nil {
+		t.Fatalf("write login: %v", err)
+	}
+	_ = conn.SetReadDeadline(time.Now().Add(1500 * time.Millisecond))
+	if n, err := conn.Read(make([]byte, 10)); err == nil {
+		t.Fatalf("got %d-byte ACK for unlisted IMEI — device would believe it was accepted", n)
+	}
+}
+
 func TestTCPIngestServer_TeltonikaProtocol(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

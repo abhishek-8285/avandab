@@ -210,6 +210,45 @@ func (r *tripRepository) FindByNumber(ctx context.Context, number string, tenant
 	return agg, nil
 }
 
+// FindActiveByBookingID returns every non-terminal trip for a booking.
+func (r *tripRepository) FindActiveByBookingID(ctx context.Context, bookingID string, tenantID shared.TenantID) ([]*aggregate.TripAggregate, error) {
+	querier := interface {
+		QueryContext(context.Context, string, ...any) (*sql.Rows, error)
+	}(r.dbConn)
+	if tx := repository.TxFromContext(ctx); tx != nil {
+		querier = tx
+	}
+	rows, err := querier.QueryContext(ctx, `
+		SELECT id FROM trips
+		WHERE booking_id = $1 AND tenant_id = $2
+		  AND status NOT IN ('completed', 'cancelled')
+		ORDER BY created_at DESC`, bookingID, string(tenantID))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	trips := make([]*aggregate.TripAggregate, 0, len(ids))
+	for _, id := range ids {
+		t, err := r.Find(ctx, aggregate.TripID(id), tenantID)
+		if err != nil {
+			return nil, err
+		}
+		trips = append(trips, t)
+	}
+	return trips, nil
+}
+
 func (r *tripRepository) FindByBookingID(ctx context.Context, bookingID string, tenantID shared.TenantID) (*aggregate.TripAggregate, error) {
 	row, err := r.Q(ctx).GetTripByBookingID(ctx, db.GetTripByBookingIDParams{
 		BookingID: sql.NullString{String: bookingID, Valid: bookingID != ""},

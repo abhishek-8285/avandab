@@ -340,6 +340,33 @@ LIMIT 1
 // ever fund one invoice, and replaying it across tenants must fail closed.
 var ErrRazorpayPaymentCrossTenant = errors.New("razorpay payment is already recorded for another tenant")
 
+// FindByRazorpayOrder returns the payment recorded for a gateway order.
+func (r *paymentRepository) FindByRazorpayOrder(ctx context.Context, tenantID shared.TenantID, orderID string) (aggregate.PaymentID, error) {
+	var id string
+	err := r.exec(ctx).QueryRowContext(ctx, `
+		SELECT id FROM payments
+		WHERE tenant_id = $1 AND razorpay_order_id = $2
+		LIMIT 1`, string(tenantID), orderID).Scan(&id)
+	if err != nil {
+		return "", err
+	}
+	return aggregate.PaymentID(id), nil
+}
+
+// SumReversalsForPayment returns the total already refunded for a payment.
+func (r *paymentRepository) SumReversalsForPayment(ctx context.Context, tenantID shared.TenantID, paymentID aggregate.PaymentID) (float64, error) {
+	var total sql.NullFloat64
+	err := r.exec(ctx).QueryRowContext(ctx, `
+		SELECT COALESCE(SUM(-amount), 0)
+		FROM payments
+		WHERE tenant_id = $1 AND reference LIKE $2`,
+		string(tenantID), "REVERSAL:"+string(paymentID)+":%").Scan(&total)
+	if err != nil {
+		return 0, err
+	}
+	return total.Float64, nil
+}
+
 // ExistsRazorpayPayment returns the payment ID recorded against a Razorpay
 // payment ID, or sql.ErrNoRows when none exists. The lookup is platform-scoped;
 // a row owned by another tenant returns ErrRazorpayPaymentCrossTenant instead

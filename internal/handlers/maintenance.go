@@ -350,7 +350,7 @@ func (h *MaintenanceHandlers) ResolveDTC(w http.ResponseWriter, r *http.Request)
 	id := chi.URLParam(r, "id")
 	vehicleID := r.FormValue("vehicle_id")
 
-	if err := h.repo.ResolveDtcEvent(r.Context(), id); err != nil {
+	if err := h.repo.ResolveDtcEvent(r.Context(), string(shared.TenantIDFromContext(r.Context())), id); err != nil {
 		if isDatastarRequest(r) {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -392,7 +392,7 @@ func (h *MaintenanceHandlers) OverrideBlock(w http.ResponseWriter, r *http.Reque
 		actorID = user.UserID
 	}
 
-	if err := h.repo.OverrideMaintenance(r.Context(), vehicleID, actorID, reason); err != nil {
+	if err := h.repo.OverrideMaintenance(r.Context(), string(shared.TenantIDFromContext(r.Context())), vehicleID, actorID, reason); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

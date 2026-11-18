@@ -52,6 +52,23 @@ func TestCSRFProtect_LenientAllowsMissingHeaders(t *testing.T) {
 	}
 }
 
+// A private/loopback peer is not a trusted proxy by default, so it cannot
+// rewrite the origin check with X-Forwarded-Host.
+func TestCSRFStrict_IgnoresForwardedHostFromUntrustedPeer(t *testing.T) {
+	t.Setenv("TRUST_PROXY", "")
+	t.Setenv("TRUST_PROXY_CIDRS", "")
+
+	store := auth.NewSessionStore("csrf-test-secret-32-bytes!!", false)
+	req := sessionRequest(t, store, http.MethodPost, "/api/x", "https://evil.example.com")
+	req.Host = "app.example.com"
+	req.RemoteAddr = "192.168.1.20:1234"
+	req.Header.Set("X-Forwarded-Host", "evil.example.com")
+
+	if code := doCSRF(CSRFProtectStrict(store), req); code != http.StatusForbidden {
+		t.Fatalf("spoofed X-Forwarded-Host accepted from untrusted peer: got %d, want 403", code)
+	}
+}
+
 func TestCSRFProtectStrict_RejectsMissingHeaders(t *testing.T) {
 	store := auth.NewSessionStore("csrf-test-secret-32-bytes!!", false)
 	mw := CSRFProtectStrict(store)
@@ -96,7 +113,10 @@ func TestCSRFProtect_Bypasses(t *testing.T) {
 }
 
 func TestSameOrigin_UsesXForwardedHost(t *testing.T) {
-	// Behind a reverse proxy the internal Host differs from the browser origin.
+	// Behind an explicitly trusted reverse proxy the internal Host differs
+	// from the browser origin; httptest's peer alone is not trusted.
+	t.Setenv("TRUST_PROXY", "true")
+	t.Setenv("TRUST_PROXY_CIDRS", "")
 	req := httptest.NewRequest(http.MethodPost, "http://internal.svc/api/x", nil)
 	req.Host = "internal.svc"
 	req.Header.Set("X-Forwarded-Host", "public.example.com")

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"transport-app/internal/auth"
+	"transport-app/internal/shared"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -35,8 +36,10 @@ func newTelemetryTestApp(t *testing.T, authSrv auth.AuthorizationService) *App {
 }
 
 func withSession(r *http.Request, userID, role string) *http.Request {
-	return r.WithContext(context.WithValue(r.Context(), auth.ContextUser,
-		&auth.SessionData{UserID: userID, Role: role}))
+	ctx := context.WithValue(r.Context(), auth.ContextUser,
+		&auth.SessionData{UserID: userID, Role: role})
+	ctx = shared.ContextWithTenantID(ctx, "1")
+	return r.WithContext(ctx)
 }
 
 func TestTelemetryDeviceRoutes_ForbiddenForViewer(t *testing.T) {

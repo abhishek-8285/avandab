@@ -440,6 +440,81 @@ func (e *Engine) normalizeEvent(ev events.Event) (IngestEvent, error) {
 		ingest.Metadata = m
 		return ingest, nil
 
+	case events.GeofenceZoneBreach:
+		b, err := json.Marshal(ev.Payload)
+		if err != nil {
+			return ingest, err
+		}
+		var m map[string]interface{}
+		if err := json.Unmarshal(b, &m); err != nil {
+			return ingest, err
+		}
+		ingest.Source = "geofence"
+		ingest.AlertType = "zone_breach"
+		ingest.Severity = domain.SeverityWarning
+		if sev, ok := m["Severity"].(string); ok && sev != "" {
+			ingest.Severity = sev
+		}
+		if t, ok := m["TenantID"].(string); ok {
+			ingest.TenantID = t
+		}
+		if v, ok := m["VehicleID"].(string); ok && v != "" {
+			ingest.EntityType = "vehicle"
+			ingest.EntityID = v
+		}
+		if k, ok := m["ZoneKind"].(string); ok && k != "" {
+			ingest.Title = "Geofence breach: " + k
+		} else {
+			ingest.Title = "Geofence zone breach"
+		}
+		if d, ok := m["Details"].(string); ok {
+			ingest.Message = d
+		}
+		ingest.Metadata = m
+		return ingest, nil
+
+	case events.FuelTheftAlert, events.TempBreachAlert:
+		// Fuel and cold-chain producers publish their canonical event types,
+		// not AlertEvent. Without these cases the alert pipeline returned
+		// "unsupported event type" and the alert was lost.
+		b, err := json.Marshal(ev.Payload)
+		if err != nil {
+			return ingest, err
+		}
+		var m map[string]interface{}
+		if err := json.Unmarshal(b, &m); err != nil {
+			return ingest, err
+		}
+		if ev.Type == events.FuelTheftAlert {
+			ingest.Source = domain.SourceFuel
+			ingest.AlertType = domain.AlertTypeTheftSuspicion
+		} else {
+			ingest.Source = domain.SourceTelemetry
+			ingest.AlertType = "temp_breach"
+		}
+		if at, ok := m["alert_type"].(string); ok && at != "" {
+			ingest.AlertType = at
+		}
+		ingest.Severity = domain.SeverityWarning
+		if sev, ok := m["severity"].(string); ok && sev != "" {
+			ingest.Severity = sev
+		}
+		if t, ok := m["tenant_id"].(string); ok {
+			ingest.TenantID = t
+		}
+		if v, ok := m["vehicle_id"].(string); ok && v != "" {
+			ingest.EntityType = "vehicle"
+			ingest.EntityID = v
+		}
+		if title, ok := m["title"].(string); ok && title != "" {
+			ingest.Title = title
+		}
+		if ingest.Title == "" {
+			ingest.Title = "Fuel anomaly detected"
+		}
+		ingest.Metadata = m
+		return ingest, nil
+
 	case "ComplianceBlocked":
 		b, _ := json.Marshal(ev.Payload)
 		var m map[string]interface{}

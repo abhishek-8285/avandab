@@ -16,8 +16,27 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/pressly/goose/v3"
-	_ "modernc.org/sqlite" // registers "sqlite" driver
+	"modernc.org/sqlite" // registers "sqlite" driver + connection hook
 )
+
+var sqliteHookOnce sync.Once
+
+// ensureSQLiteConnectionHook applies the tuned PRAGMAs to EVERY pooled
+// connection. Applying them with db.Exec only configured whichever connection
+// the pool happened to hand out; later connections silently ran without
+// foreign_keys/busy_timeout.
+func ensureSQLiteConnectionHook(logger *slog.Logger) {
+	sqliteHookOnce.Do(func() {
+		sqlite.RegisterConnectionHook(func(conn sqlite.ExecQuerierContext, _ string) error {
+			for _, p := range sqlitePragmas {
+				if _, err := conn.ExecContext(context.Background(), p, nil); err != nil && logger != nil {
+					logger.Warn("Failed to execute connection pragma", "pragma", p, "error", err)
+				}
+			}
+			return nil
+		})
+	})
+}
 
 func init() {
 	// "pgx-rebind" speaks postgres but rewrites ?/?N to $N first, so the
@@ -125,6 +144,7 @@ func Open(ctx context.Context, cfg Settings, logger *slog.Logger) (*sql.DB, erro
 	}
 
 	if driver == DriverSQLite {
+		ensureSQLiteConnectionHook(logger)
 		if err := ApplySQLitePragmas(ctx, db, logger); err != nil {
 			return nil, err
 		}

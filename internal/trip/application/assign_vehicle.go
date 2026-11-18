@@ -10,6 +10,7 @@ import (
 
 	maintsql "transport-app/internal/maintenance/infrastructure/sql"
 	"transport-app/internal/repository"
+	"transport-app/internal/service"
 	"transport-app/internal/shared"
 	"transport-app/internal/shared/ports"
 	"transport-app/internal/trip/domain"
@@ -86,7 +87,7 @@ func (uc *AssignVehicleUseCase) checkVehicleCompliance(ctx ports.TxContext, cmd 
 	if v.Status == vehicleAgg.VehicleInactive || v.Status == vehicleAgg.VehicleMaintenance {
 		return fmt.Errorf("vehicle %s is not assignable (status: %s)", cmd.VehicleID, v.Status)
 	}
-	now := uc.clock.Now().Truncate(24 * time.Hour)
+	now := service.LocalMidnight(uc.clock.Now())
 	if v.Blocked || v.Status == vehicleAgg.VehicleBlocked {
 		reason := "vehicle is compliance blocked"
 		if v.BlockedReason != "" {
@@ -158,8 +159,10 @@ func (uc *AssignVehicleUseCase) checkVehicleCompliance(ctx ports.TxContext, cmd 
 						if uid := getUserID(ctx); uid != nil {
 							overriddenBy = string(*uid)
 						}
-						_, _ = repository.ExecTx(ctx, dbGetter.DB(), `INSERT INTO dispatch_overrides (id, tenant_id, trip_id, vehicle_id, driver_id, blocked_by, reason, overridden_by, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-							fmt.Sprintf("ovr-%d", time.Now().UnixNano()), string(tenant), string(cmd.TripID), cmd.VehicleID, "", "puc_expiry", cmd.OverrideReason, overriddenBy, time.Now().UTC().Format("2006-01-02 15:04:05"))
+						if _, ierr := repository.ExecTx(ctx, dbGetter.DB(), `INSERT INTO dispatch_overrides (id, tenant_id, trip_id, vehicle_id, driver_id, blocked_by, reason, overridden_by, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+							fmt.Sprintf("ovr-%d", time.Now().UnixNano()), string(tenant), string(cmd.TripID), cmd.VehicleID, "", "puc_expiry", cmd.OverrideReason, overriddenBy, time.Now().UTC().Format("2006-01-02 15:04:05")); ierr != nil {
+							return ierr
+						}
 					}
 					recordComplianceCheck(ctx, "vehicle", cmd.VehicleID, "puc", "warning", "bypassed by override")
 				} else {

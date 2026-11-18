@@ -101,7 +101,7 @@ func (s *TripService) CreateTrip(ctx context.Context, req CreateTripRequest) (do
 	s.log.Info("trip created", "trip_id", created.ID, "trip_number", created.TripNumber)
 
 	s.logAudit(ctx, nil, "create", "trips", string(created.ID), nil, nil)
-	s.events.Publish(ctx, events.Event{
+	s.safePublish(ctx, events.Event{
 		Type: events.TripCreated,
 		Payload: tripevents.TripCreatedEvent{
 			TripID:        created.ID,
@@ -251,7 +251,7 @@ func (s *TripService) AssignDriver(ctx context.Context, tripID domain.TripID, dr
 		s.log.Warn("pod otp issue failed at dispatch", "trip_id", string(tripID), "error", otpErr)
 	}
 	if s.events != nil {
-		s.events.Publish(ctx, events.Event{
+		s.safePublish(ctx, events.Event{
 			Type: "TripAssignedEvent",
 			Payload: map[string]interface{}{
 				"trip_id":     string(tripID),
@@ -339,7 +339,7 @@ func (s *TripService) AssignVehicle(ctx context.Context, tripID domain.TripID, v
 
 	s.log.Info("vehicle assigned to trip", "vehicle_id", vehicleID, "trip_id", tripID)
 	if s.events != nil {
-		s.events.Publish(ctx, events.Event{
+		s.safePublish(ctx, events.Event{
 			Type: "TripAssignedEvent",
 			Payload: map[string]interface{}{
 				"trip_id":     string(tripID),
@@ -393,7 +393,7 @@ func (s *TripService) StartTrip(ctx context.Context, id domain.TripID) (domain.T
 	}
 
 	s.log.Info("trip started", "trip_id", id)
-	s.events.Publish(ctx, events.Event{
+	s.safePublish(ctx, events.Event{
 		Type: events.TripStarted,
 		Payload: tripevents.TripStartedEvent{
 			TripID:     id,
@@ -448,7 +448,7 @@ func (s *TripService) CompleteTrip(ctx context.Context, id domain.TripID) (domai
 	}
 
 	s.log.Info("trip completed", "trip_id", id)
-	s.events.Publish(ctx, events.Event{
+	s.safePublish(ctx, events.Event{
 		Type: events.TripCompleted,
 		Payload: tripevents.TripCompletedEvent{
 			TripID:      id,
@@ -493,7 +493,7 @@ func (s *TripService) DeliverTripWithPOD(ctx context.Context, id domain.TripID, 
 	}
 
 	s.log.Info("trip delivered with e-POD", "trip_id", id, "pod_url", podURL)
-	s.events.Publish(ctx, events.Event{
+	s.safePublish(ctx, events.Event{
 		Type: events.TripDelivered,
 		Payload: map[string]interface{}{
 			"trip_id":      id,
@@ -586,6 +586,9 @@ func (s *TripService) EnsurePODOTP(ctx context.Context, tripID string) (string, 
 	}
 	if otp != "" && expires != "" {
 		if exp, ok := parsePODOTPExpiry(expires); ok && time.Now().Before(exp) {
+			if err := syncStopOTP(ctx, db, tripID, otp); err != nil {
+				return "", err
+			}
 			return otp, nil
 		}
 	}
@@ -600,8 +603,23 @@ func (s *TripService) EnsurePODOTP(ctx context.Context, tripID string) (string, 
 		`UPDATE trips SET pod_otp = $1, pod_otp_expires_at = $2 WHERE id = $3`, code, expiresAt, tripID); err != nil {
 		return "", err
 	}
+	if err := syncStopOTP(ctx, db, tripID, code); err != nil {
+		return "", err
+	}
 	s.logAudit(ctx, nil, "pod_otp_issued", "trips", tripID, nil, nil)
 	return code, nil
+}
+
+// syncStopOTP keeps the code the operator reads (trips.pod_otp) identical to
+// the code the stop POD flow verifies (trip_stops.otp_code). A stale stop code
+// otherwise rejects the displayed OTP forever.
+func syncStopOTP(ctx context.Context, db *sql.DB, tripID, code string) error {
+	if _, err := db.ExecContext(ctx,
+		`UPDATE trip_stops SET otp_code = $1 WHERE trip_id = $2 AND otp_required = 1`,
+		code, tripID); err != nil {
+		return fmt.Errorf("sync stop otp: %w", err)
+	}
+	return nil
 }
 
 // parsePODOTPExpiry accepts both expiry layouts found in the wild:

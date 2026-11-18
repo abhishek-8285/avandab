@@ -448,6 +448,11 @@ func auditVerdict(claimed, expectedBest, tolerancePct float64, crosscheckOK bool
 	} else {
 		variancePct = math.Abs(varianceLitres) / expectedBest * 100.0
 	}
+	// A claim with no litres states nothing verifiable. 0 vs 0 used to score
+	// 0% variance and auto-pass (Spec 03 §3.2); send it to review instead.
+	if claimed <= 0 {
+		return "needs_review", varianceLitres, variancePct
+	}
 	if !crosscheckOK || variancePct > tolerancePct {
 		return "needs_review", varianceLitres, variancePct
 	}
@@ -472,8 +477,10 @@ func (s *FuelAuditService) ReviewClaim(ctx context.Context, expenseID, verdict, 
 		res, err := db.ExecContext(txCtx, `
 			UPDATE fuel_claim_audits
 			SET result = $1, reviewed_by = $2, reviewed_at = $3, review_note = $4
-			WHERE expense_id = $5`,
-			verdict, orNull(userID), now, orNull(note), expenseID)
+			WHERE expense_id = $5 AND EXISTS (
+				SELECT 1 FROM driver_expenses de
+				WHERE de.id = fuel_claim_audits.expense_id AND de.tenant_id = $6)`,
+			verdict, orNull(userID), now, orNull(note), expenseID, tenantIDFor(txCtx))
 		if err != nil {
 			return err
 		}
@@ -608,7 +615,11 @@ func (s *FuelAuditService) GetAuditStats(ctx context.Context) (FuelAuditStats, e
 		tenantIDFor(ctx)).
 		Scan(&st.FailedCount)
 	_ = db.QueryRowContext(ctx,
-		`SELECT COALESCE(AVG(variance_pct),0) FROM fuel_claim_audits`).
+		`SELECT COALESCE(AVG(fca.variance_pct),0)
+		 FROM fuel_claim_audits fca
+		 JOIN driver_expenses de ON de.id = fca.expense_id
+		 WHERE de.tenant_id = $1`,
+		tenantIDFor(ctx)).
 		Scan(&st.AvgVariancePct)
 
 	enforce, err := s.EnforceMode(ctx)
@@ -814,8 +825,9 @@ func (s *FuelAuditService) KmplReport(ctx context.Context, from, to time.Time) (
 		WHERE fe.event_type = 'refill_detected'
 		  AND substr(CAST(fe.occurred_at AS TEXT), 1, 19) >= substr(CAST($1 AS TEXT), 1, 19)
 		  AND substr(CAST(fe.occurred_at AS TEXT), 1, 19) <= substr(CAST($2 AS TEXT), 1, 19)
+		  AND EXISTS (SELECT 1 FROM vehicles v WHERE v.id = fe.vehicle_id AND v.tenant_id = $3)
 		GROUP BY fe.vehicle_id`,
-		fuelTimeStr(from), fuelTimeStr(to))
+		fuelTimeStr(from), fuelTimeStr(to), tenantIDFor(ctx))
 	if err != nil {
 		return nil, err
 	}

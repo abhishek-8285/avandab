@@ -154,6 +154,7 @@ func TestSessionStore_WithValidator(t *testing.T) {
 }
 
 func TestGenerateSecureTokenAndClientIPLocation(t *testing.T) {
+	t.Setenv("TRUST_PROXY", "true") // httptest peer is a documentation-range IP
 	tok, err := auth.GenerateSecureToken()
 	if err != nil || len(tok) == 0 {
 		t.Fatalf("failed to generate secure token: %v", err)

@@ -18,6 +18,7 @@ import (
 var (
 	ErrDuplicateDevice   = errors.New("device already exists")
 	ErrDeviceNotFound    = errors.New("device not found")
+	ErrVehicleNotFound   = errors.New("vehicle not found in this tenant")
 	ErrInvalidTransition = errors.New("invalid device state transition")
 	ErrVehicleAssigned   = errors.New("vehicle already has a device assigned")
 	ErrBatchTooLarge     = errors.New("bulk registration batch exceeds 500 rows")
@@ -116,16 +117,20 @@ func (s *DeviceStore) updateStatus(ctx context.Context, tenantID, imei, from, to
 // The partial UNIQUE(vehicle_id) index enforces one device per vehicle.
 func (s *DeviceStore) SetVehicle(ctx context.Context, tenantID, imei, vehicleID string) error {
 	db := s.dbFromContext(ctx)
-	_, err := db.ExecContext(ctx,
+	res, err := db.ExecContext(ctx,
 		`UPDATE telemetry_devices
          SET vehicle_id = $1, status = $2, updated_at = CURRENT_TIMESTAMP
-         WHERE imei = $3 AND tenant_id = $4`,
+         WHERE imei = $3 AND tenant_id = $4
+           AND EXISTS (SELECT 1 FROM vehicles WHERE id = $1 AND tenant_id = $4)`,
 		vehicleID, DeviceStatusAssigned, imei, tenantID)
 	if err != nil {
 		if isUniqueConstraint(err) {
 			return ErrVehicleAssigned
 		}
 		return fmt.Errorf("assign vehicle: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrVehicleNotFound
 	}
 	return nil
 }

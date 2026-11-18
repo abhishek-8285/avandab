@@ -20,8 +20,15 @@ import (
 // against UTC-truncated time.Now() misaligns the two calendars between
 // 00:00 and 05:30 IST and silently unblocks expired documents.
 func localMidnight() time.Time {
-	n := time.Now()
-	return time.Date(n.Year(), n.Month(), n.Day(), 0, 0, 0, 0, n.Location())
+	return LocalMidnight(time.Now())
+}
+
+// LocalMidnight returns midnight of the calendar day containing t in t's
+// location. Dispatch expiry checks must use this instead of a UTC-truncated
+// now: expiry dates are local calendar dates and the two calendars misalign
+// between 00:00 and 05:30 IST, which silently unblocks expired documents.
+func LocalMidnight(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
 // ComplianceService enforces legal and operational compliance across drivers and vehicles (Spec 05 §5).
@@ -382,7 +389,7 @@ func (s *ComplianceService) publishBlockedEvent(ctx context.Context, entityType,
 		entityID = vehicleID
 	}
 
-	s.events.Publish(ctx, events.Event{
+	s.safePublish(ctx, events.Event{
 		Type: "ComplianceBlocked",
 		Payload: map[string]interface{}{
 			"source":      "compliance",

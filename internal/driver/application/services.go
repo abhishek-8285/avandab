@@ -264,11 +264,17 @@ func (s *DriverAppService) SubmitLicense(ctx context.Context, tenantID, driverID
 		ex := s.exec(txCtx)
 		// Mirror the submitted license onto the drivers row: before this the
 		// row carried NULLs from registration and nothing ever updated them.
+		// Fail closed on self-service extensions: the mirrored expiry may only
+		// be set when unset or shortened. Extending it requires an admin edit
+		// after the license record is verified, otherwise a driver could grant
+		// themselves dispatch eligibility.
 		_, err := ex.ExecContext(txCtx, `
 			UPDATE drivers
 			SET license_number = $1, license_expiry = $2, updated_at = CURRENT_TIMESTAMP
-			WHERE tenant_id = $3 AND driver_id = $4`,
-			strings.ToUpper(strings.TrimSpace(licenseNumber)), expiresOn.Format("2006-01-02"), tenantID, driverID)
+			WHERE tenant_id = $3 AND driver_id = $4
+			  AND (license_expiry IS NULL OR TRIM(CAST(license_expiry AS TEXT)) = ''
+			       OR CAST(license_expiry AS TEXT) >= $5)`,
+			strings.ToUpper(strings.TrimSpace(licenseNumber)), expiresOn.Format("2006-01-02"), tenantID, driverID, expiresOn.Format("2006-01-02"))
 		if err != nil {
 			return err
 		}

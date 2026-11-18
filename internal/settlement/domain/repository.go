@@ -11,6 +11,10 @@ type SettlementRepository interface {
 	WithTransaction(ctx context.Context, fn func(context.Context) error) error
 
 	// Settlements
+	// GetTripSettlementInputs resolves the server-authoritative money inputs
+	// for a settlement: the trip's assigned driver and the booking fare.
+	// Callers must never use client-supplied fare/driver fields.
+	GetTripSettlementInputs(ctx context.Context, tenantID, tripID string) (driverID string, grossFare float64, err error)
 	CreateSettlement(ctx context.Context, tenantID string, s *Settlement) error
 	GetSettlementByTripID(ctx context.Context, tenantID, tripID string) (*Settlement, error)
 	ApproveSettlement(ctx context.Context, tenantID, settlementID string) error

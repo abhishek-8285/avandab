@@ -119,7 +119,8 @@ func (h *DriverHandlers) Create(w http.ResponseWriter, r *http.Request) {
 
 	licenseExpiry, err := time.Parse("2006-01-02", r.PostFormValue("license_expiry"))
 	if err != nil {
-		licenseExpiry = time.Now().AddDate(5, 0, 0)
+		http.Error(w, "license_expiry must be YYYY-MM-DD", http.StatusBadRequest)
+		return
 	}
 	exp, _ := strconv.ParseInt(r.PostFormValue("experience"), 10, 64)
 
@@ -165,19 +166,19 @@ func (h *DriverHandlers) Create(w http.ResponseWriter, r *http.Request) {
 func (h *DriverHandlers) View(w http.ResponseWriter, r *http.Request) {
 	h.init()
 	session, _ := h.getUserFromContext(r)
-	id := chi.URLParam(r, "id")
+	driverID := chi.URLParam(r, "id")
 	driver, err := h.getUC.Execute(r.Context(), driverapp.GetDriverQuery{
-		ID:       driveragg.DriverID(id),
+		ID:       driveragg.DriverID(driverID),
 		TenantID: shared.TenantIDFromContext(r.Context()),
 	})
 	if err != nil {
-		h.renderError(w, http.StatusNotFound, "Driver Not Found", fmt.Sprintf("No driver found with ID %q.", id), session)
+		h.renderError(w, http.StatusNotFound, "Driver Not Found", fmt.Sprintf("No driver found with ID %q.", driverID), session)
 		return
 	}
-	files, _ := h.Services.Files.GetFilesByEntity(r.Context(), "driver_license", id)
+	files, _ := h.Services.Files.GetFilesByEntity(r.Context(), "driver_license", driverID)
 
 	profile := h.profileQ.Load(r.Context(), driverapp.DriverProfileQuery{
-		DriverID: id,
+		DriverID: driverID,
 		TenantID: shared.TenantIDFromContext(r.Context()),
 	})
 	h.renderPage(w, r, "driver_view.html", PageData{Title: "View Driver", User: session,
@@ -192,13 +193,13 @@ func (h *DriverHandlers) View(w http.ResponseWriter, r *http.Request) {
 func (h *DriverHandlers) Edit(w http.ResponseWriter, r *http.Request) {
 	h.init()
 	session, _ := h.getUserFromContext(r)
-	id := chi.URLParam(r, "id")
+	driverID := chi.URLParam(r, "id")
 	driver, err := h.getUC.Execute(r.Context(), driverapp.GetDriverQuery{
-		ID:       driveragg.DriverID(id),
+		ID:       driveragg.DriverID(driverID),
 		TenantID: shared.TenantIDFromContext(r.Context()),
 	})
 	if err != nil {
-		h.renderError(w, http.StatusNotFound, "Driver Not Found", fmt.Sprintf("No driver found with ID %q.", id), session)
+		h.renderError(w, http.StatusNotFound, "Driver Not Found", fmt.Sprintf("No driver found with ID %q.", driverID), session)
 		return
 	}
 	h.renderForm(w, r, "driver_edit.html", PageData{Title: "Edit Driver", User: session, Extra: map[string]interface{}{"Driver": driver}})
@@ -211,10 +212,11 @@ func (h *DriverHandlers) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := chi.URLParam(r, "id")
+	driverID := chi.URLParam(r, "id")
 	licenseExpiry, err := time.Parse("2006-01-02", r.PostFormValue("license_expiry"))
 	if err != nil {
-		licenseExpiry = time.Now().AddDate(5, 0, 0)
+		http.Error(w, "license_expiry must be YYYY-MM-DD", http.StatusBadRequest)
+		return
 	}
 	exp, _ := strconv.ParseInt(r.PostFormValue("experience"), 10, 64)
 	status := driveragg.DriverStatus(r.PostFormValue("status"))
@@ -243,7 +245,7 @@ func (h *DriverHandlers) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = h.updateUC.Execute(r.Context(), driverapp.UpdateDriverCommand{
-		ID:                    driveragg.DriverID(id),
+		ID:                    driveragg.DriverID(driverID),
 		TenantID:              shared.TenantIDFromContext(r.Context()),
 		FirstName:             r.PostFormValue("first_name"),
 		LastName:              r.PostFormValue("last_name"),
@@ -262,12 +264,12 @@ func (h *DriverHandlers) Update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	http.Redirect(w, r, "/drivers/"+id, http.StatusSeeOther)
+	http.Redirect(w, r, "/drivers/"+driverID, http.StatusSeeOther)
 }
 
 func (h *DriverHandlers) Delete(w http.ResponseWriter, r *http.Request) {
-	id := domain.DriverID(chi.URLParam(r, "id"))
-	if err := h.Services.Drivers.DeleteDriver(r.Context(), id); err != nil {
+	driverID := domain.DriverID(chi.URLParam(r, "id"))
+	if err := h.Services.Drivers.DeleteDriver(r.Context(), driverID); err != nil {
 		http.Error(w, "Failed to delete driver", http.StatusInternalServerError)
 		return
 	}
@@ -280,11 +282,11 @@ func (h *DriverHandlers) Delete(w http.ResponseWriter, r *http.Request) {
 
 func (h *DriverHandlers) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	h.init()
-	id := chi.URLParam(r, "id")
+	driverID := chi.URLParam(r, "id")
 	status := r.PostFormValue("status")
 
 	driver, err := h.getUC.Execute(r.Context(), driverapp.GetDriverQuery{
-		ID:       driveragg.DriverID(id),
+		ID:       driveragg.DriverID(driverID),
 		TenantID: shared.TenantIDFromContext(r.Context()),
 	})
 	if err != nil {
@@ -293,7 +295,7 @@ func (h *DriverHandlers) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = h.updateUC.Execute(r.Context(), driverapp.UpdateDriverCommand{
-		ID:                    driveragg.DriverID(id),
+		ID:                    driveragg.DriverID(driverID),
 		TenantID:              shared.TenantIDFromContext(r.Context()),
 		FirstName:             driver.FirstName,
 		LastName:              driver.LastName,
@@ -317,7 +319,7 @@ func (h *DriverHandlers) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 		h.renderFragment(w, r, "driver_view.html", nil)
 		return
 	}
-	http.Redirect(w, r, "/drivers/"+id, http.StatusSeeOther)
+	http.Redirect(w, r, "/drivers/"+driverID, http.StatusSeeOther)
 }
 
 func strPtr(s string) *string {

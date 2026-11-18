@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -43,7 +44,7 @@ func TestSubmitStopPOD_MultipartFileUpload(t *testing.T) {
 	h := &TripHandlers{App: app}
 
 	// Seed customer, route, vehicle, driver, booking, trip, stop
-	tripID := "trip_pod_upload_1"
+	tripID := uuid.NewString()
 	stopID := "stop_pod_upload_1"
 
 	_, err = db.Exec(`INSERT INTO customers (id, name, company, phone, tenant_id) VALUES ('cust_pod', 'Alice Corp', 'Alice Enterprises', '9988771122', '1')`)
@@ -173,7 +174,7 @@ func TestSubmitStopPOD_Base64SignatureAndJSON(t *testing.T) {
 	}
 	h := &TripHandlers{App: app}
 
-	tripID := "trip_pod_json_1"
+	tripID := uuid.NewString()
 	stopID := "stop_pod_json_1"
 
 	uowImpl := triprepo.NewTripRepository(db)
@@ -251,7 +252,7 @@ func TestPublicEPODCertificate_RenderHTMLAndJSON(t *testing.T) {
 	}
 	h := &TripHandlers{App: app}
 
-	tripID := "trip_epod_public_1"
+	tripID := uuid.NewString()
 	stopID := "stop_epod_public_1"
 
 	// Seed vehicle, driver, route, company_settings, trip, stop

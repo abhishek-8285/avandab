@@ -374,3 +374,20 @@ type baseService struct {
 	// tests/fakes without a raw DB (overlay helpers become pass-through).
 	tenantCfg *TenantConfigReader
 }
+
+// safePublish dispatches an event to the bus and logs delivery failures
+// instead of discarding them. The business write has already committed by the
+// time services publish, so a lost event means a downstream alert, webhook or
+// automation silently never fires — that must stay observable.
+func (s *baseService) safePublish(ctx context.Context, evt events.Event) {
+	if s.events == nil {
+		return
+	}
+	if err := s.events.Publish(ctx, evt); err != nil {
+		logger := s.log
+		if logger == nil {
+			logger = slog.Default()
+		}
+		logger.Warn("event publish failed", "event_type", evt.Type, "error", err)
+	}
+}

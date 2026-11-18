@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -161,6 +162,9 @@ func (c *clientImpl) DeductToll(ctx context.Context, req DeductTollRequest) (Tol
 	if c.db == nil && !c.cfg.UseMock {
 		return TollTransaction{}, fmt.Errorf("fastag: no provider configured and no local ledger; set INTEGRATION_FASTAG_USE_MOCK=true for demo mode")
 	}
+	if math.IsNaN(req.Amount) || math.IsInf(req.Amount, 0) || req.Amount <= 0 {
+		return TollTransaction{}, fmt.Errorf("fastag: toll amount must be positive, got %v", req.Amount)
+	}
 	if c.cfg.UseMock {
 		txnID = "MOCK-" + txnID
 	}
@@ -169,6 +173,11 @@ func (c *clientImpl) DeductToll(ctx context.Context, req DeductTollRequest) (Tol
 		source := req.Source
 		if source == "" {
 			source = "MANUAL"
+		}
+		providerMode := "LIVE"
+		if c.cfg.UseMock {
+			// Demo rows must be distinguishable from real provider tolls.
+			providerMode = "MOCK"
 		}
 		tenantID := string(shared.TenantIDFromContext(ctx))
 		if tenantID == "" && req.TripID != "" {
@@ -181,12 +190,20 @@ func (c *clientImpl) DeductToll(ctx context.Context, req DeductTollRequest) (Tol
 		if tenantID == "" {
 			return TollTransaction{}, fmt.Errorf("fastag: cannot record toll without tenant (trip %q tag %q)", req.TripID, req.TagID)
 		}
+		if req.TagID != "" {
+			var tagTenant string
+			if err := c.db.QueryRowContext(ctx,
+				`SELECT tenant_id FROM fastag_tags WHERE tag_id = $1 OR id = $2 LIMIT 1`,
+				req.TagID, req.TagID).Scan(&tagTenant); err == nil && tagTenant != tenantID {
+				return TollTransaction{}, fmt.Errorf("fastag: tag %q belongs to another tenant", req.TagID)
+			}
+		}
 		_, err := c.db.ExecContext(ctx, `
 			INSERT INTO fastag_transactions (
 				id, tenant_id, tag_id, vehicle_number, trip_id, plaza_id, plaza_name,
-				amount, txn_timestamp, status, source, reconciled
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'SUCCESS', $10, 0)
-		`, txnID, string(tenantID), req.TagID, req.VehicleNumber, req.TripID, req.PlazaID, req.PlazaName, req.Amount, now, source)
+				amount, txn_timestamp, status, source, reconciled, provider_mode
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'SUCCESS', $10, 0, $11)
+		`, txnID, string(tenantID), req.TagID, req.VehicleNumber, req.TripID, req.PlazaID, req.PlazaName, req.Amount, now, source, providerMode)
 		if err != nil {
 			slog.Default().Warn("fastag: could not persist deduction txn", "error", err)
 		} else {
@@ -194,8 +211,8 @@ func (c *clientImpl) DeductToll(ctx context.Context, req DeductTollRequest) (Tol
 			_, _ = c.db.ExecContext(ctx, `
 				UPDATE fastag_tags
 				SET balance = balance - $1, last_sync = $2
-				WHERE tag_id = $3 OR vehicle_number = $4
-			`, req.Amount, now, req.TagID, req.VehicleNumber)
+				WHERE (tag_id = $3 OR vehicle_number = $4) AND tenant_id = $5
+			`, req.Amount, now, req.TagID, req.VehicleNumber, string(tenantID))
 		}
 	}
 

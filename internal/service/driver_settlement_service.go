@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -122,11 +123,24 @@ func (s *DriverSettlementService) GenerateSettlement(ctx context.Context, tripID
 	if !driverID.Valid || driverID.String == "" {
 		return nil, ErrDriverNotAssigned
 	}
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		_ = db.QueryRowContext(ctx, `SELECT tenant_id FROM trips WHERE id = $1`, tripID).Scan(&tenantID)
+	}
+	if tenantID == "" {
+		return nil, fmt.Errorf("settlement tenant is required")
+	}
 
 	// 2. Idempotency Check
 	if !force {
 		existing, err := s.findByTripID(ctx, db, tripID)
 		if err == nil && existing != nil {
+			// A prior attempt may have committed the header but failed the
+			// post-commit ledger append. Backfill on retry so the orphan
+			// header cannot leave the driver wallet understated forever.
+			if berr := s.backfillLedgerForSettlement(ctx, db, existing); berr != nil {
+				return nil, berr
+			}
 			return existing, nil
 		}
 	}
@@ -189,11 +203,11 @@ func (s *DriverSettlementService) GenerateSettlement(ctx context.Context, tripID
 			INSERT INTO driver_settlements
 			    (id, trip_id, driver_id, gross_fare, commission_amount, advances_kharcha,
 			     deductions, performance_bonus, tds_rate, tds_amount, net_payout,
-			     rate_model, rate_basis_json, status, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+			     rate_model, rate_basis_json, status, tenant_id, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'pending', $14, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 		`, settlementID, tripID, driverID.String, rateResult.GrossFare, rateResult.Commission,
 			advances, deductions, bonus, tdsRate, tdsAmount, netPayout,
-			rateResult.RateModel, string(rateBasisJSON))
+			rateResult.RateModel, string(rateBasisJSON), tenantID)
 		return e
 	}
 
@@ -272,7 +286,7 @@ func (s *DriverSettlementService) GenerateSettlement(ctx context.Context, tripID
 
 	// 9. Emit SettlementGenerated Event
 	if s.events != nil {
-		s.events.Publish(ctx, events.Event{
+		s.safePublish(ctx, events.Event{
 			Type: "SettlementGenerated",
 			Payload: map[string]interface{}{
 				"SettlementID": settlementID,
@@ -285,6 +299,19 @@ func (s *DriverSettlementService) GenerateSettlement(ctx context.Context, tripID
 	}
 
 	return s.findByTripID(ctx, db, tripID)
+}
+
+// backfillLedgerForSettlement repairs a header that was committed without its
+// ledger entries (post-commit append failure). recordLedgerForSettlement is
+// idempotent via its reference_id count guard, so a healthy header is untouched.
+func (s *DriverSettlementService) backfillLedgerForSettlement(ctx context.Context, db *sql.DB, rec *DriverSettlementRecord) error {
+	// Only this legacy flow's own headers (stl-) are ours to repair; the
+	// payout rail's headers are a different owner.
+	if !strings.HasPrefix(rec.ID, "stl-") {
+		return nil
+	}
+	return s.recordLedgerForSettlement(ctx, db, "", string(rec.DriverID), string(rec.TripID), rec.ID,
+		rec.GrossFare, rec.CommissionAmount, rec.AdvancesKharcha, rec.Deductions, rec.TDSAmount, rec.PerformanceBonus)
 }
 
 func (s *DriverSettlementService) recordLedgerForSettlement(ctx context.Context, db *sql.DB, tenantID, driverID, tripID, settlementID string, grossFare, commission, advances, deductions, tdsAmount, bonus float64) error {
@@ -517,7 +544,9 @@ func (s *DriverSettlementService) calculateTDS(ctx context.Context, db *sql.DB, 
 		rate = s.getConfigFloat(ctx, db, "tds_rate_without_pan", 2.00)
 	}
 
-	amount := tdsBase * (rate / 100.0)
+	// Match settlement.domain.CalculateSettlement: round TDS to 2dp so the
+	// legacy ledger and the payout rail agree on paise.
+	amount := math.Round(tdsBase*(rate/100.0)*100) / 100
 	return rate, amount, tdsSection, nil
 }
 
@@ -680,8 +709,12 @@ func (s *DriverSettlementService) GetSettlement(ctx context.Context, id string) 
 	}
 	db := getter.DB()
 
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		return nil, fmt.Errorf("settlement tenant is required")
+	}
 	var tripID string
-	err := db.QueryRowContext(ctx, `SELECT trip_id FROM driver_settlements WHERE id = $1`, id).Scan(&tripID)
+	err := db.QueryRowContext(ctx, `SELECT trip_id FROM driver_settlements WHERE id = $1 AND tenant_id = $2`, id, tenantID).Scan(&tripID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrSettlementNotFound
@@ -717,8 +750,12 @@ func (s *DriverSettlementService) listSettlementsFiltered(ctx context.Context, s
 		limit = 50
 	}
 
-	var conditions []string
-	var args []interface{}
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		return nil, fmt.Errorf("settlement tenant is required")
+	}
+	conditions := []string{"tenant_id = ?"}
+	args := []interface{}{tenantID}
 	if status != "" {
 		conditions = append(conditions, "status = ?")
 		args = append(args, status)
@@ -783,26 +820,43 @@ func (s *DriverSettlementService) MarkPaid(ctx context.Context, settlementID, pa
 		}
 		return nil, err
 	}
+	if currentStatus == "paid" {
+		return s.findByTripID(ctx, db, tripID)
+	}
 
+	// A duplicate MarkPaid must be a no-op: no paid_at/payment_ref overwrite
+	// and no second payout event. The WHERE guard is the atomic backstop for
+	// two concurrent MarkPaid calls.
 	paidAtStr := paidAt.UTC().Format(time.RFC3339)
-	_, err = db.ExecContext(ctx, `
+	res, err := db.ExecContext(ctx, `
 		UPDATE driver_settlements
 		SET status = 'paid', payment_ref = $1, paid_at = $2, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $3
+		WHERE id = $3 AND status <> 'paid'
 	`, paymentRef, paidAtStr, settlementID)
 	if err != nil {
 		return nil, err
 	}
+	changed, err := res.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+	if changed == 0 {
+		return s.findByTripID(ctx, db, tripID)
+	}
 
 	// Spec 22 §5.5 — attached advance requests become 'paid' with their
-	// settlement so the §5.2 running balance stays consistent.
-	_, _ = db.ExecContext(ctx, `
+	// settlement so the §5.2 running balance stays consistent. A failure here
+	// must be returned, never swallowed: the settlement is already paid, so
+	// callers need to know the advances are out of sync.
+	if _, err := db.ExecContext(ctx, `
 		UPDATE driver_advance_requests SET status = 'paid'
 		WHERE settlement_id = $1 AND status = 'approved'
-	`, settlementID)
+	`, settlementID); err != nil {
+		return nil, fmt.Errorf("mark attached advances paid: %w", err)
+	}
 
 	if s.events != nil {
-		s.events.Publish(ctx, events.Event{
+		s.safePublish(ctx, events.Event{
 			Type: events.DriverPayoutSettled,
 			Payload: map[string]interface{}{
 				"SettlementID": settlementID,

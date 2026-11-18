@@ -2,6 +2,7 @@ package ev
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"time"
 
@@ -116,7 +117,9 @@ func (s *Service) IngestTelemetry(ctx context.Context, tenantID string, in Inges
 				EstimatedCost:  0.0,
 				Status:         SessionStatusInProgress,
 			}
-			_ = s.repo.CreateChargingSession(ctx, newSession)
+			if err := s.repo.CreateChargingSession(ctx, newSession); err != nil {
+				return nil, fmt.Errorf("persist charging session: %w", err)
+			}
 		} else {
 			// Update ongoing session
 			changed := false
@@ -136,7 +139,9 @@ func (s *Service) IngestTelemetry(ctx context.Context, tenantID string, in Inges
 				changed = true
 			}
 			if changed {
-				_ = s.repo.UpdateChargingSession(ctx, activeSession)
+				if err := s.repo.UpdateChargingSession(ctx, activeSession); err != nil {
+					return nil, fmt.Errorf("update charging session: %w", err)
+				}
 			}
 		}
 	} else if activeSession != nil {
@@ -155,7 +160,9 @@ func (s *Service) IngestTelemetry(ctx context.Context, tenantID string, in Inges
 		activeSession.EstimatedCost = math.Round(activeSession.EnergyAddedKWh*tariff*100) / 100
 		activeSession.Status = SessionStatusCompleted
 
-		_ = s.repo.UpdateChargingSession(ctx, activeSession)
+		if err := s.repo.UpdateChargingSession(ctx, activeSession); err != nil {
+			return nil, fmt.Errorf("close charging session: %w", err)
+		}
 	}
 
 	// 4. Upsert latest telemetry

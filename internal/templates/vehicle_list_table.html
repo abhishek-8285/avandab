@@ -12,8 +12,8 @@
         <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
             {{if .Vehicles}}
             {{range .Vehicles}}
-            <tr class="hover:bg-surface-container-low/50 transition-colors group" data-href="/vehicles/{{.ID}}" onclick="if(this.dataset.href)location.href=this.dataset.href" onkeydown="if((event.key==='Enter'||event.key===' ')){event.preventDefault();if(this.dataset.href)location.href=this.dataset.href}" tabindex="0" role="link" aria-label="View vehicle {{.RegistrationNumber}}">
-                <td data-label="Unit ID" class="px-3 py-2 font-data-mono font-bold text-primary tabular-nums whitespace-nowrap">{{.RegistrationNumber}}</td>
+            <tr class="hover:bg-surface-container-low/50 transition-colors group" data-href="/vehicles/{{.ID}}" onclick="if(this.dataset.href)location.href=this.dataset.href">
+                <td data-label="Unit ID" class="px-3 py-2 font-data-mono font-bold text-primary tabular-nums whitespace-nowrap"><a href="/vehicles/{{.ID}}" class="text-decoration-none hover:underline" onclick="event.stopPropagation()">{{.RegistrationNumber}}</a></td>
                 <td data-label="Vehicle Type" class="px-3 py-2">
                     <div class="flex items-center gap-2.5">
                         <div class="w-7 h-7 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0">

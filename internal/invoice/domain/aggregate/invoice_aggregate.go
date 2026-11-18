@@ -342,6 +342,12 @@ func (a *InvoiceAggregate) Void(now time.Time) error {
 	if a.Status == InvoiceStatusCancelled {
 		return errors.New("invoice already cancelled")
 	}
+	if a.IRN != nil && *a.IRN != "" {
+		return errors.New("IRN-generated invoices cannot be voided; issue a credit note")
+	}
+	if a.PaidAmount > 0 {
+		return errors.New("invoices with recorded payments cannot be voided")
+	}
 
 	a.Status = InvoiceStatusCancelled
 	a.UpdatedAt = now

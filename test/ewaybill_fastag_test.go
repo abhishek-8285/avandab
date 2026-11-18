@@ -328,8 +328,9 @@ func TestEWayBill_And_FASTag_HTTP_Handlers(t *testing.T) {
 	fastagClient := intFastag.NewClient(intFastag.Config{Enabled: true, UseMock: true}, db)
 	fastagSvc := fastag.NewFASTagService(db, fastagClient, fastag.Config{AutoKharcha: true, Provider: "NETC"})
 
-	ewbHandlers := handlers.NewEWayBillHandlers(nil, ewbSvc, &stubAuthSvc{})
-	fastagHandlers := handlers.NewFASTagHandlers(nil, fastagSvc, &stubAuthSvc{})
+	ewbApp := &handlers.App{DB: db}
+	ewbHandlers := handlers.NewEWayBillHandlers(ewbApp, ewbSvc, &stubAuthSvc{})
+	fastagHandlers := handlers.NewFASTagHandlers(&handlers.App{DB: db}, fastagSvc, &stubAuthSvc{})
 
 	r := chi.NewRouter()
 	r.Use(authInjectMiddleware)

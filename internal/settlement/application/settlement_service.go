@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -56,6 +57,34 @@ type CalculateSettlementRequest struct {
 	AdvanceDeductions float64 `json:"advance_deductions"`
 	CommissionRate    float64 `json:"commission_rate,omitempty"`
 	TDSRate           float64 `json:"tds_rate,omitempty"`
+}
+
+// CreateFromTrip derives every money input server-side: the driver comes from
+// the trip and the gross fare from the trip's booking. This is the only entry
+// point the HTTP API uses, so a caller cannot mint wallet credit by posting a
+// fabricated gross_fare.
+func (s *SettlementAppService) CreateFromTrip(ctx context.Context, tenantID, tripID string) (*domain.Settlement, error) {
+	if tenantID == "" || tripID == "" {
+		return nil, errors.New("tenant_id and trip_id are required")
+	}
+	driverID, grossFare, err := s.repo.GetTripSettlementInputs(ctx, tenantID, tripID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("trip not found")
+		}
+		return nil, fmt.Errorf("load trip settlement inputs: %w", err)
+	}
+	if driverID == "" {
+		return nil, errors.New("trip has no assigned driver")
+	}
+	if grossFare <= 0 {
+		return nil, errors.New("trip booking has no billable fare")
+	}
+	return s.CalculateAndCreateSettlement(ctx, tenantID, CalculateSettlementRequest{
+		TripID:    tripID,
+		DriverID:  driverID,
+		GrossFare: grossFare,
+	})
 }
 
 func (s *SettlementAppService) CalculateAndCreateSettlement(ctx context.Context, tenantID string, req CalculateSettlementRequest) (*domain.Settlement, error) {
@@ -135,9 +164,35 @@ type ledgerAmounts struct {
 	tds, tdsRate                                     float64
 }
 
+// clamped caps ledger debits at the available credits when the domain has
+// floored net payout at zero (e.g. advance > gross). Without it the ledger
+// would drive the wallet negative even though the header net is 0.
+// Advance is reduced first (it is the already-disbursed cash), then tax, then fee.
+func (a ledgerAmounts) clamped() ledgerAmounts {
+	if a.gross-a.commission+a.toll-a.advance-a.tds >= 0 {
+		return a
+	}
+	available := a.gross + a.toll
+	take := func(amt float64) float64 {
+		if amt > available {
+			amt = available
+		}
+		if amt < 0 {
+			amt = 0
+		}
+		available -= amt
+		return amt
+	}
+	a.advance = take(a.advance)
+	a.tds = take(a.tds)
+	a.commission = take(a.commission)
+	return a
+}
+
 // expectedEntryTypes mirrors the append predicates below so backfill and
 // create paths can never drift apart.
 func (a ledgerAmounts) expectedEntryTypes() []domain.EntryType {
+	a = a.clamped()
 	var out []domain.EntryType
 	if a.gross > 0 {
 		out = append(out, domain.EntryTripEarning)
@@ -161,6 +216,7 @@ func (a ledgerAmounts) expectedEntryTypes() []domain.EntryType {
 // (empty on create; stored types on backfill). Predicates live in exactly
 // one place — expectedEntryTypes above.
 func (s *SettlementAppService) appendSettlementLedger(ctx context.Context, tenantID string, a ledgerAmounts, have map[domain.EntryType]bool) error {
+	a = a.clamped()
 	appendOne := func(typ domain.EntryType, amount float64, desc string) error {
 		if have[typ] {
 			return nil

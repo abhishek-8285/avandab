@@ -365,8 +365,8 @@ func (r *SQLRepository) GetBidByID(ctx context.Context, tenantID, listingID, bid
 			id, tenant_id, listing_id, carrier_id, carrier_name, bid_amount,
 			vehicle_id, driver_id, status, remarks, submitted_at, decided_at
 		FROM load_board_bids
-		WHERE tenant_id = $1 AND listing_id = $2 AND id = $3`,
-		tenantID, listingID, bidID).Scan(
+		WHERE listing_id = $1 AND id = $2`,
+		listingID, bidID).Scan(
 		&b.ID, &b.TenantID, &b.ListingID, &b.CarrierID, &b.CarrierName, &b.BidAmount,
 		&vehID, &drvID, &b.Status, &remarks, &b.SubmittedAt, &decidedAt,
 	)
@@ -394,11 +394,12 @@ func (r *SQLRepository) GetBidByID(ctx context.Context, tenantID, listingID, bid
 func (r *SQLRepository) ListBidsForListing(ctx context.Context, tenantID, listingID string) ([]LoadBoardBid, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT 
-			id, tenant_id, listing_id, carrier_id, carrier_name, bid_amount,
-			vehicle_id, driver_id, status, remarks, submitted_at, decided_at
-		FROM load_board_bids
-		WHERE tenant_id = $1 AND listing_id = $2
-		ORDER BY bid_amount ASC, submitted_at ASC`,
+			b.id, b.tenant_id, b.listing_id, b.carrier_id, b.carrier_name, b.bid_amount,
+			b.vehicle_id, b.driver_id, b.status, b.remarks, b.submitted_at, b.decided_at
+		FROM load_board_bids b
+		JOIN load_board_listings l ON l.id = b.listing_id
+		WHERE l.tenant_id = $1 AND b.listing_id = $2
+		ORDER BY b.bid_amount ASC, b.submitted_at ASC`,
 		tenantID, listingID)
 	if err != nil {
 		return nil, err
@@ -490,8 +491,8 @@ func (r *SQLRepository) AwardBidTransaction(ctx context.Context, tenantID, listi
 	_, err = tx.ExecContext(ctx, `
 		UPDATE load_board_bids
 		SET status = 'ACCEPTED', decided_at = $1
-		WHERE tenant_id = $2 AND listing_id = $3 AND id = $4`,
-		now, tenantID, listingID, bidID)
+		WHERE listing_id = $2 AND id = $3`,
+		now, listingID, bidID)
 	if err != nil {
 		return nil, err
 	}
@@ -500,8 +501,8 @@ func (r *SQLRepository) AwardBidTransaction(ctx context.Context, tenantID, listi
 	_, err = tx.ExecContext(ctx, `
 		UPDATE load_board_bids
 		SET status = 'REJECTED', decided_at = $1
-		WHERE tenant_id = $2 AND listing_id = $3 AND id != $4 AND status = 'SUBMITTED'`,
-		now, tenantID, listingID, bidID)
+		WHERE listing_id = $2 AND id != $3 AND status = 'SUBMITTED'`,
+		now, listingID, bidID)
 	if err != nil {
 		return nil, err
 	}
@@ -582,9 +583,12 @@ func (r *SQLRepository) AwardBidTransaction(ctx context.Context, tenantID, listi
 		bkgIDPtr, driverIDVal, vehicleIDVal, routeID, now,
 		"Awarded from load board listing "+listingID, now, now,
 	)
-	if err == nil {
-		tripIDPtr = &tripID
+	if err != nil {
+		// A trip_number collision used to be swallowed: the award committed
+		// with no trip, so the listing disappeared with nothing to dispatch.
+		return nil, fmt.Errorf("create awarded trip: %w", err)
 	}
+	tripIDPtr = &tripID
 
 	if err := tx.Commit(); err != nil {
 		return nil, err

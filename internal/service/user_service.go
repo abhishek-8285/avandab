@@ -800,6 +800,13 @@ func (s *UserService) WithdrawConsent(ctx context.Context, tenantID, userID stri
 			withdrawn_at = CURRENT_TIMESTAMP,
 			updated_at = CURRENT_TIMESTAMP`,
 		"consent_"+tenantID+"_"+userID, tenantID, userID, ConsentPurposePlatformUse, ConsentNoticeVersion)
+	if err != nil {
+		return err
+	}
+	// DPDP §6(4): cease processing now. Revoke every live server-side session
+	// so tokens minted before withdrawal replay as invalid. Mirrors the
+	// generated DeleteSessionsForUser query (db/query/auth_sessions.sql).
+	_, err = repository.ExecTx(ctx, rawDB, `DELETE FROM sessions WHERE user_id = $1`, userID)
 	return err
 }
 

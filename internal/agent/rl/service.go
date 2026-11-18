@@ -5,7 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 )
+
+// A handler killed between ClaimAction and UpdateActionDecision leaves an
+// action 'approved' with an unknown outcome — the mutation may already have
+// committed. Past this cutoff it is quarantined, never auto-requeued.
+const staleApprovedAfter = 15 * time.Minute
 
 // Service bundles the online RL loop: episode recording, reward signals,
 // preference memory (few-shot) and policy shaping (tool deprioritization).
@@ -18,6 +24,16 @@ func New(dbPath string) (*Service, error) {
 	store, err := OpenStore(dbPath)
 	if err != nil {
 		return nil, err
+	}
+	cutoff := time.Now().UTC().Add(-staleApprovedAfter).Format(time.RFC3339)
+	// Do not requeue. Re-running a mutation whose commit status is unknown is
+	// how double bookings and double payments happen. Quarantine it with a
+	// diagnosis; an admin verifies and submits a fresh action if needed.
+	if _, err := store.db.ExecContext(context.Background(),
+		`UPDATE agent_actions SET status = ?, error = ? WHERE status = ? AND decided_at <> '' AND decided_at < ?`,
+		ActionFailed, "execution outcome unknown after crash: verify before resubmitting", ActionApproved, cutoff); err != nil {
+		_ = store.Close()
+		return nil, fmt.Errorf("quarantine stale approved actions: %w", err)
 	}
 	return &Service{store: store}, nil
 }
@@ -100,8 +116,11 @@ func (s *Service) UpdateActionDecision(a *Action, expect ActionStatus) error {
 }
 
 // ExamplesFor retrieves similar high-reward episodes as few-shot exemplars.
-func (s *Service) ExamplesFor(agentName, query string, k int) []Example {
-	episodes, err := s.store.TopEpisodes(agentName, 0.5, 50)
+func (s *Service) ExamplesFor(tenantID, agentName, query string, k int) []Example {
+	if tenantID == "" {
+		return nil
+	}
+	episodes, err := s.store.TopEpisodes(tenantID, agentName, 0.5, 50)
 	if err != nil {
 		return nil
 	}

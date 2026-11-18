@@ -208,6 +208,7 @@ func TestAccounting_OutboxConsumer_Idempotency_And_GLRules(t *testing.T) {
 			"SettlementID": "stl-test-001",
 			"DriverID":     "drv-001",
 			"NetPayout":    4500.0,
+			"tenant_id":    "1",
 		},
 	})
 
@@ -239,6 +240,7 @@ func TestAccounting_OutboxConsumer_Idempotency_And_GLRules(t *testing.T) {
 		Payload: map[string]interface{}{
 			"SettlementID": "stl-test-001",
 			"NetPayout":    4500.0,
+			"tenant_id":    "1",
 		},
 	})
 
@@ -254,6 +256,7 @@ func TestAccounting_OutboxConsumer_Idempotency_And_GLRules(t *testing.T) {
 			"InvoiceNumber": "INV-2026-999",
 			"CustomerName":  "Acme Corp",
 			"TotalAmount":   15000.0,
+			"tenant_id":     "1",
 		},
 	})
 
@@ -272,7 +275,7 @@ func TestAccounting_OutboxConsumer_Idempotency_And_GLRules(t *testing.T) {
 func TestAccounting_TriggerSync_And_Reconciliation(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	cfg := accounting.Config{Provider: "mock", Enabled: true, UseMock: true}
 	client := accounting.NewClient(cfg)
@@ -280,15 +283,15 @@ func TestAccounting_TriggerSync_And_Reconciliation(t *testing.T) {
 
 	// Seed pending/failed logs
 	_, err := db.Exec(`
-		INSERT INTO accounting_sync_log (id, idempotency_key, direction, entity_type, entity_id, adapter, payload_json, status, attempts, created_at, updated_at)
+		INSERT INTO accounting_sync_log (id, tenant_id, idempotency_key, direction, entity_type, entity_id, adapter, payload_json, status, attempts, created_at, updated_at)
 		VALUES
-		('acc-f1', 'DriverPayoutSettled:stl-retry-1', 'out', 'payout', 'stl-retry-1', 'mock', '{"NetPayout": 2000.0}', 'failed', 1, datetime('now'), datetime('now')),
-		('acc-p1', 'InvoiceExported:inv-retry-1', 'out', 'invoice', 'inv-retry-1', 'mock', '{"InvoiceNumber": "INV-RET-1", "TotalAmount": 8000.0}', 'pending', 0, datetime('now'), datetime('now'))
+		('acc-f1', '1', 'DriverPayoutSettled:stl-retry-1', 'out', 'payout', 'stl-retry-1', 'mock', '{"NetPayout": 2000.0}', 'failed', 1, datetime('now'), datetime('now')),
+		('acc-p1', '1', 'InvoiceExported:inv-retry-1', 'out', 'invoice', 'inv-retry-1', 'mock', '{"InvoiceNumber": "INV-RET-1", "TotalAmount": 8000.0}', 'pending', 0, datetime('now'), datetime('now'))
 	`)
 	require.NoError(t, err)
 
 	// Trigger sync flush
-	trigRes, err := consumer.TriggerSync(ctx, 60)
+	trigRes, err := consumer.TriggerSync(ctx, "1", 60)
 	require.NoError(t, err)
 	assert.Equal(t, 2, trigRes.Dispatched)
 	assert.Equal(t, 0, trigRes.Failed)
@@ -302,7 +305,7 @@ func TestAccounting_TriggerSync_And_Reconciliation(t *testing.T) {
 	_, _ = db.Exec(`INSERT OR REPLACE INTO customers (id, name, email, phone, gst) VALUES ('cust-acc-1', 'Apex Logistics', 'apex@test.com', '9988112233', '27AABCA1234A1Z1')`)
 	_, _ = db.Exec(`INSERT OR REPLACE INTO drivers (id, driver_id, first_name, last_name, phone, license_number, license_expiry, status) VALUES ('drv-acc-1', 'DRV-001', 'Suresh', 'Patil', '9876543210', 'DL-MH-1122', '2029-12-31', 'available')`)
 
-	syncRes, err := consumer.SyncContacts(ctx)
+	syncRes, err := consumer.SyncContacts(ctx, "1")
 	require.NoError(t, err)
 	assert.Equal(t, 2, syncRes.Synced)
 

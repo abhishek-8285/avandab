@@ -972,7 +972,7 @@ func (a *App) renderPage(w http.ResponseWriter, r *http.Request, name string, da
 		return
 	}
 
-	var notifications interface{}
+	var notificationsFeed interface{}
 	var unreadCount int
 	if a.AlertsRepo != nil && r != nil {
 		userID := ""
@@ -983,7 +983,7 @@ func (a *App) renderPage(w http.ResponseWriter, r *http.Request, name string, da
 			unreadCount = count
 		}
 		if recent, err := a.AlertsRepo.Recent(r.Context(), userID, 5); err == nil {
-			notifications = recent
+			notificationsFeed = recent
 		}
 	}
 	if unreadCount > 99 {
@@ -1022,7 +1022,7 @@ func (a *App) renderPage(w http.ResponseWriter, r *http.Request, name string, da
 			}
 			return ""
 		}(),
-		Notifications: notifications,
+		Notifications: notificationsFeed,
 		UnreadCount:   unreadCount,
 		HasUnread:     unreadCount > 0,
 		Features: func() map[string]bool {

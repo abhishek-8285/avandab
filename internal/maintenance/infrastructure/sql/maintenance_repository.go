@@ -288,12 +288,23 @@ func (r *MaintenanceRepository) ListUnresolvedCriticalDtc(ctx context.Context, v
 }
 
 // ResolveDtcEvent marks a DTC event as resolved.
-func (r *MaintenanceRepository) ResolveDtcEvent(ctx context.Context, id string) error {
-	_, err := r.db.ExecContext(ctx, `
+func (r *MaintenanceRepository) ResolveDtcEvent(ctx context.Context, tenantID, id string) error {
+	res, err := r.db.ExecContext(ctx, `
 		UPDATE dtc_events
 		SET resolved_at = CURRENT_TIMESTAMP
-		WHERE id = $1 AND resolved_at IS NULL`, id)
-	return err
+		WHERE id = $1 AND resolved_at IS NULL
+		  AND vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = $2)`, id, tenantID)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return fmt.Errorf("DTC event not found")
+	}
+	return nil
 }
 
 // InsertRecord adds a completed maintenance record and updates the associated schedule.
@@ -306,6 +317,11 @@ func (r *MaintenanceRepository) InsertRecord(ctx context.Context, rec domain.Rec
 	}
 	if tenantID == "" {
 		return errors.New("maintenance: cannot record without tenant")
+	}
+	// The vehicle must belong to the tenant the record is filed under.
+	var vehicleTenant string
+	if err := r.db.QueryRowContext(ctx, `SELECT tenant_id FROM vehicles WHERE id = $1`, rec.VehicleID).Scan(&vehicleTenant); err != nil || vehicleTenant != tenantID {
+		return errors.New("maintenance: vehicle not found in tenant")
 	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -324,17 +340,33 @@ func (r *MaintenanceRepository) InsertRecord(ctx context.Context, rec domain.Rec
 	}
 
 	// Update schedule last_done markers if schedule_id or match found
+	// Schedules have no tenant_id column: scope them through their vehicle's
+	// tenant, and surface write failures instead of silently losing the stamp.
+	var scheduleRes sql.Result
 	if rec.ScheduleID != nil && *rec.ScheduleID != "" {
-		_, _ = tx.ExecContext(ctx, `
+		scheduleRes, err = tx.ExecContext(ctx, `
 			UPDATE maintenance_schedules
 			SET last_done_km = $1, last_done_at = $2, updated_at = CURRENT_TIMESTAMP
-			WHERE id = $3`, rec.OdometerKM, rec.PerformedAt.UTC().Format("2006-01-02 15:04:05"), *rec.ScheduleID)
+			WHERE id = $3 AND vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = $4)`,
+			rec.OdometerKM, rec.PerformedAt.UTC().Format("2006-01-02 15:04:05"), *rec.ScheduleID, tenantID)
 	} else {
-		_, _ = tx.ExecContext(ctx, `
+		scheduleRes, err = tx.ExecContext(ctx, `
 			UPDATE maintenance_schedules
 			SET last_done_km = $1, last_done_at = $2, updated_at = CURRENT_TIMESTAMP
-			WHERE vehicle_id = $3 AND service_type = $4 AND active = 1`,
-			rec.OdometerKM, rec.PerformedAt.UTC().Format("2006-01-02 15:04:05"), rec.VehicleID, rec.ServiceType)
+			WHERE vehicle_id = $3 AND service_type = $4 AND active = 1
+			  AND vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = $5)`,
+			rec.OdometerKM, rec.PerformedAt.UTC().Format("2006-01-02 15:04:05"), rec.VehicleID, rec.ServiceType, tenantID)
+	}
+	if err != nil {
+		return err
+	}
+	// An explicitly named schedule that cannot be matched in this tenant is a
+	// cross-tenant write attempt. A vehicle+service match is best-effort: not
+	// every service record has a schedule.
+	if rec.ScheduleID != nil && *rec.ScheduleID != "" {
+		if n, _ := scheduleRes.RowsAffected(); n == 0 {
+			return errors.New("maintenance: schedule not found in tenant")
+		}
 	}
 
 	return tx.Commit()
@@ -373,15 +405,25 @@ func (r *MaintenanceRepository) SaveSchedule(ctx context.Context, s domain.Sched
 }
 
 // OverrideMaintenance applies an admin override to a vehicle's maintenance block.
-func (r *MaintenanceRepository) OverrideMaintenance(ctx context.Context, vehicleID, actorID, reason string) error {
-	_, err := r.db.ExecContext(ctx, `
+func (r *MaintenanceRepository) OverrideMaintenance(ctx context.Context, tenantID, vehicleID, actorID, reason string) error {
+	res, err := r.db.ExecContext(ctx, `
 		UPDATE vehicles
 		SET maintenance_override_by = $1,
 		    maintenance_override_at = CURRENT_TIMESTAMP,
 		    maintenance_override_reason = $2,
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE id = $3`, actorID, reason, vehicleID)
-	return err
+		WHERE id = $3 AND tenant_id = $4`, actorID, reason, vehicleID, tenantID)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return fmt.Errorf("vehicle not found")
+	}
+	return nil
 }
 
 // GetCriticalDtcCodes reads configured critical DTCs from company_settings or falls back to env/default.

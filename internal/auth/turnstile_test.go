@@ -10,11 +10,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTurnstileVerifier_UnconfiguredPasses(t *testing.T) {
+func TestTurnstileVerifier_UnconfiguredFailsClosed(t *testing.T) {
 	v := NewTurnstileVerifier("")
 	ok, err := v.Verify(context.Background(), "any-token", "1.2.3.4")
-	require.NoError(t, err)
-	assert.True(t, ok, "unconfigured verifier must pass-through in dev/test")
+	require.Error(t, err, "unconfigured verifier must report why it denied")
+	assert.False(t, ok, "no secret means no real check happened: deny, never pass through")
+
+	var nilVerifier *CloudflareTurnstileVerifier
+	ok, err = nilVerifier.Verify(context.Background(), "any-token", "1.2.3.4")
+	require.Error(t, err)
+	assert.False(t, ok, "nil verifier must deny too")
 }
 
 func TestTurnstileVerifier_EmptyTokenFails(t *testing.T) {

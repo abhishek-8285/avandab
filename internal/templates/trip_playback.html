@@ -505,6 +505,7 @@
             return {points:allPoints, summary:firstSummary, stops:allStops, geofenceEvents:allGeofences, detentions:allDetentions, truncated:truncated};
         }
 
+        function escZoneText(v){ return String(v==null?'':v).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
         async function loadGeofenceZones(){
             try{
                 var r=await fetch('/api/v1/telemetry/geofences', {headers:{'Accept':'application/json'}, credentials:'same-origin'});
@@ -517,10 +518,10 @@
                     var color=colors[z.kind]||'#137fec';
                     if(z.shape==='circle' && z.center_lat!=null && z.center_lng!=null && z.radius_m>0){
                         L.circle([z.center_lat,z.center_lng],{color:color, weight:2, fillColor:color, fillOpacity:0.12, radius:z.radius_m})
-                         .bindTooltip(z.name+' ('+(z.kind||'').toUpperCase()+')',{sticky:true}).addTo(geofenceOverlay);
+                         .bindTooltip(escZoneText(z.name)+' ('+escZoneText((z.kind||'').toUpperCase())+')',{sticky:true}).addTo(geofenceOverlay);
                     } else if(z.shape==='polygon' && z.polygon && z.polygon.length>=3){
                         var pts=z.polygon.map(function(p){ return Array.isArray(p)? [p[0],p[1]]:[p.lat,p.lng]; });
-                        L.polygon(pts,{color:color, weight:2, fillColor:color, fillOpacity:0.12}).bindTooltip(z.name+' ('+(z.kind||'').toUpperCase()+')',{sticky:true}).addTo(geofenceOverlay);
+                        L.polygon(pts,{color:color, weight:2, fillColor:color, fillOpacity:0.12}).bindTooltip(escZoneText(z.name)+' ('+escZoneText((z.kind||'').toUpperCase())+')',{sticky:true}).addTo(geofenceOverlay);
                     }
                 });
                 if(geofenceToggle && geofenceToggle.checked){

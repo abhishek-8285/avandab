@@ -72,7 +72,7 @@ func TestSubTask4D_MasterIntegrationSuite(t *testing.T) {
 	var sosAlertID, sosSeverity, sosStatus string
 	err := dbConn.QueryRow(`
 		SELECT id, severity, status FROM alerts 
-		WHERE dedup_key = 'sos:veh-sos-e2e'`).Scan(&sosAlertID, &sosSeverity, &sosStatus)
+		WHERE dedup_key = 'sos:tenant-1:veh-sos-e2e'`).Scan(&sosAlertID, &sosSeverity, &sosStatus)
 	require.NoError(t, err)
 	assert.Equal(t, alertdomain.SeverityBlocker, sosSeverity)
 	assert.Equal(t, alertdomain.StatusOpen, sosStatus)
@@ -215,7 +215,7 @@ func TestSubTask4D_MasterIntegrationSuite(t *testing.T) {
 
 	// Verify outbox recorded TripAssignedEvent
 	var outboxCount int
-	err = dbConn.QueryRow(`SELECT COUNT(*) FROM outbox_events WHERE aggregate_type = 'Trip' AND event_type = 'TripAssignedEvent'`).Scan(&outboxCount)
+	err = dbConn.QueryRow(`SELECT COUNT(*) FROM outbox_events WHERE aggregate_type = 'Trip' AND event_type = 'trip.assigned'`).Scan(&outboxCount)
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, outboxCount, 1)
 

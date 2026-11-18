@@ -12,6 +12,7 @@ import (
 	"transport-app/internal/middleware"
 	paymentapp "transport-app/internal/payment/application"
 	paymentagg "transport-app/internal/payment/domain/aggregate"
+	paymentSQL "transport-app/internal/payment/infrastructure/persistence/sql"
 	"transport-app/internal/payment/razorpay"
 	"transport-app/internal/shared"
 	clock "transport-app/internal/shared/clock"
@@ -53,7 +54,8 @@ func (h *PaymentHandlers) init() {
 			keySecret = h.Config.RazorpayKeySecret
 		}
 		client := razorpay.NewRazorpayClient(keyID, keySecret)
-		h.orderUC = paymentapp.NewCreateRazorpayOrderUseCase(uowImpl, client, keyID)
+		h.orderUC = paymentapp.NewCreateRazorpayOrderUseCase(uowImpl, client, keyID).
+			WithOrderBinding(paymentSQL.NewRazorpayOrderSQLStore(h.DB))
 	}
 	if h.verifyUC == nil {
 		uowImpl := uow.NewSQLUnitOfWork(h.DB)
@@ -65,7 +67,8 @@ func (h *PaymentHandlers) init() {
 		}
 		client := razorpay.NewRazorpayClient(keyID, keySecret)
 		h.verifyUC = paymentapp.NewVerifyRazorpayPaymentUseCase(uowImpl, h.recordUC, client, keySecret, clockImpl).
-			WithPaymentGateway(client)
+			WithPaymentGateway(client).
+			WithOrderBinding(paymentSQL.NewRazorpayOrderSQLStore(h.DB))
 	}
 	if h.publicPay == nil {
 		h.publicPay = paymentapp.NewPublicPaymentQueries(h.DB)
@@ -228,9 +231,9 @@ func (h *PaymentHandlers) Create(w http.ResponseWriter, r *http.Request) {
 
 func (h *PaymentHandlers) View(w http.ResponseWriter, r *http.Request) {
 	h.init()
-	id := chi.URLParam(r, "id")
+	paymentID := chi.URLParam(r, "id")
 	payment, err := h.getUC.Execute(r.Context(), paymentapp.GetPaymentQuery{
-		ID:       paymentagg.PaymentID(id),
+		ID:       paymentagg.PaymentID(paymentID),
 		TenantID: shared.TenantIDFromContext(r.Context()),
 	})
 	if err != nil {
@@ -242,8 +245,8 @@ func (h *PaymentHandlers) View(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PaymentHandlers) Delete(w http.ResponseWriter, r *http.Request) {
-	id := domain.PaymentID(chi.URLParam(r, "id"))
-	if err := h.Services.Payments.DeletePayment(r.Context(), id); err != nil {
+	paymentID := domain.PaymentID(chi.URLParam(r, "id"))
+	if err := h.Services.Payments.DeletePayment(r.Context(), paymentID); err != nil {
 		http.Error(w, "Failed to delete payment", http.StatusInternalServerError)
 		return
 	}

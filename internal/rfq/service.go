@@ -298,6 +298,9 @@ func (s *Service) AwardRFQ(ctx context.Context, tenantID, rfqID, bidID, userID s
 	if bid.Status == BidStatusWithdrawn {
 		return fmt.Errorf("%w: bid was withdrawn", ErrBidDecided)
 	}
+	if bid.RFQID != rfqID {
+		return fmt.Errorf("%w: bid does not belong to this RFQ", ErrBidDecided)
+	}
 
 	return s.repo.AwardRFQBidTransaction(ctx, tenantID, rfqID, bidID, bid.BidAmount, bid.CarrierID, bid.CarrierName, userID)
 }

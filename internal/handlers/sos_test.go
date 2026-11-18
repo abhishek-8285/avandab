@@ -183,3 +183,42 @@ func TestDriverSOS_EndToEndLifecycle(t *testing.T) {
 	assert.Equal(t, 1, alertCountAfter, "duplicate SOS alert must not be created within cooldown window")
 	assert.Equal(t, 2, occurrences, "occurrences counter must increment on dedup")
 }
+
+// Ratchet for the fail-closed SOS path: a panic acknowledgement must never be
+// returned when the outbox row could not be written, because the alert
+// pipeline only runs off that row.
+func TestDriverSOS_PersistFailureIsNotAcknowledged(t *testing.T) {
+	db, app, _, _, _ := setupSOSTestEnvironment(t)
+	defer db.Close()
+
+	// Force the persistence step to fail the way a locked/full DB would.
+	_, err := db.Exec(`DROP TABLE outbox_events`)
+	require.NoError(t, err)
+
+	driverID := "drv-sos-fail"
+	_, err = db.Exec(`INSERT INTO drivers (id, driver_id, tenant_id, first_name, last_name, phone, license_number, license_expiry, pan, status)
+		VALUES (?, ?, 'tenant-1', 'Fail', 'Case', '9811122244', 'DL-SOS-FAIL', '2029-01-01', 'ABCDE8888F', 'available')`,
+		driverID, driverID)
+	require.NoError(t, err)
+
+	payload := handlers.SOSRequest{
+		Latitude:  28.5355,
+		Longitude: 77.3910,
+		Reason:    "panic button",
+	}
+	body, err := json.Marshal(payload)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/sos", bytes.NewReader(body))
+	req = req.WithContext(shared.ContextWithTenantID(context.Background(), "tenant-1"))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Driver-ID", driverID)
+
+	rec := httptest.NewRecorder()
+	app.SOS.TriggerSOS(rec, req)
+
+	assert.NotEqual(t, http.StatusOK, rec.Code, "failed persist must not be acknowledged as success")
+	assert.NotEqual(t, http.StatusCreated, rec.Code, "failed persist must not be acknowledged as created")
+	assert.NotContains(t, rec.Body.String(), "have been alerted",
+		"response must not claim dispatchers were alerted when nothing was persisted")
+}

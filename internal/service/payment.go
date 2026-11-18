@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -10,6 +11,7 @@ import (
 	paymentevents "transport-app/internal/domain/payment"
 	"transport-app/internal/events"
 	"transport-app/internal/repository"
+	"transport-app/internal/shared"
 )
 
 // PaymentService handles payment processing and balance tracking.
@@ -80,7 +82,7 @@ func (s *PaymentService) RecordPayment(ctx context.Context, invoiceID domain.Inv
 
 	s.log.Info("payment recorded", "payment_id", created.ID, "invoice_id", invoiceID, "amount", amount)
 	s.logAudit(ctx, nil, "create", "payments", string(created.ID), nil, nil)
-	s.events.Publish(ctx, events.Event{
+	s.safePublish(ctx, events.Event{
 		Type: events.PaymentRecorded,
 		Payload: paymentevents.PaymentRecorded{
 			PaymentID:  created.ID,
@@ -151,21 +153,51 @@ func (s *PaymentService) ListPayments(ctx context.Context, method string, limit,
 	return payments, total, nil
 }
 
-// DeletePayment deletes a payment and updates the invoice status.
+// DeletePayment deletes a payment, appends a compensating ledger entry in the
+// same transaction, and recalculates the invoice payment status.
 func (s *PaymentService) DeletePayment(ctx context.Context, id domain.PaymentID) error {
-	// Get payment to find invoice ID
+	// Get payment to find invoice ID and the amount to reverse.
 	payment, err := s.store.GetPaymentByID(ctx, id)
 	if err != nil {
 		return domain.ErrPaymentNotFound
 	}
+	invoiceID := domain.InvoiceID(payment.InvoiceID)
 
-	if err := s.store.DeletePayment(ctx, id); err != nil {
+	// The delete and its compensating (debit) ledger entry commit together —
+	// a lost reversal can never leave the money ledger overstated.
+	deleteAndReverse := func(ctx context.Context) error {
+		if err := s.store.DeletePayment(ctx, id); err != nil {
+			return err
+		}
+		getter, ok := s.store.(repository.DBGetter)
+		if !ok || getter == nil || getter.DB() == nil {
+			return errors.New("payment delete: store exposes no *sql.DB for ledger")
+		}
+		tenant, err := shared.RequireTenantID(ctx)
+		if err != nil {
+			return err
+		}
+		_, err = repository.ExecTx(ctx, getter.DB(),
+			`INSERT INTO money_ledger
+				(id, tenant_id, txn_type, ref_table, ref_id, direction, amount_minor, currency, memo, created_by)
+			 VALUES (?, ?, 'payment_recorded', 'payments', ?, 'debit', ?, 'INR', ?, '')`,
+			generateID(), string(tenant), string(id), ToMinor(payment.Amount),
+			fmt.Sprintf("reversal of deleted payment against invoice %s", invoiceID))
+		return err
+	}
+	if s.txManager != nil {
+		err = s.txManager.WithTransaction(ctx, deleteAndReverse)
+	} else {
+		err = deleteAndReverse(ctx)
+	}
+	if err != nil {
 		return err
 	}
 
-	// Recalculate invoice payment status
-	invoiceID := domain.InvoiceID(payment.InvoiceID)
-	_ = s.updateInvoicePaymentStatus(ctx, invoiceID)
+	// Recalculate invoice payment status — a failure must reach the caller.
+	if err := s.updateInvoicePaymentStatus(ctx, invoiceID); err != nil {
+		return err
+	}
 
 	s.log.Info("payment deleted", "payment_id", id)
 	return nil

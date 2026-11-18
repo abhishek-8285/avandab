@@ -3,11 +3,13 @@ package fastag
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log/slog"
 	"strings"
 	"time"
 
 	intFastag "transport-app/internal/integration/fastag"
+	"transport-app/internal/shared"
 )
 
 // Config holds settings for FASTag operations.
@@ -129,16 +131,20 @@ func (s *FASTagService) ListTransactions(ctx context.Context, vehicleNumber stri
 	if limit <= 0 {
 		limit = 50
 	}
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		return nil, errors.New("fastag: tenant is required")
+	}
 
 	query := `
 		SELECT id, tenant_id, tag_id, vehicle_id, vehicle_number, trip_id, plaza_id, plaza_name,
 		       amount, txn_timestamp, status, source, reconciled, kharcha_id
 		FROM fastag_transactions
-		WHERE (vehicle_number = $1 OR $2 = '')
+		WHERE tenant_id = $1 AND (vehicle_number = $2 OR $3 = '')
 		ORDER BY txn_timestamp DESC
-		LIMIT $3
+		LIMIT $4
 	`
-	rows, err := s.db.QueryContext(ctx, query, vehicleNumber, vehicleNumber, limit)
+	rows, err := s.db.QueryContext(ctx, query, tenantID, vehicleNumber, vehicleNumber, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -174,12 +180,17 @@ func (s *FASTagService) ListTransactions(ctx context.Context, vehicleNumber stri
 
 // ListTags returns all registered tags in the database.
 func (s *FASTagService) ListTags(ctx context.Context) ([]TagRecord, error) {
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		return nil, errors.New("fastag: tenant is required")
+	}
 	query := `
 		SELECT id, tenant_id, vehicle_id, tag_id, vehicle_number, issuer, tag_class, balance, status, last_sync
 		FROM fastag_tags
+		WHERE tenant_id = $1
 		ORDER BY vehicle_number ASC
 	`
-	rows, err := s.db.QueryContext(ctx, query)
+	rows, err := s.db.QueryContext(ctx, query, tenantID)
 	if err != nil {
 		return nil, err
 	}

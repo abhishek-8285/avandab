@@ -18,8 +18,9 @@
     <script src="/static/js/bookings_board.js?v={{if .Version}}{{.Version}}{{else}}20260824{{end}}" defer></script>
     <script src="/static/js/console.js?v={{if .Version}}{{.Version}}{{else}}20260824{{end}}" defer></script>
     <script src="/static/js/geofence_draw.js?v={{if .Version}}{{.Version}}{{else}}20260824{{end}}" defer></script>
+    <script src="/static/js/command-palette.js?v={{if .Version}}{{.Version}}{{else}}20261118{{end}}" defer></script>
     <link rel="stylesheet" href="/static/css/tailwind.css?v={{if .Version}}{{.Version}}{{else}}20260821{{end}}">
-    <link rel="stylesheet" href="/static/css/app.css?v={{if .Version}}{{.Version}}{{else}}20260821{{end}}">
+    <link rel="stylesheet" href="/static/css/app.css?v={{if .Version}}{{.Version}}{{else}}20261118{{end}}">
     {{if .Extra}}{{if .Extra.MapAssets}}
     <link rel="stylesheet" href="/static/css/leaflet/leaflet.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link rel="stylesheet" href="/static/css/leaflet.markercluster/MarkerCluster.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
@@ -91,7 +92,7 @@
             <div class="sidebar-brand-row h-16 flex items-center px-5 shrink-0">
                 <a href="/dashboard" class="flex items-center gap-3 group text-decoration-none">
                     {{with .Extra}}{{with .BrandLogo}}
-                        <img src="{{.}}" alt="{{with $.Extra.BrandName}}{{.}}{{end}}" class="h-8 w-auto rounded object-contain">
+                        <img src="{{.}}" alt="{{with $.Extra.BrandName}}{{.}}{{end}}" width="32" height="32" class="h-8 w-auto rounded object-contain">
                     {{else}}
                         <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-white bg-blue-600 group-hover:bg-blue-500 transition-colors shadow-sm">
                             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-5 h-5"><path d="M3 5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h1v2a1 1 0 0 0 2 0v-2h9v2a1 1 0 0 0 2 0v-2h2a1 1 0 0 0 1-1v-7l-4-4H3Zm11 4h3l2 2v2h-5V9Z"/></svg>
@@ -473,10 +474,19 @@
                         aria-label="Toggle navigation" aria-expanded="false">
                         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
                     </button>
-                    <h2 class="text-sm font-semibold text-on-surface tracking-tight truncate m-0">{{.Title}}</h2>
+                    <div class="text-sm font-semibold text-on-surface tracking-tight truncate m-0">{{.Title}}</div>
                 </div>
 
                 <div class="flex items-center gap-4 sm:gap-6 ml-auto">
+                    <!-- Quick navigation (Ctrl/Cmd+K). A real link so the
+                         control still works before/defer without JS. -->
+                    <a href="/search" data-cp-open
+                       aria-label="Quick navigation (Control K or Command K)" aria-keyshortcuts="Control+K Meta+K"
+                       title="Quick navigation (Ctrl+K)"
+                       class="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-text-muted hover:text-on-surface hover:bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary transition-colors text-decoration-none">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        <kbd class="hidden lg:inline px-1.5 py-0.5 rounded border border-border-subtle bg-surface-container-low text-[11px] font-semibold">Ctrl K</kbd>
+                    </a>
                     <form method="GET" action="/search" class="relative hidden sm:block">
                         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                         <label for="global-search-input" class="sr-only">Search bookings, trips, vehicles, drivers, customers</label>

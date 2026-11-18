@@ -8,6 +8,8 @@ import (
 	"fmt"
 
 	rzp "github.com/razorpay/razorpay-go"
+
+	"transport-app/internal/shared"
 )
 
 // ErrNotConfigured is returned when Razorpay credentials are absent.
@@ -122,10 +124,11 @@ func (c *RazorpayClient) CreateOrder(invoiceID string, amountINR float64, curren
 		return nil, ErrNotConfigured
 	}
 
-	amountInPaise := int64(amountINR * 100)
 	if currency == "" {
 		currency = "INR"
 	}
+	// Round to minor units — int64(float*100) truncates (19.99 -> 1998).
+	amountInPaise := shared.FloatToMoney(amountINR, currency).Amount
 
 	data := map[string]interface{}{
 		"amount":   amountInPaise,

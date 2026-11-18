@@ -131,7 +131,7 @@ func TestSettlement_Migration00051_RoundTrip(t *testing.T) {
 func TestSettlement_Generate_Persistence_And_Idempotency(t *testing.T) {
 	dbConn, svcs, _, _, _ := setupComplianceTestEnv(t)
 	seedSettlementTestData(t, dbConn)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	// First generation
 	rec1, err := svcs.Settlements.GenerateSettlement(ctx, "trip-stl-1", false)

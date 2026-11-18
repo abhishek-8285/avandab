@@ -213,7 +213,10 @@ func (uc *CreateTripUseCase) Execute(ctx context.Context, cmd CreateTripCommand)
 				dropEta = cmd.DepartureTime.Add(4 * time.Hour)
 			}
 
-			otpN, _ := rand.Int(rand.Reader, big.NewInt(900000))
+			otpN, err := rand.Int(rand.Reader, big.NewInt(900000))
+			if err != nil {
+				return fmt.Errorf("generate drop OTP: %w", err)
+			}
 			otpCode := fmt.Sprintf("%06d", otpN.Int64()+100000)
 			otpExpires := dropEta.Add(48 * time.Hour)
 

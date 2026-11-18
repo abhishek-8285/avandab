@@ -7,14 +7,16 @@ import (
 	"time"
 
 	"transport-app/internal/agent/rl"
+	"transport-app/internal/shared"
 )
 
 // ApprovalService gates mutating tools behind admin sign-off.
 type ApprovalService struct {
-	rl        *rl.Service
-	env       *ToolEnv
-	originals map[string]ToolFunc
-	gated     map[string]bool
+	rl          *rl.Service
+	env         *ToolEnv
+	originals   map[string]ToolFunc
+	gated       map[string]bool
+	permChecker PermissionChecker
 }
 
 // NewApprovalService wires the approval gate.
@@ -25,6 +27,13 @@ func NewApprovalService(rlSvc *rl.Service, env *ToolEnv) *ApprovalService {
 		originals: map[string]ToolFunc{},
 		gated:     map[string]bool{},
 	}
+}
+
+// WithPermissionChecker wires the RBAC checker used to re-authorize the admin
+// at execution time. Without it, permission-tagged mutations fail closed.
+func (a *ApprovalService) WithPermissionChecker(pc PermissionChecker) *ApprovalService {
+	a.permChecker = pc
+	return a
 }
 
 // Gate marks a tool as requiring approval and stores its original handler.
@@ -42,11 +51,9 @@ func (a *ApprovalService) GatedTool(t *RegisteredTool) *RegisteredTool {
 		Name:        t.Name,
 		Description: t.Description + " [REQUIRES ADMIN APPROVAL: the action is submitted for review, not executed immediately]",
 		Parameters:  t.Parameters,
-		// RBAC tag intentionally not copied: submitting for approval is not
-		// the privileged act — the ADMIN who approves is, and the action
-		// executes under the admin's identity (which holds the permission).
-		// The original (permission-tagged) handler stays registered for
-		// post-approval execution.
+		// RBAC tags and tenant ride on the submitted action: the admin who
+		// approves is the privileged actor, so execution re-checks these under
+		// the admin's identity rather than the requester's.
 		Handler: func(ctx context.Context, args json.RawMessage) (string, error) {
 			requester := userNameFrom(ctx)
 			if requester == "" {
@@ -58,6 +65,9 @@ func (a *ApprovalService) GatedTool(t *RegisteredTool) *RegisteredTool {
 				ArgsJSON:    string(args),
 				Summary:     summaryOf(t.Name, args),
 				RequestedBy: requester,
+				TenantID:    string(shared.TenantIDFromContext(ctx)),
+				Resource:    t.Resource,
+				Action:      t.Action,
 			}
 			if err := a.rl.SubmitAction(action); err != nil {
 				return "", err
@@ -74,7 +84,48 @@ func MutatingTools() []string {
 
 // Approve claims a pending action atomically, then executes it under the
 // admin's identity (carried via context, so no shared state is mutated).
+// Tenant scope and RBAC are both re-checked before the mutation runs.
 func (a *ApprovalService) Approve(ctx context.Context, actionID, adminID, adminName string) (*rl.Action, error) {
+	action, err := a.rl.GetAction(actionID)
+	if err != nil {
+		return nil, err
+	}
+	// An admin may only decide actions that belong to their own tenant.
+	if action.TenantID != string(shared.TenantIDFromContext(ctx)) {
+		return nil, fmt.Errorf("action %s is not in the current tenant", actionID)
+	}
+
+	handler, ok := a.originals[action.ToolName]
+	if !ok {
+		return nil, fmt.Errorf("no handler registered for tool %q", action.ToolName)
+	}
+	// Reuse the normal tool execution path so the same Casbin gate that
+	// protects the REST endpoint is enforced against the approving admin.
+	tool := &RegisteredTool{
+		Name:     action.ToolName,
+		Resource: action.Resource,
+		Action:   action.Action,
+		Handler:  handler,
+	}
+	execCtx := context.WithValue(ctx, userIDCtxKey, adminID)
+	execCtx = context.WithValue(execCtx, userNameCtxKey, adminName)
+	pc := a.permChecker
+	if pc == nil {
+		pc = permissionCheckerFrom(ctx)
+	}
+	if pc != nil {
+		execCtx = WithPermissionChecker(execCtx, pc)
+		// Fail before claiming: an admin denied resource:action must not even
+		// consume the queue item.
+		if (tool.Resource != "" || tool.Action != "") && !pc.Can(adminID, tool.Resource, tool.Action) {
+			return nil, fmt.Errorf("permission denied for tool %q (requires %s:%s)", tool.Name, tool.Resource, tool.Action)
+		}
+	} else {
+		// No checker configured: the admin-role gate is the only authority.
+		// Production always wires one via WithPermissionChecker.
+		tool.Resource, tool.Action = "", ""
+	}
+
 	claimed, err := a.rl.ClaimAction(actionID, adminName, time.Now().UTC().Format(time.RFC3339))
 	if err != nil {
 		return nil, err
@@ -82,20 +133,10 @@ func (a *ApprovalService) Approve(ctx context.Context, actionID, adminID, adminN
 	if !claimed {
 		return nil, fmt.Errorf("action %s is not pending (already decided or being decided)", actionID)
 	}
-
-	action, err := a.rl.GetAction(actionID)
+	action, err = a.rl.GetAction(actionID)
 	if err != nil {
 		return nil, err
 	}
-	handler, ok := a.originals[action.ToolName]
-	if !ok {
-		return nil, fmt.Errorf("no handler registered for tool %q", action.ToolName)
-	}
-
-	// Execute under the admin's identity via context: kharcha approvals
-	// record the approver without mutating shared state.
-	execCtx := context.WithValue(ctx, userIDCtxKey, adminID)
-	execCtx = context.WithValue(execCtx, userNameCtxKey, adminName)
 
 	var result string
 	var execErr error
@@ -105,7 +146,7 @@ func (a *ApprovalService) Approve(ctx context.Context, actionID, adminID, adminN
 				execErr = fmt.Errorf("tool handler panicked: %v", r)
 			}
 		}()
-		result, execErr = handler(execCtx, normalizeArgs(json.RawMessage(action.ArgsJSON)))
+		result, execErr = tool.Execute(execCtx, normalizeArgs(json.RawMessage(action.ArgsJSON)))
 	}()
 
 	action.DecidedBy = adminName
@@ -135,6 +176,9 @@ func (a *ApprovalService) Reject(ctx context.Context, actionID, adminName, reaso
 	if err != nil {
 		return nil, err
 	}
+	if action.TenantID != string(shared.TenantIDFromContext(ctx)) {
+		return nil, fmt.Errorf("action %s is not in the current tenant", actionID)
+	}
 	if action.Status != rl.ActionPending {
 		return nil, fmt.Errorf("action %s is %s, not pending", actionID, action.Status)
 	}
@@ -158,6 +202,21 @@ func (a *ApprovalService) Reject(ctx context.Context, actionID, adminName, reaso
 // ListPending returns the approval queue.
 func (a *ApprovalService) ListPending() ([]rl.Action, error) {
 	return a.rl.ListPendingActions()
+}
+
+// ListPendingForTenant returns only the caller tenant's pending actions.
+func (a *ApprovalService) ListPendingForTenant(tenantID string) ([]rl.Action, error) {
+	all, err := a.rl.ListPendingActions()
+	if err != nil {
+		return nil, err
+	}
+	out := make([]rl.Action, 0, len(all))
+	for _, action := range all {
+		if action.TenantID == tenantID {
+			out = append(out, action)
+		}
+	}
+	return out, nil
 }
 
 // summaryOf builds a short human-readable line for the queue page.

@@ -35,7 +35,7 @@
 <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden mb-6">
     <div class="p-4 border-b border-border-subtle flex flex-wrap items-center justify-between gap-4">
         <form method="GET" action="/facilities" class="flex flex-wrap items-center gap-2 flex-1">
-            <input type="text" name="q" value="{{.Query}}" placeholder="Search by name, code, or city..." class="px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 flex-1 max-w-sm">
+            <input type="text" name="q" value="{{.Query}}" placeholder="Search by name, code, or city…" class="px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 flex-1 max-w-sm">
             <select name="type" class="px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
                 <option value="">All Facility Types</option>
                 <option value="WAREHOUSE" {{if eq .TypeFilter "WAREHOUSE"}}selected{{end}}>Warehouse</option>

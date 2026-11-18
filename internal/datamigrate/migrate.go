@@ -155,7 +155,10 @@ func Run(ctx context.Context, src, dst *sql.DB, opt Options) (*Summary, error) {
 			if done[t] {
 				continue
 			}
-			tc := copyTable(ctx, src, ex, qx, t, maps, depCols[t], sum, opt.DryRun)
+			tc, copyErr := copyTable(ctx, src, ex, qx, t, maps, depCols[t], sum, opt.DryRun)
+			if copyErr != nil {
+				return nil, fmt.Errorf("copy table %s: %w", t, copyErr)
+			}
 			// Accumulate across passes: Copied sums per-pass deltas,
 			// Skip/counts reflect the latest pass.
 			acc := last[t]
@@ -258,17 +261,19 @@ func copyMergeTable(ctx context.Context, src *sql.DB, ex execer, qx queryer, m *
 }
 
 // copyTable copies one plain table; rows that fail are quarantined.
-func copyTable(ctx context.Context, src *sql.DB, ex execer, qx queryer, table string, maps map[string]*IDMap, deps map[string]string, sum *Summary, savepoints bool) TableCount {
+func copyTable(ctx context.Context, src *sql.DB, ex execer, qx queryer, table string, maps map[string]*IDMap, deps map[string]string, sum *Summary, savepoints bool) (TableCount, error) {
 	tc := TableCount{Table: table}
 	rows, err := src.QueryContext(ctx, fmt.Sprintf(`SELECT * FROM "%s"`, table))
 	if err != nil {
-		return tc
+		// A failed read used to return an empty table count and look like a
+		// successfully copied zero-row table. Abort the cutover instead.
+		return tc, fmt.Errorf("read source table: %w", err)
 	}
 	defer func() { _ = rows.Close() }()
 	cols, _ := rows.Columns()
 	types, err := ColumnTypes(ctx, qx, table)
 	if err != nil {
-		return tc
+		return tc, fmt.Errorf("resolve destination columns: %w", err)
 	}
 	if len(types) == 0 {
 		// Table exists in sqlite but no PG migration owns it (legacy /
@@ -284,7 +289,10 @@ func copyTable(ctx context.Context, src *sql.DB, ex execer, qx queryer, table st
 		// missing table and poison the dry-run transaction (25P02).
 		_ = src.QueryRowContext(ctx, fmt.Sprintf(`SELECT count(*) FROM "%s"`, table)).Scan(&tc.SQLite)
 		tc.PG = -1 // no PG counterpart to count
-		return tc
+		if err := rows.Err(); err != nil {
+			return tc, err
+		}
+		return tc, nil
 	}
 	ph := placeholders(len(cols))
 	stmt := fmt.Sprintf(`INSERT INTO "%s" ("%s") VALUES (%s) ON CONFLICT DO NOTHING`,
@@ -328,7 +336,7 @@ func copyTable(ctx context.Context, src *sql.DB, ex execer, qx queryer, table st
 		unquar(ctx, ex, sum, savepoints, table, cols, vals)
 	}
 	finishCount(ctx, qx, src, &tc)
-	return tc
+	return tc, nil
 }
 
 // execInsert runs one row insert with ON CONFLICT DO NOTHING and reports

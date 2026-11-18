@@ -710,7 +710,9 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				// TestGetOpenAlerts_TenantIsolation below).
 				alerts, err := alertsapp.NewOpenAlertQueries(db).List(ctx, string(shared.TenantIDFromContext(ctx)), in.Severity, 20)
 				if err != nil {
-					return "No alerts found: " + err.Error(), nil
+					// Propagate so Agent.Run traces the failure; DB internals
+					// must never be returned as a user-facing answer.
+					return "", err
 				}
 				if len(alerts) == 0 {
 					return "No open alerts found.", nil

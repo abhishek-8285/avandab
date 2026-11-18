@@ -193,15 +193,15 @@ func (h *BookingHandlers) Create(w http.ResponseWriter, r *http.Request) {
 func (h *BookingHandlers) View(w http.ResponseWriter, r *http.Request) {
 	h.init()
 	session, _ := h.getUserFromContext(r)
-	id := chi.URLParam(r, "id")
+	bookingID := chi.URLParam(r, "id")
 	tenantID := shared.TenantIDFromContext(r.Context())
 
 	booking, err := h.getUC.Execute(r.Context(), bookingapp.GetBookingQuery{
-		BookingID: bookingagg.BookingID(id),
+		BookingID: bookingagg.BookingID(bookingID),
 		TenantID:  tenantID,
 	})
 	if err != nil {
-		h.renderError(w, http.StatusNotFound, "Booking Not Found", fmt.Sprintf("No booking found with ID %q.", id), session)
+		h.renderError(w, http.StatusNotFound, "Booking Not Found", fmt.Sprintf("No booking found with ID %q.", bookingID), session)
 		return
 	}
 
@@ -210,26 +210,26 @@ func (h *BookingHandlers) View(w http.ResponseWriter, r *http.Request) {
 		relatedInvoice *repository.InvoiceWithJoins
 		history        []repository.AuditLogWithUser
 	)
-	if t, err := h.Services.Trips.GetTripByBooking(r.Context(), domain.BookingID(id)); err == nil {
+	if t, err := h.Services.Trips.GetTripByBooking(r.Context(), domain.BookingID(bookingID)); err == nil {
 		relatedTrip = t
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		slog.ErrorContext(r.Context(), "booking view: trip lookup failed",
-			slog.String("booking_id", id),
+			slog.String("booking_id", bookingID),
 			slog.String("error", logging.Redact(err.Error())))
 	}
-	if inv, err := h.Services.Invoices.GetInvoiceByBooking(r.Context(), domain.BookingID(id)); err == nil {
+	if inv, err := h.Services.Invoices.GetInvoiceByBooking(r.Context(), domain.BookingID(bookingID)); err == nil {
 		relatedInvoice = &inv
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		slog.ErrorContext(r.Context(), "booking view: invoice lookup failed",
-			slog.String("booking_id", id),
+			slog.String("booking_id", bookingID),
 			slog.String("error", logging.Redact(err.Error())))
 	}
 
-	if entries, err := h.Services.Audit.ListAuditLogsByRecord(r.Context(), "bookings", id, 10); err == nil {
+	if entries, err := h.Services.Audit.ListAuditLogsByRecord(r.Context(), "bookings", bookingID, 10); err == nil {
 		history = entries
 	} else {
 		slog.ErrorContext(r.Context(), "booking view: history lookup failed",
-			slog.String("booking_id", id),
+			slog.String("booking_id", bookingID),
 			slog.String("error", logging.Redact(err.Error())))
 	}
 
@@ -242,16 +242,16 @@ func (h *BookingHandlers) View(w http.ResponseWriter, r *http.Request) {
 
 func (h *BookingHandlers) Edit(w http.ResponseWriter, r *http.Request) {
 	h.init()
-	id := chi.URLParam(r, "id")
+	bookingID := chi.URLParam(r, "id")
 	session, _ := h.getUserFromContext(r)
 	tenantID := shared.TenantIDFromContext(r.Context())
 
 	booking, err := h.getUC.Execute(r.Context(), bookingapp.GetBookingQuery{
-		BookingID: bookingagg.BookingID(id),
+		BookingID: bookingagg.BookingID(bookingID),
 		TenantID:  tenantID,
 	})
 	if err != nil {
-		h.renderError(w, http.StatusNotFound, "Booking Not Found", fmt.Sprintf("No booking found with ID %q.", id), session)
+		h.renderError(w, http.StatusNotFound, "Booking Not Found", fmt.Sprintf("No booking found with ID %q.", bookingID), session)
 		return
 	}
 	customers, _, _ := h.Services.Customers.ListCustomers(r.Context(), "", 1000, 0)
@@ -270,7 +270,7 @@ func (h *BookingHandlers) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := chi.URLParam(r, "id")
+	bookingID := chi.URLParam(r, "id")
 	customerID := r.PostFormValue("customer_id")
 	routeID := r.PostFormValue("route_id")
 	passengers, _ := strconv.ParseInt(r.PostFormValue("passengers"), 10, 64)
@@ -279,7 +279,7 @@ func (h *BookingHandlers) Update(w http.ResponseWriter, r *http.Request) {
 	tenantID := shared.TenantIDFromContext(r.Context())
 
 	err := h.updateUC.Execute(r.Context(), bookingapp.UpdateBookingCommand{
-		BookingID:   bookingagg.BookingID(id),
+		BookingID:   bookingagg.BookingID(bookingID),
 		TenantID:    tenantID,
 		CustomerID:  customerID,
 		RouteID:     routeID,
@@ -292,7 +292,7 @@ func (h *BookingHandlers) Update(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		booking, _ := h.getUC.Execute(r.Context(), bookingapp.GetBookingQuery{
-			BookingID: bookingagg.BookingID(id),
+			BookingID: bookingagg.BookingID(bookingID),
 			TenantID:  tenantID,
 		})
 		customers, _, _ := h.Services.Customers.ListCustomers(r.Context(), "", 1000, 0)
@@ -303,7 +303,7 @@ func (h *BookingHandlers) Update(w http.ResponseWriter, r *http.Request) {
 			flash = ae.UserMsg
 		}
 		slog.ErrorContext(r.Context(), "booking update failed",
-			slog.String("booking_id", id),
+			slog.String("booking_id", bookingID),
 			slog.String("error", logging.Redact(err.Error())))
 		h.renderForm(w, r, "booking_edit.html", PageData{
 			Title:      "Edit Booking",
@@ -313,32 +313,32 @@ func (h *BookingHandlers) Update(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	http.Redirect(w, r, "/bookings/"+id, http.StatusSeeOther)
+	http.Redirect(w, r, "/bookings/"+bookingID, http.StatusSeeOther)
 }
 
 func (h *BookingHandlers) Complete(w http.ResponseWriter, r *http.Request) {
 	h.init()
-	id := chi.URLParam(r, "id")
+	bookingID := chi.URLParam(r, "id")
 	tenantID := shared.TenantIDFromContext(r.Context())
 
 	err := h.completeUC.Execute(r.Context(), bookingapp.CompleteBookingCommand{
-		BookingID: bookingagg.BookingID(id),
+		BookingID: bookingagg.BookingID(bookingID),
 		TenantID:  tenantID,
 	})
 	if err != nil {
 		bookingActionFailed(h, w, r, err, "Could Not Complete Booking")
 		return
 	}
-	http.Redirect(w, r, "/bookings/"+id, http.StatusSeeOther)
+	http.Redirect(w, r, "/bookings/"+bookingID, http.StatusSeeOther)
 }
 
 func (h *BookingHandlers) Delete(w http.ResponseWriter, r *http.Request) {
 	h.init()
-	id := chi.URLParam(r, "id")
+	bookingID := chi.URLParam(r, "id")
 	tenantID := shared.TenantIDFromContext(r.Context())
 
 	if err := h.deleteUC.Execute(r.Context(), bookingapp.DeleteBookingCommand{
-		BookingID: bookingagg.BookingID(id),
+		BookingID: bookingagg.BookingID(bookingID),
 		TenantID:  tenantID,
 	}); err != nil {
 		bookingActionFailed(h, w, r, err, "Could Not Delete Booking")
@@ -349,15 +349,15 @@ func (h *BookingHandlers) Delete(w http.ResponseWriter, r *http.Request) {
 
 func (h *BookingHandlers) Confirm(w http.ResponseWriter, r *http.Request) {
 	h.init()
-	id := chi.URLParam(r, "id")
+	bookingID := chi.URLParam(r, "id")
 	tenantID := shared.TenantIDFromContext(r.Context())
 
-	booking, err := h.getUC.Execute(r.Context(), bookingapp.GetBookingQuery{BookingID: bookingagg.BookingID(id), TenantID: tenantID})
+	booking, err := h.getUC.Execute(r.Context(), bookingapp.GetBookingQuery{BookingID: bookingagg.BookingID(bookingID), TenantID: tenantID})
 	if err == nil {
 		_, err = h.confirmTripUC.Execute(r.Context(), workflowapp.ConfirmBookingAndCreateTripCommand{
-			BookingID: bookingagg.BookingID(id), TenantID: tenantID,
+			BookingID: bookingagg.BookingID(bookingID), TenantID: tenantID,
 			RouteID: booking.RouteID, DepartureTime: booking.PickupDate,
-			IdempotencyKey: "confirm-trip-" + id,
+			IdempotencyKey: "confirm-trip-" + bookingID,
 			CustomerID:     booking.CustomerID,
 		})
 	}
@@ -365,23 +365,23 @@ func (h *BookingHandlers) Confirm(w http.ResponseWriter, r *http.Request) {
 		bookingActionFailed(h, w, r, err, "Could Not Confirm Booking")
 		return
 	}
-	http.Redirect(w, r, "/bookings/"+id, http.StatusSeeOther)
+	http.Redirect(w, r, "/bookings/"+bookingID, http.StatusSeeOther)
 }
 
 func (h *BookingHandlers) Cancel(w http.ResponseWriter, r *http.Request) {
 	h.init()
-	id := chi.URLParam(r, "id")
+	bookingID := chi.URLParam(r, "id")
 	tenantID := shared.TenantIDFromContext(r.Context())
 
 	err := h.cancelUC.Execute(r.Context(), bookingapp.CancelBookingCommand{
-		BookingID: bookingagg.BookingID(id),
+		BookingID: bookingagg.BookingID(bookingID),
 		TenantID:  tenantID,
 	})
 	if err != nil {
 		bookingActionFailed(h, w, r, err, "Could Not Cancel Booking")
 		return
 	}
-	http.Redirect(w, r, "/bookings/"+id, http.StatusSeeOther)
+	http.Redirect(w, r, "/bookings/"+bookingID, http.StatusSeeOther)
 }
 
 // ── S5: Bookings kanban board (Spec 22 §2.4, §4.2) ──────────────────────

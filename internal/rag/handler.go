@@ -3,6 +3,7 @@ package rag
 import (
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -322,7 +323,11 @@ func (h *Handler) handleUpload(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(APIError{Error: "file is required"})
 		return
 	}
-	defer file.Close()
+	defer func() {
+		if cerr := file.Close(); cerr != nil {
+			slog.Default().Warn("rag upload: close form file failed", "error", cerr)
+		}
+	}()
 
 	if header.Size > 10<<20 {
 		w.WriteHeader(http.StatusBadRequest)
@@ -350,14 +355,22 @@ func (h *Handler) handleUpload(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(APIError{Error: "failed to save file"})
 		return
 	}
-	defer os.Remove(tmpPath)
+	defer func() {
+		if err := os.Remove(tmpPath); err != nil && !os.IsNotExist(err) {
+			slog.Default().Warn("rag upload: remove temp file failed", "path", tmpPath, "error", err)
+		}
+	}()
 
 	if _, err := io.Copy(tmpFile, file); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(APIError{Error: "failed to save file"})
 		return
 	}
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(APIError{Error: "failed to save file"})
+		return
+	}
 
 	count, err := h.service.UploadFile(r.Context(), tmpPath)
 	if err != nil {

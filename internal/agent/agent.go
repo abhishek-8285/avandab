@@ -154,10 +154,25 @@ func (a *Agent) Run(ctx context.Context, history []Message) (string, int, error)
 // could be echoed to the user (schema/DB internals). Newlines and over-long
 // messages are stripped; the raw error is already logged above and traced.
 func sanitizeToolError(err error) string {
+	return SanitizeToolError(err)
+}
+
+// SanitizeToolError is the shared client-facing form of a tool error: raw
+// errors are logged server-side, but schema/DB detail must not reach callers
+// through MCP any more than it reaches the model or the web user.
+func SanitizeToolError(err error) string {
 	if err == nil {
 		return ""
 	}
 	s := strings.Join(strings.Fields(err.Error()), " ")
+	// SQL text, driver errors and schema identifiers must never reach a model
+	// or an MCP client — the raw error is logged server-side with the tool name.
+	lower := strings.ToLower(s)
+	for _, marker := range []string{"select ", "insert ", "update ", "delete ", " from ", " where ", "sqlite", "postgres", "constraint", " table ", " column ", "sql:"} {
+		if strings.Contains(lower, marker) {
+			return "tool error (details logged server-side)"
+		}
+	}
 	r := []rune(s)
 	if len(r) > 300 {
 		return string(r[:300]) + "..."

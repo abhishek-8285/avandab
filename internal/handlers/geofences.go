@@ -131,8 +131,8 @@ func (h *GeofenceHandlers) Create(w http.ResponseWriter, r *http.Request) {
 // EditForm renders the drawing form pre-loaded with the zone.
 func (h *GeofenceHandlers) EditForm(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
-	id := chi.URLParam(r, "id")
-	zone, err := h.adminRepo.Find(r.Context(), string(h.tenant(r.Context())), id)
+	geofenceID := chi.URLParam(r, "id")
+	zone, err := h.adminRepo.Find(r.Context(), string(h.tenant(r.Context())), geofenceID)
 	if err != nil {
 		h.renderError(w, http.StatusNotFound, "Not Found", "Geofence not found", session)
 		return
@@ -147,21 +147,21 @@ func (h *GeofenceHandlers) EditForm(w http.ResponseWriter, r *http.Request) {
 
 // Update persists changes to an existing zone.
 func (h *GeofenceHandlers) Update(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
+	geofenceID := chi.URLParam(r, "id")
 	pz, err := parseZoneForm(r)
 	if err != nil {
 		http.SetCookie(w, flashCookie("flash_error", err.Error()))
-		http.Redirect(w, r, routeGeofences+"/"+id+"/edit", http.StatusSeeOther)
+		http.Redirect(w, r, routeGeofences+"/"+geofenceID+"/edit", http.StatusSeeOther)
 		return
 	}
 	err = h.crudUC.Update(r.Context(), application.UpdateZoneCommand{
-		TenantID: h.tenant(r.Context()), ID: id, Name: pz.name, Kind: pz.kind, Shape: pz.shape,
+		TenantID: h.tenant(r.Context()), ID: geofenceID, Name: pz.name, Kind: pz.kind, Shape: pz.shape,
 		CenterLat: pz.centerLat, CenterLng: pz.centerLng, RadiusM: pz.radius,
 		Polygon: pz.polygon, RouteName: pz.routeName, Priority: pz.priority,
 	})
 	if err != nil {
 		http.SetCookie(w, flashCookie("flash_error", "Update failed: "+err.Error()))
-		http.Redirect(w, r, routeGeofences+"/"+id+"/edit", http.StatusSeeOther)
+		http.Redirect(w, r, routeGeofences+"/"+geofenceID+"/edit", http.StatusSeeOther)
 		return
 	}
 	http.SetCookie(w, flashCookie("flash_success", "Geofence updated"))
@@ -170,8 +170,8 @@ func (h *GeofenceHandlers) Update(w http.ResponseWriter, r *http.Request) {
 
 // Delete soft-deletes the zone (is_active=0).
 func (h *GeofenceHandlers) Delete(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if err := h.crudUC.SoftDelete(r.Context(), h.tenant(r.Context()), id); err != nil {
+	geofenceID := chi.URLParam(r, "id")
+	if err := h.crudUC.SoftDelete(r.Context(), h.tenant(r.Context()), geofenceID); err != nil {
 		http.SetCookie(w, flashCookie("flash_error", "Delete failed: "+err.Error()))
 		http.Redirect(w, r, routeGeofences, http.StatusSeeOther)
 		return

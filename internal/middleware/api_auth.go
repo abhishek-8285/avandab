@@ -70,7 +70,10 @@ func RequireAPIAuth(store *auth.SessionStore, secret []byte, tenantResolver Tena
 	}
 }
 
-// RequirePermission checks Casbin RBAC permissions and returns JSON 403 on denial.
+// RequirePermission is the JSON-API permission gate (JSON 401/403). The
+// permission decision itself has one source of truth: auth.AuthorizationService.Can
+// (Casbin). Its HTML/Datastar twin is middleware.ResourcePermission, which has
+// a different response contract (redirect / http.Error) and stays separate.
 // Use this on API routes after RequireAPIAuth.
 func RequirePermission(authSrv auth.AuthorizationService, resource, action string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -133,7 +136,11 @@ func resolveAPIPrincipal(r *http.Request, store *auth.SessionStore, secret []byt
 		}, nil
 	}
 
-	// 2. Session cookie (browser / Datastar requests)
+	// 2. Session cookie (browser / Datastar requests). A nil store is a
+	//    misconfiguration, not a panic: fail closed like the Bearer branch.
+	if store == nil {
+		return apiPrincipal{}, auth.ErrTokenInvalid
+	}
 	session, ok := store.ValidateSession(r)
 	if !ok {
 		return apiPrincipal{}, auth.ErrTokenInvalid

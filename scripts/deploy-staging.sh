@@ -15,6 +15,10 @@ VERSION="$(git rev-parse --short HEAD)"
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w -X main.Version=${VERSION}" -o bin/server ./cmd/server
 echo "==> [2/5] Syncing binary + templates + static to staging..."
 ssh "${TARGET_HOST}" "mkdir -p ${REMOTE_DIR}/bin"
+# Drop a stale server.new first. A rollback rehearsal can leave it as a
+# symlink into bin/releases/, and rsync then refuses to replace it (it logs
+# "server -> releases/..." and the following chmod dies on a dangling link).
+ssh "${TARGET_HOST}" "rm -f ${REMOTE_DIR}/bin/server.new"
 # --timeout=120: fail loudly on stall, never hang silently (see deploy-vps.sh).
 rsync -avz --timeout=120 bin/server "${TARGET_HOST}:${REMOTE_DIR}/bin/server.new"
 ssh "${TARGET_HOST}" "chmod +x ${REMOTE_DIR}/bin/server.new"

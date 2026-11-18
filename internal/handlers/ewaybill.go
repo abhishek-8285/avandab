@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -50,11 +51,79 @@ func (h *EWayBillHandlers) Mount(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.authSrv, "ewaybill", "update")).Post("/ewaybill/{ewb}/cancel", h.Cancel)
 }
 
+func (h *EWayBillHandlers) requestTenant(r *http.Request) string {
+	return string(shared.TenantIDFromContext(r.Context()))
+}
+
+// tripOwned reports whether the trip belongs to the caller's tenant. Missing
+// tenant or a failed lookup is treated as not owned (fail closed).
+func (h *EWayBillHandlers) tripOwned(ctx context.Context, tripID, tenantID string) (bool, error) {
+	if tripID == "" || tenantID == "" {
+		return false, nil
+	}
+	var n int
+	if err := h.DB.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM trips WHERE id = $1 AND tenant_id = $2`, tripID, tenantID).Scan(&n); err != nil {
+		return false, err
+	}
+	return n > 0, nil
+}
+
+// ewbOwned resolves ownership through the bill's trip; eway_bills itself has
+// no tenant column.
+func (h *EWayBillHandlers) ewbOwned(ctx context.Context, ewbNumber, tenantID string) (bool, error) {
+	if ewbNumber == "" || tenantID == "" {
+		return false, nil
+	}
+	var n int
+	if err := h.DB.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM eway_bills e
+		JOIN trips t ON t.id = e.trip_id
+		WHERE e.ewb_number = $1 AND t.tenant_id = $2`, ewbNumber, tenantID).Scan(&n); err != nil {
+		return false, err
+	}
+	return n > 0, nil
+}
+
+func (h *EWayBillHandlers) requireTrip(w http.ResponseWriter, r *http.Request, tripID string) bool {
+	ok, err := h.tripOwned(r.Context(), tripID, h.requestTenant(r))
+	if err != nil {
+		http.Error(w, "could not verify trip", http.StatusInternalServerError)
+		return false
+	}
+	if !ok {
+		http.Error(w, "trip not found", http.StatusNotFound)
+		return false
+	}
+	return true
+}
+
+func (h *EWayBillHandlers) requireEWB(w http.ResponseWriter, r *http.Request, ewbNumber string) bool {
+	ok, err := h.ewbOwned(r.Context(), ewbNumber, h.requestTenant(r))
+	if err != nil {
+		http.Error(w, "could not verify e-way bill", http.StatusInternalServerError)
+		return false
+	}
+	if !ok {
+		http.Error(w, "E-Way Bill not found", http.StatusNotFound)
+		return false
+	}
+	return true
+}
+
 // GenerateForTrip generates a Part-A EWB for a trip.
 func (h *EWayBillHandlers) GenerateForTrip(w http.ResponseWriter, r *http.Request) {
 	tripID := chi.URLParam(r, "id")
 	if tripID == "" {
 		http.Error(w, "trip id required", http.StatusBadRequest)
+		return
+	}
+
+	if ok, ownErr := h.tripOwned(r.Context(), tripID, h.requestTenant(r)); ownErr != nil {
+		http.Error(w, "could not verify trip", http.StatusInternalServerError)
+		return
+	} else if !ok {
+		http.Error(w, "trip not found", http.StatusNotFound)
 		return
 	}
 
@@ -139,6 +208,9 @@ func (h *EWayBillHandlers) AttachPartB(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.requireEWB(w, r, ewbNumber) {
+		return
+	}
 	record, err := h.svc.AttachPartB(r.Context(), ewbNumber, vehicleNumber, transporterID)
 	if err != nil {
 		if err == ewaybill.ErrEWBNotFound {
@@ -170,6 +242,9 @@ func (h *EWayBillHandlers) Extend(w http.ResponseWriter, r *http.Request) {
 		reason = "manual_admin_extension"
 	}
 
+	if !h.requireEWB(w, r, ewbNumber) {
+		return
+	}
 	record, err := h.svc.Extend(r.Context(), ewbNumber, ewaybill.ExtendRequest{
 		EwbNumber: ewbNumber,
 		Reason:    reason,
@@ -211,6 +286,9 @@ func (h *EWayBillHandlers) Cancel(w http.ResponseWriter, r *http.Request) {
 		reason = "order_cancelled"
 	}
 
+	if !h.requireEWB(w, r, ewbNumber) {
+		return
+	}
 	record, err := h.svc.Cancel(r.Context(), ewbNumber, reason)
 	if err != nil {
 		if err == ewaybill.ErrEWBNotFound {
@@ -314,6 +392,9 @@ func (h *EWayBillHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	force := r.FormValue("force") == "true"
 
+	if !h.requireTrip(w, r, tripID) {
+		return
+	}
 	rec, err := h.svc.GeneratePartA(r.Context(), ewaybill.GeneratePartARequest{
 		TripID:     tripID,
 		GoodsValue: goodsVal,

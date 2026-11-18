@@ -15,7 +15,7 @@
             {{if .Trips}}
             {{range .Trips}}
             <tr class="hover:bg-surface-container-low/50 transition-colors group cursor-pointer" data-href="/trips/{{.ID}}" onclick="if(this.dataset.href)location.href=this.dataset.href">
-                <td data-label="Trip #" class="px-3 py-2 font-data-mono font-bold text-primary tabular-nums whitespace-nowrap">{{.TripNumber}}</td>
+                <td data-label="Trip #" class="px-3 py-2 font-data-mono font-bold text-primary tabular-nums whitespace-nowrap"><a href="/trips/{{.ID}}" class="text-decoration-none hover:underline" onclick="event.stopPropagation()">{{.TripNumber}}</a></td>
                 <td data-label="Driver" class="px-3 py-2 font-medium text-on-surface">
                     {{if .DriverFirstName}}<div class="flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-primary/10 border border-primary/15 grid place-items-center text-[11px] font-bold text-primary shrink-0">{{slice .DriverFirstName 0 1}}{{if .DriverLastName}}{{slice .DriverLastName 0 1}}{{end}}</span><span>{{.DriverFirstName}} {{.DriverLastName}}</span></div>{{else}}<span class="text-secondary italic">Unassigned</span>{{end}}
                 </td>

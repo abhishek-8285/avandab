@@ -114,6 +114,42 @@ func (h *SOSHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 		tenantID = svc.DriverTenant(r.Context(), driverID)
 	}
 
+	// Client-supplied trip/vehicle IDs are untrusted: bind them to the
+	// authenticated driver and tenant before they reach the alert payload.
+	if tenantID == "" {
+		// No way to attribute the IDs — never emit caller-provided ones.
+		req.TripID, req.VehicleID = "", ""
+	} else if req.TripID != "" {
+		var tripVehicleID string
+		err := h.db.QueryRowContext(r.Context(), `
+			SELECT vehicle_id FROM trips WHERE id = $1 AND driver_id = $2 AND tenant_id = $3`,
+			req.TripID, driverID, tenantID).Scan(&tripVehicleID)
+		if err != nil {
+			httpx.JSON(w, http.StatusBadRequest, map[string]string{
+				"error": "invalid_request", "message": "trip_id is not an active trip for this driver",
+			})
+			return
+		}
+		if req.VehicleID != "" && req.VehicleID != tripVehicleID {
+			httpx.JSON(w, http.StatusBadRequest, map[string]string{
+				"error": "invalid_request", "message": "vehicle_id does not match the trip",
+			})
+			return
+		}
+		req.VehicleID = tripVehicleID
+	} else if req.VehicleID != "" {
+		var one int
+		err := h.db.QueryRowContext(r.Context(), `
+			SELECT 1 FROM vehicles WHERE id = $1 AND tenant_id = $2`,
+			req.VehicleID, tenantID).Scan(&one)
+		if err != nil {
+			httpx.JSON(w, http.StatusBadRequest, map[string]string{
+				"error": "invalid_request", "message": "vehicle_id is not in this tenant",
+			})
+			return
+		}
+	}
+
 	// Resolve active trip and vehicle if omitted in mobile request
 	if req.TripID == "" || req.VehicleID == "" {
 		tripID, vehicleID := svc.ActiveTrip(r.Context(), driverID)

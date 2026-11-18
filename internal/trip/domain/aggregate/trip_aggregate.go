@@ -448,18 +448,9 @@ func (t *TripAggregate) Deliver(now time.Time) error {
 	if t.Status != TripInTransit && t.Status != TripReachedPickup {
 		return errors.New("trip must be in transit or reached pickup before being delivered")
 	}
-	// For default 2-stop trips or legacy workflow where deliver is called directly,
-	// complete any pending drop stop.
-	for i, s := range t.Stops {
-		if s.StopType != StopTypeDrop || s.Status == StopStatusCompleted || len(t.Stops) > 2 {
-			continue
-		}
-		t.Stops[i].Status = StopStatusCompleted
-		t.Stops[i].ActualArrival = &now
-		t.Stops[i].ActualDeparture = &now
-		t.Stops[i].PODRequired = false
-		t.Stops[i].UpdatedAt = now
-	}
+	// Every stop (including a default drop stop) must be closed through the
+	// stop/POD flow. Force-completing it here cleared PODRequired and hid an
+	// undelivered consignment from the proof-of-delivery audit.
 	// Multi-stop check: if stops are defined, all stops must be completed before overall trip delivery
 	if len(t.Stops) > 0 && !t.AllStopsCompleted() {
 		return errors.New("cannot deliver trip: incomplete stops remain")

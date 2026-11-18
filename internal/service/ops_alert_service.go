@@ -141,7 +141,7 @@ func (s *OpsAlertService) CreateAlert(ctx context.Context, alert OpsAlert) (stri
 
 	// Bridge to Spec 05 alerting pipeline if critical (Option A)
 	if severity == OpsAlertSeverityCritical && s.events != nil {
-		s.events.Publish(ctx, events.Event{
+		s.safePublish(ctx, events.Event{
 			Type: "ops.alert.critical",
 			Payload: map[string]interface{}{
 				"alert_id":    id,

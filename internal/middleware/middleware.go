@@ -267,7 +267,11 @@ func roleIDFromName(role string) int64 {
 	}
 }
 
-// ResourcePermission checks if the user has permission to access a resource with an action.
+// ResourcePermission is the HTML/Datastar permission gate (redirect /
+// http.Error). Permission decisions have one source of truth:
+// auth.AuthorizationService.Can (Casbin). Its JSON-API twin is
+// middleware.RequirePermission in api_auth.go; both stay separate because
+// collapsing them would change response contracts for existing callers.
 func ResourcePermission(authSrv auth.AuthorizationService, resource, action string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

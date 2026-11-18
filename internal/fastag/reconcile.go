@@ -39,8 +39,8 @@ func (s *FASTagService) Reconcile(ctx context.Context, vehicleNumber, fromDate, 
 	for _, p := range pulledTxs {
 		var exists bool
 		_ = s.db.QueryRowContext(ctx, `
-			SELECT EXISTS(SELECT 1 FROM fastag_transactions WHERE tag_id = $1 AND txn_timestamp = $2 AND amount = $3)
-		`, p.TagID, p.Timestamp, p.Amount).Scan(&exists)
+			SELECT EXISTS(SELECT 1 FROM fastag_transactions WHERE tenant_id = $4 AND tag_id = $1 AND txn_timestamp = $2 AND amount = $3)
+		`, p.TagID, p.Timestamp, p.Amount, tenantID).Scan(&exists)
 
 		if !exists {
 			txnID := p.TransactionID
@@ -49,12 +49,17 @@ func (s *FASTagService) Reconcile(ctx context.Context, vehicleNumber, fromDate, 
 			}
 			// source CHECK allows only PROVIDER/MANUAL/GPS; mock rows must stay
 			// 'PROVIDER' until a migration adds a MOCK value.
+			source := "PROVIDER"
+			providerMode := "LIVE"
+			if strings.EqualFold(strings.TrimSpace(s.config.Provider), "MOCK") {
+				providerMode = "MOCK"
+			}
 			_, _ = s.db.ExecContext(ctx, `
 				INSERT INTO fastag_transactions (
 					id, tenant_id, tag_id, vehicle_number, plaza_id, plaza_name,
-					amount, txn_timestamp, status, source, reconciled
-				) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'SUCCESS', 'PROVIDER', 0)
-			`, txnID, tenantID, p.TagID, p.VehicleNumber, p.PlazaID, p.PlazaName, p.Amount, p.Timestamp)
+					amount, txn_timestamp, status, source, reconciled, provider_mode
+				) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'SUCCESS', $9, 0, $10)
+			`, txnID, tenantID, p.TagID, p.VehicleNumber, p.PlazaID, p.PlazaName, p.Amount, p.Timestamp, source, providerMode)
 		}
 	}
 
@@ -62,10 +67,10 @@ func (s *FASTagService) Reconcile(ctx context.Context, vehicleNumber, fromDate, 
 	query := `
 		SELECT id, tag_id, vehicle_number, plaza_id, plaza_name, amount, txn_timestamp
 		FROM fastag_transactions
-		WHERE (vehicle_number = $1 OR $2 = '') AND reconciled = 0
+		WHERE tenant_id = $1 AND (vehicle_number = $2 OR $3 = '') AND reconciled = 0
 		ORDER BY txn_timestamp ASC
 	`
-	rows, err := s.db.QueryContext(ctx, query, vehicleNumber, vehicleNumber)
+	rows, err := s.db.QueryContext(ctx, query, tenantID, vehicleNumber, vehicleNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -184,8 +189,8 @@ func (s *FASTagService) Reconcile(ctx context.Context, vehicleNumber, fromDate, 
 			_, _ = s.db.ExecContext(ctx, `
 				UPDATE fastag_transactions
 				SET trip_id = $1, reconciled = 1, kharcha_id = $2
-				WHERE id = $3
-			`, bestTrip.ID, kharchaID, txn.ID)
+				WHERE id = $3 AND tenant_id = $4
+			`, bestTrip.ID, kharchaID, txn.ID, tenantID)
 		} else {
 			unmatched++
 			unmatchedIDs = append(unmatchedIDs, txn.ID)

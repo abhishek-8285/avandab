@@ -53,6 +53,7 @@ func TestMetering_ReserveCommitFlow(t *testing.T) {
 	require.NoError(t, tripApp.NewStartTripUseCase(unitOfWork, clk).Execute(ctx, tripApp.StartTripCommand{TripID: tripID, TenantID: tenantID}))
 	require.NoError(t, tripApp.NewReachPickupUseCase(unitOfWork, clk).Execute(ctx, tripApp.ReachPickupCommand{TripID: tripID, TenantID: tenantID}))
 	require.NoError(t, tripApp.NewStartTransitUseCase(unitOfWork, clk).Execute(ctx, tripApp.StartTransitCommand{TripID: tripID, TenantID: tenantID}))
+	completeTripStopsForTest(t, db, string(tripID))
 	require.NoError(t, tripApp.NewDeliverUseCase(unitOfWork, clk).Execute(ctx, tripApp.DeliverCommand{TripID: tripID, TenantID: tenantID}))
 	require.NoError(t, tripApp.NewCompleteTripUseCase(unitOfWork, clk).WithUsageMeter(meter).Execute(ctx, tripApp.CompleteTripCommand{TripID: tripID, TenantID: tenantID}))
 

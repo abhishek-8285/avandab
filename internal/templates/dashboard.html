@@ -88,7 +88,7 @@
             <div class="mt-4">
                 <div id="kpi-completed" class="text-stat text-status-success tabular-nums text-3xl font-black tracking-tight">{{.Stats.CompletedTripsCount}}</div>
                 <div class="text-sm font-medium text-secondary mt-1">{{t "db.kpi_completed"}}</div>
-                <div class="mt-3 text-xs text-text-muted">Today • <span class="text-primary font-semibold cursor-pointer hover:underline" onclick="event.stopPropagation(); location.href='/trips'" role="link" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation(); location.href='/trips'}">{{t "db.view_all"}}</span></div>
+                <div class="mt-3 text-xs text-text-muted">Today • <span class="text-primary font-semibold">{{t "db.view_all"}}</span></div>
             </div>
         </a>
 

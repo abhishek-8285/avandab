@@ -117,9 +117,9 @@ func PointToSegmentDistance(p, a, b Point) float64 {
 // PointToPolygonDistance returns the distance (metres) from point p to the
 // polygon boundary: 0 if inside, otherwise the minimum distance to any edge.
 func PointToPolygonDistance(p Point, ring []Point) float64 {
-	if PointInPolygon(p.Lat, p.Lng, ring) {
-		return 0
-	}
+	// Always return distance to the boundary, including inside points:
+	// hysteresis (ContainsExit) needs the margin, and returning 0 made every
+	// polygon exit test false.
 	n := len(ring)
 	if n < 2 {
 		return math.MaxFloat64

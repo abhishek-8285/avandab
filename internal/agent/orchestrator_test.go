@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"transport-app/internal/agent/rl"
+	"transport-app/internal/shared"
 )
 
 type routeClient struct {
@@ -131,7 +132,7 @@ func TestOrchestratorHandleRecordsEpisode(t *testing.T) {
 		}},
 	})
 
-	answer, episodeID, err := o.Handle(context.Background(), []Message{{Role: "user", Content: "say hi"}}, "usr-1", "Tester")
+	answer, episodeID, err := o.Handle(shared.ContextWithTenantID(context.Background(), "1"), []Message{{Role: "user", Content: "say hi"}}, "usr-1", "Tester")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +143,7 @@ func TestOrchestratorHandleRecordsEpisode(t *testing.T) {
 		t.Error("expected episode id")
 	}
 
-	examples := svc.ExamplesFor("ops", "say hi", 3)
+	examples := svc.ExamplesFor("1", "ops", "say hi", 3)
 	if len(examples) != 1 {
 		t.Errorf("expected 1 recorded example, got %d", len(examples))
 	}
@@ -156,7 +157,7 @@ func TestOrchestratorFewShotInjection(t *testing.T) {
 	defer svc.Close()
 
 	ep := &rl.Episode{
-		ID: svc.NewEpisodeID(), AgentName: "ops", Query: "how many trips", Answer: "4 trips",
+		ID: svc.NewEpisodeID(), TenantID: "1", AgentName: "ops", Query: "how many trips", Answer: "4 trips",
 		TurnCount: 2,
 		Traces: []rl.ToolTrace{
 			{Name: "list_trips", OK: true},
@@ -169,7 +170,7 @@ func TestOrchestratorFewShotInjection(t *testing.T) {
 
 	o := NewOrchestrator(nil, &ToolEnv{}, svc, 5)
 	sub := &SubAgent{Name: "ops", Description: "trips", SystemPrompt: "Base prompt."}
-	system := o.buildSystem(sub, "how many trips today", "Ramesh")
+	system := o.buildSystem("1", sub, "how many trips today", "Ramesh")
 	if !strings.Contains(system, "how many trips") {
 		t.Error("expected few-shot example injected into system prompt")
 	}

@@ -8,6 +8,8 @@ import (
 
 	"transport-app/internal/agent/rl"
 	"transport-app/internal/auth"
+	"transport-app/internal/domain"
+	"transport-app/internal/shared"
 )
 
 // ApprovalHandler exposes the admin approval queue over HTTP.
@@ -26,15 +28,17 @@ func (h *ApprovalHandler) RegisterRoutes(r chi.Router) {
 	r.Post("/api/agent/actions/{id}/reject", h.reject)
 }
 
-// requireAdmin rejects any authenticated user who is not an admin.
-// The approval gate executes mutating tools; only admins may decide.
+// requireAdmin rejects any authenticated user who is not a tenant admin.
+// The approval gate executes mutating tools; only global and tenant admins
+// may decide. org_admin is the role self-serve tenants receive, so excluding
+// it leaves their submitted mutations impossible to approve.
 func requireAdmin(w http.ResponseWriter, r *http.Request) *auth.SessionData {
 	session, ok := r.Context().Value(auth.ContextUser).(*auth.SessionData)
 	if !ok || session == nil {
 		writeErr(w, http.StatusUnauthorized, "authentication required")
 		return nil
 	}
-	if session.Role != "admin" {
+	if session.Role != string(domain.RoleAdmin) && session.Role != string(domain.RoleOrgAdmin) {
 		writeErr(w, http.StatusForbidden, "admin role required")
 		return nil
 	}
@@ -51,8 +55,16 @@ func (h *ApprovalHandler) list(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "failed to list actions")
 		return
 	}
+	// Approval actions are multi-tenant: never show another tenant's queue.
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	scoped := make([]rl.Action, 0, len(actions))
+	for _, action := range actions {
+		if action.TenantID == tenantID {
+			scoped = append(scoped, action)
+		}
+	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{"actions": actions})
+	json.NewEncoder(w).Encode(map[string]any{"actions": scoped})
 }
 
 func (h *ApprovalHandler) approve(w http.ResponseWriter, r *http.Request) {

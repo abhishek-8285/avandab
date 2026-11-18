@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -256,14 +257,75 @@ func serveLLMs(w http.ResponseWriter) {
 	_, _ = w.Write([]byte(seoLLMs))
 }
 
+// tenantFileGuard gates the /uploads/* file server on the requested file's
+// tenant. Only files with a tenant row are gated; untracked static assets
+// (customer logos saved straight to disk) keep the old behavior.
+// shortcut: untracked paths stay readable by any authenticated user; upgrade
+// when those assets are recorded in the files table too.
+func tenantFileGuard(db *sql.DB, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rel := strings.TrimPrefix(r.URL.Path, "/")
+		// Decode before deciding: %70od must be treated as pod.
+		if decoded, decErr := url.PathUnescape(rel); decErr == nil {
+			rel = decoded
+		}
+		// POD assets are signature-only. A doubled slash or encoded segment
+		// can fall through the dedicated /uploads/pod/* child into this
+		// catch-all, so refuse the directory here as well.
+		if rel == "pod" || strings.HasPrefix(strings.ToLower(rel), "pod/") {
+			w.Header().Set("Cache-Control", "no-store")
+			http.NotFound(w, r)
+			return
+		}
+		// Traversal guard: only clean relative paths reach the file server.
+		if rel == "" || rel == "." || filepath.IsAbs(rel) ||
+			strings.Contains(rel, "..") || strings.Contains(rel, "\\") ||
+			filepath.ToSlash(filepath.Clean(rel)) != rel {
+			w.Header().Set("Cache-Control", "no-store")
+			http.NotFound(w, r)
+			return
+		}
+		if db != nil {
+			var owner string
+			err := db.QueryRowContext(r.Context(),
+				`SELECT tenant_id FROM files WHERE path = $1 LIMIT 1`, rel).Scan(&owner)
+			if err == nil && owner != string(shared.TenantIDFromContext(r.Context())) {
+				w.Header().Set("Cache-Control", "no-store")
+				http.NotFound(w, r)
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
+	if err := run(); err != nil {
+		slog.Error("server exited with error", "error", err)
+		os.Exit(1)
+	}
+}
+
+// startupSecretsError refuses known default secrets unless the operator opts
+// in explicitly for local iteration. APP_ENV is not a security control.
+func startupSecretsError(cfg *config.Config, allowDevSecrets bool) error {
+	if !cfg.UsingKnownDefaultSecret() || allowDevSecrets {
+		return nil
+	}
+	return errors.New("refusing to start with known default secrets; set strong, unique COOKIE_SECRET and API_SECRET values, or ALLOW_DEV_SECRETS=1 for local iteration only")
+}
+
+// run owns the startup/shutdown lifecycle so every failure path returns
+// through main and deferred cleanup (signal stop, DB close, cache close)
+// actually executes instead of being skipped by os.Exit.
+func run() error {
 	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-version" || os.Args[1] == "version") {
 		v := Version
 		if v == "" {
 			v = "dev"
 		}
 		fmt.Printf("avandab %s\n", v)
-		return
+		return nil
 	}
 
 	// Load .env (if present) before config so file-based config takes effect.
@@ -296,13 +358,18 @@ func main() {
 		logger.Error("Refusing to start with known default secrets. Set strong, unique COOKIE_SECRET, API_SECRET and RAZORPAY_* values in the environment.")
 		os.Exit(1)
 	}
-	if cfg.IsDevelopment() && cfg.UsingKnownDefaultSecret() {
-		logger.Warn("Running on default secrets — development only. Never deploy without strong, unique COOKIE_SECRET and API_SECRET values.")
+	if cfg.UsingKnownDefaultSecret() {
+		logger.Warn("Running on default secrets with ALLOW_DEV_SECRETS=1 — local iteration only; never deploy this way.")
 	}
 	// Device-token pepper has no fail-closed default: changing it invalidates
 	// stored device hashes (reprovisioning required), so warn only outside dev.
 	if !cfg.IsDevelopment() && cfg.Telemetry.DeviceSecretPepper == "" {
 		logger.Warn("TELEMETRY_DEVICE_SECRET_PEPPER unset — device hashes HMAC'd without pepper. Set it before provisioning hardware; rotation requires device reprovisioning.")
+	}
+	// A site key renders the widget on the login/register forms, but without
+	// the secret Enabled() stays false and the visible CAPTCHA is decorative.
+	if !cfg.IsDevelopment() && cfg.Turnstile.SiteKey != "" && cfg.Turnstile.SecretKey == "" {
+		logger.Warn("TURNSTILE_SECRET_KEY unset while TURNSTILE_SITE_KEY is set — the CAPTCHA widget renders but server-side verification is DISABLED. Set the secret or remove the site key.")
 	}
 	port := cfg.Port
 	if port == "" {
@@ -322,8 +389,7 @@ func main() {
 	// config-driven factory — switching engines never touches this file.
 	database, err := appdb.Open(ctx, &cfg.Database, logger)
 	if err != nil {
-		logger.Error("Failed to open database", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("open database: %w", err)
 	}
 	defer func() { _ = database.Close() }()
 
@@ -338,32 +404,35 @@ func main() {
 	}
 	migrations, err := fs.Sub(migrationFS, migrationDir)
 	if err != nil {
-		logger.Error("Failed to read embedded migrations", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("read embedded migrations: %w", err)
+	}
+
+	// SQLite: repair a crash mid-00126 (NO TRANSACTION rebuild) before goose
+	// retries; otherwise the leftover temp table makes every startup fail.
+	if appdb.GooseDialect(cfg.Database.Driver) == goose.DialectSQLite3 {
+		if err := appdb.RecoverInterruptedRebuild(ctx, database, logger); err != nil {
+			return fmt.Errorf("recover interrupted migration rebuild: %w", err)
+		}
 	}
 
 	provider, err := goose.NewProvider(appdb.GooseDialect(cfg.Database.Driver), database, migrations, goose.WithAllowOutofOrder(true))
 	if err != nil {
-		logger.Error("Failed to create migration provider", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("create migration provider: %w", err)
 	}
 
 	// PG two-phase migrate (A7): explicit-id seeds desync identity sequences,
 	// so migrate to just before the first generated insert, resync, then go.
 	if appdb.MigrationDir(cfg.Database.Driver) == "migrations_pg" {
 		if _, err := provider.UpTo(ctx, appdb.PreGooseCutVersion); err != nil {
-			logger.Error("Failed to run pre-resync migrations", "error", err)
-			os.Exit(1)
+			return fmt.Errorf("run pre-resync migrations: %w", err)
 		}
 		if err := appdb.ResyncIdentitySequences(ctx, database); err != nil {
-			logger.Error("Failed to resync identity sequences", "error", err)
-			os.Exit(1)
+			return fmt.Errorf("resync identity sequences: %w", err)
 		}
 	}
 
 	if _, err := provider.Up(ctx); err != nil {
-		logger.Error("Failed to run migrations", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("run migrations: %w", err)
 	}
 
 	logger.Info("Database migrated successfully")
@@ -384,8 +453,7 @@ func main() {
 	// run on, so re-assert rather than trust it. No-op on other engines.
 	if appdb.GooseDialect(cfg.Database.Driver) == goose.DialectSQLite3 {
 		if err := appdb.ApplySQLitePragmas(ctx, database, logger); err != nil {
-			logger.Error("Failed to re-apply SQLite pragmas", "error", err)
-			os.Exit(1)
+			return fmt.Errorf("re-apply sqlite pragmas: %w", err)
 		}
 	}
 
@@ -552,6 +620,14 @@ func main() {
 	eventBus.Subscribe("telemetry.sos", func(ctx context.Context, e events.Event) error {
 		return alertEngine.ProcessEvent(ctx, e)
 	})
+	// Geofence breaches, fuel anomalies and cold-chain breaches publish their
+	// canonical event types; without these subscriptions no canonical alert is
+	// created (the outbox row exists but nothing consumes it).
+	for _, et := range []string{events.GeofenceZoneBreach, events.FuelTheftAlert, events.TempBreachAlert} {
+		eventBus.Subscribe(et, func(ctx context.Context, e events.Event) error {
+			return alertEngine.ProcessEvent(ctx, e)
+		})
+	}
 
 	// Initialize auth store
 	authStore := auth.NewSessionStore(cfg.CookieSecret, cfg.CookieSecure)
@@ -561,8 +637,7 @@ func main() {
 	// Initialize Casbin authorization service
 	authSvc, err := auth.NewCasbinAuthorizationService(database)
 	if err != nil {
-		logger.Error("Failed to initialize Casbin authorization service", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("initialize casbin authorization service: %w", err)
 	}
 
 	// scorecard:update is referenced by the /scorecard/drivers/{id}/resolve
@@ -594,7 +669,7 @@ func main() {
 	// Initialize handlers app
 	resetTokens := auth.NewResetTokenStore(0).WithPersistence(database, "password_reset")
 	app := handlers.NewApp(services, cfg, authStore, database, authSvc, resetTokens)
-	app.OTPStore = auth.NewOTPStore(0)
+	app.OTPStore = auth.NewOTPStoreWithCache(0, appCache)
 	// Email-verification tokens live apart from password-reset tokens (a
 	// verify link must never redeem as a reset). 24h window: inbox delays.
 	app.VerifyTokens = auth.NewResetTokenStore(24*time.Hour).WithPersistence(database, "email_verify")
@@ -897,8 +972,7 @@ func main() {
 	apiSecret := []byte(cfg.APITokenSecret)
 	if len(apiSecret) == 0 {
 		if cfg.IsProduction() {
-			slog.Error("API_SECRET must be explicitly configured in production")
-			os.Exit(1)
+			return errors.New("API_SECRET must be explicitly configured in production")
 		}
 		apiSecret = []byte(cfg.CookieSecret)
 	}
@@ -955,10 +1029,19 @@ func main() {
 
 	// ── Physical Hardware GPS TCP Server (GT06 / AIS-140) ─────────────
 	tcpPort := os.Getenv("TELEMETRY_TCP_PORT")
+	allowedIMEIs := strings.Split(os.Getenv("TELEMETRY_TCP_ALLOWED_IMEIS"), ",")
 	if tcpPort == "" {
-		tcpPort = ":5023"
+		if os.Getenv("TELEMETRY_TCP_ALLOWED_IMEIS") != "" {
+			tcpPort = ":5023"
+		} else {
+			// GT06/AIS-140 carry a self-declared IMEI and no credential.
+			// Without an allowlist, never expose the unauthenticated port.
+			tcpPort = "127.0.0.1:5023"
+			logger.Warn("telemetry hardware TCP ingest bound to loopback: set TELEMETRY_TCP_ALLOWED_IMEIS to accept remote devices")
+		}
 	}
 	tcpServer := telemetry.NewTCPIngestServer(tcpPort, ingestor, telemetry.NewDeviceStore(database), logger)
+	tcpServer.SetAllowedIMEIs(allowedIMEIs)
 	if err := tcpServer.Start(sigCtx); err != nil {
 		logger.Warn("telemetry hardware TCP server startup warning", "error", err)
 	}
@@ -1092,6 +1175,10 @@ func main() {
 	// Linkage: admin records provider_subscription_id via /tenants/{id}/plan.
 	subscriptionWebhook := entitlementAPI.NewWebhookHandler(subscriptionSvc, cfg.RazorpayWebhook)
 	r.With(middleware.RateLimitDistributed(appCache, 30)).Post("/api/v1/billing/webhooks/razorpay", subscriptionWebhook.ServeHTTP)
+	// Payout provider webhook: Razorpay cannot send a session/Bearer token, so
+	// it must be public. The use case verifies the HMAC and resolves the payout
+	// globally; no tenant is trusted from the caller.
+	r.With(middleware.RateLimitDistributed(appCache, 30)).Post("/api/v1/webhooks/payouts/razorpay", settlementAPIHandler.RazorpayPayoutWebhook)
 
 	// Public: device GPS ingestion (own hardware + mobile app) — authenticated via
 	// X-Device-Token header (HMAC-SHA256), not session/Bearer token.
@@ -1181,7 +1268,7 @@ func main() {
 		r.With(middleware.RequirePermission(authSvc, "driver", "write-self")).
 			Post("/api/v1/telemetry/mqtt-credentials/rotate", app.MQTTCredentials.Rotate)
 		customerAPIHandler.RegisterRoutes(r)
-		settlementAPIHandler.RegisterRoutes(r)
+		settlementAPIHandler.RegisterRoutes(r, authSvc)
 		controlTowerAPIHandler.Register(r)
 		// Commercial plan catalog (C3 live pricing): list for any authed
 		// caller, price updates admin-gated (users:manage, like email pool).
@@ -1329,9 +1416,12 @@ func main() {
 		// on-demand OCR + flagged queue API.
 		kharchaVerifier := service.NewKharchaVerifyService(database, logger,
 			intOCR.NewClient(intOCR.Config{
-				Provider: cfg.OCRProvider,
-				HTTPURL:  cfg.OCRHTTPURL,
-				HTTPKey:  cfg.OCRHTTPKey,
+				Provider:               cfg.OCRProvider,
+				HTTPURL:                cfg.OCRHTTPURL,
+				HTTPKey:                cfg.OCRHTTPKey,
+				AlibabaRegionID:        cfg.OCRAlibabaRegionID,
+				AlibabaAccessKeyID:     cfg.OCRAlibabaAccessKeyID,
+				AlibabaAccessKeySecret: cfg.OCRAlibabaAccessKeySecret,
 			}, logger))
 		kharchaVerifier.SubscribeExpenseCreated(eventBus)
 		kharchaVerifyHandlers := handlers.NewKharchaVerifyHandlers(app, kharchaVerifier)
@@ -1391,7 +1481,7 @@ func main() {
 		}
 
 		if rlSvc != nil && cfg.Agent.RequireApproval {
-			approvalSvc = agent.NewApprovalService(rlSvc, toolEnv)
+			approvalSvc = agent.NewApprovalService(rlSvc, toolEnv).WithPermissionChecker(authSvc)
 			for _, name := range agent.MutatingTools() {
 				if t, ok := toolsByName[name]; ok {
 					approvalSvc.Gate(name, t.Handler)
@@ -1483,8 +1573,7 @@ func main() {
 	// application issues per viewer. Unsigned requests get 404, not the file.
 	podSigner, err := podsign.New([]byte(cfg.CookieSecret), podsign.DefaultTTL)
 	if err != nil {
-		logger.Error("POD signing secret too short; refusing to start without valid secret", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("POD signing secret too short; refusing to start without valid secret: %w", err)
 	}
 	// NOTE: no StripPrefix on this mount. The handler serves the file itself
 	// via filepath.Join(uploadDir, "pod", filename) and the signer validates
@@ -2319,6 +2408,7 @@ func main() {
 		tcpServer.Stop, asyncQueue.DrainContext, srv.Shutdown); err != nil {
 		logger.Error("Graceful shutdown failed", "error", err)
 	}
+	return nil
 }
 
 // bootstrapAdmin creates the initial admin account from environment config.

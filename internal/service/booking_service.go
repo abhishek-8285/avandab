@@ -80,7 +80,7 @@ func (s *BookingService) CreateBooking(ctx context.Context, req CreateBookingReq
 
 	s.log.Info("booking created", "booking_id", created.ID, "booking_number", created.BookingNumber)
 	s.logAudit(ctx, nil, "create", "bookings", string(created.ID), nil, nil)
-	s.events.Publish(ctx, events.Event{
+	s.safePublish(ctx, events.Event{
 		Type: events.BookingCreated,
 		Payload: bookingevents.BookingCreatedEvent{
 			TenantID:      shared.TenantIDFromContext(ctx),
@@ -183,7 +183,7 @@ func (s *BookingService) ConfirmBooking(ctx context.Context, id domain.BookingID
 
 	s.log.Info("booking confirmed", "booking_id", id)
 	s.logAudit(ctx, nil, "approve", "bookings", string(id), nil, nil)
-	s.events.Publish(ctx, events.Event{
+	s.safePublish(ctx, events.Event{
 		Type: events.BookingConfirmed,
 		Payload: bookingevents.BookingConfirmedEvent{
 			TenantID:    shared.TenantIDFromContext(ctx),
@@ -255,6 +255,8 @@ func (s *BookingService) DeleteBooking(ctx context.Context, id domain.BookingID)
 // parseDateTime parses a date/datetime string.
 func parseDateTime(s string) (time.Time, error) {
 	layouts := []string{
+		time.RFC3339Nano,
+		time.RFC3339,
 		"2006-01-02T15:04:05",
 		"2006-01-02T15:04",
 		"2006-01-02 15:04:05",

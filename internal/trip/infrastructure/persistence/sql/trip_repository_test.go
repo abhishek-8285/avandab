@@ -1469,3 +1469,25 @@ func TestTripRepository_SearchReadModels_AllNulls(t *testing.T) {
 	require.Nil(t, models[0].DeliveredAt)
 	require.Nil(t, models[0].CompletedAt)
 }
+
+// Persisted event_type must be the canonical string subscribers listen on, not
+// the Go struct name. TripDelivered was missing from the catalog entirely.
+func TestTripRepository_PersistsCanonicalDeliveredEvent(t *testing.T) {
+	dbConn := setupTripTestDB(t)
+	seedRoute(t, dbConn, "route-canon", "A", "B")
+	repo := NewTripRepository(dbConn)
+	ctx := context.Background()
+	now := time.Date(2026, 11, 18, 12, 0, 0, 0, time.UTC)
+	agg := newTestTripAgg("tr-canon", "1", "TR-CANON", nil, "route-canon", now.Add(time.Hour), "", now)
+	require.NoError(t, agg.Schedule(now))
+	require.NoError(t, agg.Start(now))
+	require.NoError(t, agg.ReachPickup(now))
+	require.NoError(t, agg.StartTransit(now))
+	require.NoError(t, agg.Deliver(now))
+	require.NoError(t, repo.Save(ctx, agg))
+
+	var eventType string
+	require.NoError(t, dbConn.QueryRow(`SELECT event_type FROM outbox_events
+		WHERE aggregate_id = 'tr-canon' AND event_type LIKE '%elivered%' LIMIT 1`).Scan(&eventType))
+	require.Equal(t, "trip.delivered", eventType)
+}

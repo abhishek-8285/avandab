@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -224,16 +225,46 @@ func (s *DriverAppService) executeAcceptOffer(ctx context.Context, tenantID, dri
 	err = tx.QueryRowContext(ctx, `
 		SELECT id FROM trips
 		WHERE tenant_id = $1 AND booking_id = $2
-		  AND status NOT IN ('completed', 'cancelled')
+		  AND status IN ('draft', 'scheduled', 'assigned')
 		ORDER BY created_at DESC LIMIT 1`, tenantID, bookingID).Scan(&tripID)
 	if err != nil {
-		return DriverCommandResponse{}, fmt.Errorf("find booking trip: %w", err)
+		return DriverCommandResponse{}, fmt.Errorf("find assignable booking trip: %w", err)
 	}
-	if _, err = tx.ExecContext(ctx, `
+
+	// Conflict checks: accepting an offer must not hijack a trip another
+	// driver is running or double-book a driver/vehicle.
+	var conflicts int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM trips
+		WHERE tenant_id = $1 AND id != $2 AND status NOT IN ('completed', 'cancelled')
+		  AND (driver_id = $3 OR vehicle_id = $4)`,
+		tenantID, tripID, driverID, vehicleID).Scan(&conflicts); err != nil {
+		return DriverCommandResponse{}, fmt.Errorf("check assignment conflicts: %w", err)
+	}
+	if conflicts > 0 {
+		return DriverCommandResponse{}, errors.New("driver or vehicle is already on another active trip")
+	}
+
+	var vehicleStatus string
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COALESCE(status, '') FROM vehicles WHERE id = $1 AND tenant_id = $2`,
+		vehicleID, tenantID).Scan(&vehicleStatus); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return DriverCommandResponse{}, fmt.Errorf("load vehicle: %w", err)
+	}
+	if strings.EqualFold(vehicleStatus, "blocked") {
+		return DriverCommandResponse{}, errors.New("vehicle is blocked and cannot be assigned")
+	}
+
+	res, err := tx.ExecContext(ctx, `
 		UPDATE trips
 		SET driver_id = $1, vehicle_id = $2, status = 'assigned', updated_at = $3
-		WHERE id = $4 AND tenant_id = $5`, driverID, vehicleID, now, tripID, tenantID); err != nil {
+		WHERE id = $4 AND tenant_id = $5 AND status IN ('draft', 'scheduled', 'assigned')`,
+		driverID, vehicleID, now, tripID, tenantID)
+	if err != nil {
 		return DriverCommandResponse{}, fmt.Errorf("assign booking trip: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return DriverCommandResponse{}, errors.New("trip is no longer assignable")
 	}
 
 	if commitErr := tx.Commit(); commitErr != nil {
@@ -298,25 +329,35 @@ func (s *DriverAppService) executeTripTransition(ctx context.Context, tenantID, 
 		return DriverCommandResponse{}, err
 	}
 
-	var nextStatus string
+	// One state machine: the driver command API must write the canonical
+	// trips.status values the CHECK constraint and the mobile mapper know.
+	// The granular driver labels (en_route_pickup, loading, ...) are UI states,
+	// not database states — writing them failed the CHECK on every command.
+	if currentStatus == "completed" || currentStatus == "cancelled" {
+		return DriverCommandResponse{}, fmt.Errorf("trip is already %s and cannot be changed", currentStatus)
+	}
+
+	var nextStatus, timestampColumn string
 	switch cmdType {
 	case "START_TRIP", "EN_ROUTE_PICKUP":
-		if currentStatus != "assigned" && currentStatus != "accepted" && currentStatus != "draft" {
+		if currentStatus != "assigned" && currentStatus != "scheduled" && currentStatus != "draft" {
 			return DriverCommandResponse{}, fmt.Errorf("cannot start trip from status %s", currentStatus)
 		}
-		nextStatus = "en_route_pickup"
+		nextStatus = "started"
+		timestampColumn = "started_at"
 	case "ARRIVE_PICKUP", "ARRIVED_PICKUP":
-		nextStatus = "arrived_pickup"
-	case "START_LOADING":
-		nextStatus = "loading"
-	case "COMPLETE_LOADING", "LOADED":
-		nextStatus = "loaded"
+		nextStatus = "reached_pickup"
+		timestampColumn = "reached_pickup_at"
+	case "START_LOADING", "COMPLETE_LOADING", "LOADED":
+		// Loading happens at the pickup point; the canonical trip state stays
+		// reached_pickup until the vehicle actually departs.
+		nextStatus = "reached_pickup"
 	case "START_DELIVERY", "IN_TRANSIT":
 		nextStatus = "in_transit"
-	case "ARRIVE_DELIVERY", "ARRIVED_DELIVERY":
-		nextStatus = "arrived_delivery"
-	case "START_UNLOADING":
-		nextStatus = "unloading"
+		timestampColumn = "in_transit_at"
+	case "ARRIVE_DELIVERY", "ARRIVED_DELIVERY", "START_UNLOADING":
+		// Still in transit until the POD/complete step.
+		nextStatus = "in_transit"
 	case "COMPLETE_TRIP":
 		// Document verification check: if pod_required is set, verify a POD
 		// exists. POD proofs live on trip_stops (driver_documents holds
@@ -337,20 +378,24 @@ func (s *DriverAppService) executeTripTransition(ctx context.Context, tenantID, 
 			}
 		}
 		nextStatus = "completed"
+		timestampColumn = "completed_at"
 	case "CANCEL_TRIP":
 		nextStatus = "cancelled"
 	case "INTERRUPT_TRIP", "TRIP_INTERRUPTED":
-		nextStatus = "trip_interrupted"
+		// An interrupted run is closed out as cancelled; the reason is kept in
+		// the command payload and response message.
+		nextStatus = "cancelled"
 	default:
 		return DriverCommandResponse{}, fmt.Errorf("unsupported trip command: %s", cmdType)
 	}
 
 	now := time.Now()
-	_, err = ex.ExecContext(ctx, `
-		UPDATE trips
-		SET status = $1, updated_at = $2
-		WHERE tenant_id = $3 AND id = $4`,
-		nextStatus, now, tenantID, tripID)
+	query := `UPDATE trips SET status = $1, updated_at = $2`
+	if timestampColumn != "" {
+		query += fmt.Sprintf(", %s = COALESCE(%s, $2)", timestampColumn, timestampColumn)
+	}
+	query += ` WHERE tenant_id = $3 AND id = $4`
+	_, err = ex.ExecContext(ctx, query, nextStatus, now, tenantID, tripID)
 	if err != nil {
 		return DriverCommandResponse{}, fmt.Errorf("failed updating trip state: %w", err)
 	}

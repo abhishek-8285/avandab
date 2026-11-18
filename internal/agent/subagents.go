@@ -137,6 +137,10 @@ func ragSearchTool(svc *rag.Service) *RegisteredTool {
 	return &RegisteredTool{
 		Name:        "knowledge_search",
 		Description: "Search the company knowledge base (policies, procedures, documents) by topic.",
+		// Same Casbin gate as the RAG REST endpoint; RAG registration itself
+		// is already gated by the feature flag (nil service = no tool).
+		Resource: "rag",
+		Action:   "read",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

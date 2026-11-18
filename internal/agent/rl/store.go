@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 	appdb "transport-app/internal/database"
 
@@ -43,6 +44,7 @@ type ToolTrace struct {
 // Episode is a full agent conversation recorded for learning.
 type Episode struct {
 	ID        string      `json:"id"`
+	TenantID  string      `json:"tenant_id"`
 	UserID    string      `json:"user_id"`
 	AgentName string      `json:"agent_name"`
 	Query     string      `json:"query"`
@@ -68,6 +70,9 @@ type Action struct {
 	Result      string       `json:"result"`
 	Error       string       `json:"error"`
 	CreatedAt   string       `json:"created_at"`
+	TenantID    string       `json:"tenant_id"`
+	Resource    string       `json:"resource,omitempty"`
+	Action      string       `json:"action,omitempty"`
 }
 
 // RewardSignal is one reward contribution to an episode.
@@ -104,6 +109,7 @@ func migrate(db *sql.DB) error {
 	stmts := []string{
 		`CREATE TABLE IF NOT EXISTS agent_episodes (
 			id TEXT PRIMARY KEY,
+			tenant_id TEXT NOT NULL DEFAULT '',
 			user_id TEXT,
 			agent_name TEXT,
 			query TEXT,
@@ -127,7 +133,10 @@ func migrate(db *sql.DB) error {
 			decided_at TEXT,
 			result TEXT,
 			error TEXT,
-			created_at TEXT
+			created_at TEXT,
+			tenant_id TEXT,
+			resource TEXT,
+			perm_action TEXT
 		)`,
 		`CREATE TABLE IF NOT EXISTS agent_rewards (
 			id TEXT PRIMARY KEY,
@@ -151,6 +160,22 @@ func migrate(db *sql.DB) error {
 	for _, st := range stmts {
 		if _, err := db.ExecContext(context.Background(), st); err != nil {
 			return fmt.Errorf("migrate: %w", err)
+		}
+	}
+	// Existing agent_episodes tables predate tenant scoping; old rows get ''
+	// and are no longer replayed into any tenant's prompt.
+	if _, err := db.ExecContext(context.Background(),
+		`ALTER TABLE agent_episodes ADD COLUMN tenant_id TEXT NOT NULL DEFAULT ''`); err != nil &&
+		!strings.Contains(strings.ToLower(err.Error()), "duplicate column name") {
+		return fmt.Errorf("migrate: add agent_episodes.tenant_id: %w", err)
+	}
+
+	// Existing agent_actions tables predate tenant/RBAC scoping. Add the
+	// columns lazily so old RL databases open without a new migration.
+	for _, col := range []string{"tenant_id", "resource", "perm_action"} {
+		_, err := db.ExecContext(context.Background(), "ALTER TABLE agent_actions ADD COLUMN "+col+" TEXT")
+		if err != nil && !strings.Contains(strings.ToLower(err.Error()), "duplicate column name") {
+			return fmt.Errorf("migrate: add agent_actions.%s: %w", col, err)
 		}
 	}
 	return nil
@@ -178,9 +203,9 @@ func (s *Store) SaveEpisode(e *Episode) error {
 	if e.CreatedAt == "" {
 		e.CreatedAt = now()
 	}
-	_, err = s.db.ExecContext(context.Background(), `INSERT INTO agent_episodes (id, user_id, agent_name, query, answer, reward, status, turn_count, messages_json, traces_json, created_at)
-		VALUES ($1, $2, $3, $4, $5, 0, 'pending', $6, $7, $8, $9)`,
-		e.ID, e.UserID, e.AgentName, e.Query, e.Answer, e.TurnCount, e.Messages, traces, e.CreatedAt)
+	_, err = s.db.ExecContext(context.Background(), `INSERT INTO agent_episodes (id, tenant_id, user_id, agent_name, query, answer, reward, status, turn_count, messages_json, traces_json, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, 0, 'pending', $7, $8, $9, $10)`,
+		e.ID, e.TenantID, e.UserID, e.AgentName, e.Query, e.Answer, e.TurnCount, e.Messages, traces, e.CreatedAt)
 	return err
 }
 
@@ -205,9 +230,9 @@ func (s *Store) RecordEpisodeTx(e *Episode, rewards []RewardSignal, toolCalls []
 	if e.CreatedAt == "" {
 		e.CreatedAt = now()
 	}
-	if _, err := tx.ExecContext(context.Background(), `INSERT INTO agent_episodes (id, user_id, agent_name, query, answer, reward, status, turn_count, messages_json, traces_json, created_at)
-		VALUES ($1, $2, $3, $4, $5, 0, 'pending', $6, $7, $8, $9)`,
-		e.ID, e.UserID, e.AgentName, e.Query, e.Answer, e.TurnCount, e.Messages, traces, e.CreatedAt); err != nil {
+	if _, err := tx.ExecContext(context.Background(), `INSERT INTO agent_episodes (id, tenant_id, user_id, agent_name, query, answer, reward, status, turn_count, messages_json, traces_json, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, 0, 'pending', $7, $8, $9, $10)`,
+		e.ID, e.TenantID, e.UserID, e.AgentName, e.Query, e.Answer, e.TurnCount, e.Messages, traces, e.CreatedAt); err != nil {
 		return err
 	}
 	for _, r := range rewards {
@@ -253,8 +278,18 @@ func (s *Store) AddReward(episodeID, signal, note string, value float64) error {
 		newID("rw-"), episodeID, signal, value, note, now()); err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(context.Background(), `UPDATE agent_episodes SET reward = reward + $1 WHERE id = $2`, value, episodeID); err != nil {
+	res, err := tx.ExecContext(context.Background(), `UPDATE agent_episodes SET reward = reward + $1 WHERE id = $2`, value, episodeID)
+	if err != nil {
 		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		// Never leave a reward row pointing at a missing episode: roll the
+		// INSERT back so learning data stays referentially consistent.
+		return fmt.Errorf("reward rejected: no episode %s", episodeID)
 	}
 	return tx.Commit()
 }
@@ -266,10 +301,10 @@ func (s *Store) FinishEpisode(episodeID string) error {
 }
 
 // TopEpisodes returns the highest-reward episodes for an agent (for few-shot replay).
-func (s *Store) TopEpisodes(agentName string, minReward float64, limit int) ([]Episode, error) {
-	rows, err := s.db.QueryContext(context.Background(), `SELECT id, user_id, agent_name, query, answer, reward, turn_count, messages_json, traces_json, created_at
-		FROM agent_episodes WHERE agent_name = $1 AND reward >= $2 AND status = 'rewarded'
-		ORDER BY reward DESC, created_at DESC LIMIT $3`, agentName, minReward, limit)
+func (s *Store) TopEpisodes(tenantID, agentName string, minReward float64, limit int) ([]Episode, error) {
+	rows, err := s.db.QueryContext(context.Background(), `SELECT id, tenant_id, user_id, agent_name, query, answer, reward, turn_count, messages_json, traces_json, created_at
+		FROM agent_episodes WHERE tenant_id = $1 AND agent_name = $2 AND reward >= $3 AND status = 'rewarded'
+		ORDER BY reward DESC, created_at DESC LIMIT $4`, tenantID, agentName, minReward, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +314,7 @@ func (s *Store) TopEpisodes(agentName string, minReward float64, limit int) ([]E
 	for rows.Next() {
 		var e Episode
 		var tracesJSON string
-		if err := rows.Scan(&e.ID, &e.UserID, &e.AgentName, &e.Query, &e.Answer, &e.Reward, &e.TurnCount, &e.Messages, &tracesJSON, &e.CreatedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.TenantID, &e.UserID, &e.AgentName, &e.Query, &e.Answer, &e.Reward, &e.TurnCount, &e.Messages, &tracesJSON, &e.CreatedAt); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal([]byte(tracesJSON), &e.Traces); err != nil {
@@ -295,9 +330,9 @@ func (s *Store) CreateAction(a *Action) error {
 	a.ID = newID("act-")
 	a.Status = ActionPending
 	a.CreatedAt = now()
-	_, err := s.db.ExecContext(context.Background(), `INSERT INTO agent_actions (id, episode_id, tool_name, args_json, summary, status, requested_by, created_at)
-		VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7)`,
-		a.ID, a.EpisodeID, a.ToolName, a.ArgsJSON, a.Summary, a.RequestedBy, a.CreatedAt)
+	_, err := s.db.ExecContext(context.Background(), `INSERT INTO agent_actions (id, episode_id, tool_name, args_json, summary, status, requested_by, created_at, tenant_id, resource, perm_action)
+		VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10)`,
+		a.ID, a.EpisodeID, a.ToolName, a.ArgsJSON, a.Summary, a.RequestedBy, a.CreatedAt, a.TenantID, a.Resource, a.Action)
 	return err
 }
 
@@ -305,9 +340,10 @@ func (s *Store) CreateAction(a *Action) error {
 func (s *Store) GetAction(id string) (*Action, error) {
 	var a Action
 	err := s.db.QueryRowContext(context.Background(), `SELECT id, episode_id, tool_name, args_json, summary, status,
-		COALESCE(requested_by,''), COALESCE(decided_by,''), COALESCE(decided_at,''), COALESCE(result,''), COALESCE(error,''), created_at
+		COALESCE(requested_by,''), COALESCE(decided_by,''), COALESCE(decided_at,''), COALESCE(result,''), COALESCE(error,''), created_at,
+		COALESCE(tenant_id,''), COALESCE(resource,''), COALESCE(perm_action,'')
 		FROM agent_actions WHERE id = $1`, id).
-		Scan(&a.ID, &a.EpisodeID, &a.ToolName, &a.ArgsJSON, &a.Summary, &a.Status, &a.RequestedBy, &a.DecidedBy, &a.DecidedAt, &a.Result, &a.Error, &a.CreatedAt)
+		Scan(&a.ID, &a.EpisodeID, &a.ToolName, &a.ArgsJSON, &a.Summary, &a.Status, &a.RequestedBy, &a.DecidedBy, &a.DecidedAt, &a.Result, &a.Error, &a.CreatedAt, &a.TenantID, &a.Resource, &a.Action)
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +353,8 @@ func (s *Store) GetAction(id string) (*Action, error) {
 // ListActions returns actions filtered by status ("" = all), newest first.
 func (s *Store) ListActions(status ActionStatus, limit int) ([]Action, error) {
 	q := `SELECT id, episode_id, tool_name, args_json, summary, status,
-		COALESCE(requested_by,''), COALESCE(decided_by,''), COALESCE(decided_at,''), COALESCE(result,''), COALESCE(error,''), created_at
+		COALESCE(requested_by,''), COALESCE(decided_by,''), COALESCE(decided_at,''), COALESCE(result,''), COALESCE(error,''), created_at,
+		COALESCE(tenant_id,''), COALESCE(resource,''), COALESCE(perm_action,'')
 		FROM agent_actions`
 	args := []any{}
 	if status != "" {
@@ -340,7 +377,7 @@ func (s *Store) ListActions(status ActionStatus, limit int) ([]Action, error) {
 	var out []Action
 	for rows.Next() {
 		var a Action
-		if err := rows.Scan(&a.ID, &a.EpisodeID, &a.ToolName, &a.ArgsJSON, &a.Summary, &a.Status, &a.RequestedBy, &a.DecidedBy, &a.DecidedAt, &a.Result, &a.Error, &a.CreatedAt); err != nil {
+		if err := rows.Scan(&a.ID, &a.EpisodeID, &a.ToolName, &a.ArgsJSON, &a.Summary, &a.Status, &a.RequestedBy, &a.DecidedBy, &a.DecidedAt, &a.Result, &a.Error, &a.CreatedAt, &a.TenantID, &a.Resource, &a.Action); err != nil {
 			return nil, err
 		}
 		out = append(out, a)

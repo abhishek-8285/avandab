@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -67,7 +68,11 @@ func (h *DocumentHandlers) UploadDriverDoc(w http.ResponseWriter, r *http.Reques
 		http.Error(w, `{"error":"file_required","message":"no file provided"}`, http.StatusBadRequest)
 		return
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			slog.Warn("close document upload failed", "error", err)
+		}
+	}()
 
 	doc, err := h.docSvc.UploadDriverDoc(r.Context(), driverID, docType, header, expiryDate)
 	if err != nil {
@@ -110,7 +115,11 @@ func (h *DocumentHandlers) UploadVehicleDoc(w http.ResponseWriter, r *http.Reque
 		http.Error(w, `{"error":"file_required","message":"no file provided"}`, http.StatusBadRequest)
 		return
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			slog.Warn("close document upload failed", "error", err)
+		}
+	}()
 
 	doc, err := h.docSvc.UploadVehicleDoc(r.Context(), vehicleID, docType, header, expiryDate)
 	if err != nil {

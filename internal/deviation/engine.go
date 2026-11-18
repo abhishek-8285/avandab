@@ -52,6 +52,23 @@ func NewEngine(db *sql.DB, bus events.EventBus, reader *fuel.ConfigReader, logge
 	}
 }
 
+// safePublish dispatches an event to the bus and logs any delivery failure
+// instead of discarding it. A failed publish can mean a downstream alert or
+// automation never fired, even though the outbox record was persisted.
+func (e *Engine) safePublish(ctx context.Context, evt events.Event) {
+	if e.events == nil {
+		return
+	}
+	logger := e.logger
+	if logger == nil {
+		logger = slog.Default()
+	}
+	if err := e.events.Publish(ctx, evt); err != nil {
+		logger.Warn("gps deviation event publish failed",
+			"event_type", evt.Type, "error", err)
+	}
+}
+
 type tripMetadata struct {
 	ID        string
 	TenantID  string
@@ -190,11 +207,11 @@ func (e *Engine) ProcessTelemetry(ctx context.Context, pt TelemetryPoint) (Devia
 
 		// C. Publish to Event Bus if this is the first delivery
 		if (rowsAlert > 0 || rowsOutbox > 0) && e.events != nil {
-			e.events.Publish(ctx, events.Event{
+			e.safePublish(ctx, events.Event{
 				Type:    events.GPSDeviationAlert,
 				Payload: outboxPayload,
 			})
-			e.events.Publish(ctx, events.Event{
+			e.safePublish(ctx, events.Event{
 				Type: "AlertEvent",
 				Payload: map[string]interface{}{
 					"source":      "telemetry",

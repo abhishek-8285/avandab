@@ -87,6 +87,27 @@ func (uc *CancelBookingUseCase) cancelLinkedTrip(txCtx ports.TxContext, bookingI
 	if !ok {
 		return errors.New("failed to retrieve trip repository")
 	}
+	// A booking can own a replacement trip after the first one was cancelled.
+	// Cancel every non-terminal trip; the old :one lookup returned the oldest
+	// row and could leave the live replacement dispatched.
+	if active, ok := tripRepo.(tripdomain.ActiveTripRepository); ok {
+		trips, err := active.FindActiveByBookingID(txCtx, bookingID, tenantID)
+		if err != nil {
+			return err
+		}
+		for _, trip := range trips {
+			if err := trip.Cancel(now); err != nil {
+				if strings.Contains(strings.ToLower(err.Error()), "completed") {
+					continue
+				}
+				return err
+			}
+			if err := tripRepo.Save(txCtx, trip); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 	trip, err := tripRepo.FindByBookingID(txCtx, bookingID, tenantID)
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "not found") {

@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -91,8 +92,16 @@ func (h *Handler) handleChat(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "messages are required")
 		return
 	}
+	// Never trust client-supplied roles or tool metadata: rebuild history
+	// server-side as plain user/assistant text so injected system/tool turns
+	// cannot reach the model.
+	history, err := buildChatHistory(req.Messages)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
-	answer, episodeID, err := h.orch.Handle(ctx, req.Messages, userID, operatorName)
+	answer, episodeID, err := h.orch.Handle(ctx, history, userID, operatorName)
 	if err != nil {
 		// Never leak provider/DB internals to the client.
 		slog.ErrorContext(ctx, "assistant: request failed",
@@ -113,4 +122,20 @@ func (h *Handler) handleChat(w http.ResponseWriter, r *http.Request) {
 func writeErr(w http.ResponseWriter, status int, msg string) {
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(map[string]string{"error": msg})
+}
+
+// buildChatHistory validates client messages and keeps only plain-text
+// user/assistant turns. The system prompt is added by the agent, never here.
+func buildChatHistory(in []Message) ([]Message, error) {
+	out := make([]Message, 0, len(in))
+	for _, m := range in {
+		if m.Role != "user" && m.Role != "assistant" {
+			return nil, fmt.Errorf("invalid message role %q (only user and assistant allowed)", m.Role)
+		}
+		if len(m.ToolCalls) != 0 || m.ToolCallID != "" || m.Name != "" || m.FinishReason != "" {
+			return nil, fmt.Errorf("message contains non-text fields")
+		}
+		out = append(out, Message{Role: m.Role, Content: m.Content})
+	}
+	return out, nil
 }

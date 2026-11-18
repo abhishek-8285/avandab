@@ -69,8 +69,18 @@ func (e *Engine) HandleSOS(ctx context.Context, ev events.Event) error {
 
 	now := e.clock.Now()
 
-	// 1. Dedup key: "sos:<vehicle_id>" with 60s cooldown
-	dedupKey := fmt.Sprintf("sos:%s", vehicleID)
+	// 1. Dedup key: "sos:<tenant>:<vehicle|driver>" with 60s cooldown. The key
+	// used to omit the tenant, so the same vehicle id in another org collapsed
+	// into (and incremented) the wrong tenant's alert. Unknown vehicles used to
+	// collapse into one global "sos:" alert.
+	subject := vehicleID
+	if subject == "" {
+		subject = driverID
+	}
+	if subject == "" {
+		subject = fmt.Sprintf("unattributed-%d", now.UnixNano())
+	}
+	dedupKey := fmt.Sprintf("sos:%s:%s", tenantID, subject)
 	if existing, err := e.repo.FindOpenByDedupKey(ctx, dedupKey); err == nil && existing != nil {
 		if now.Sub(existing.LastSeenAt) < 60*time.Second {
 			_ = e.repo.IncrementOccurrences(ctx, existing.ID, now)

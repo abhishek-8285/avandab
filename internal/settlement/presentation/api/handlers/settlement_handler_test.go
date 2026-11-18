@@ -54,6 +54,16 @@ func setupSettlementHandlerDB(t *testing.T) *sql.DB {
 	INSERT INTO driver_payout_accounts (id, tenant_id, driver_id, verification_status, is_primary)
 	VALUES ('acc-1', 'tenant-1', 'drv-1', 'verified', 1);
 
+	CREATE TABLE bookings (
+		id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, price REAL NOT NULL DEFAULT 0
+	);
+	INSERT INTO bookings (id, tenant_id, price) VALUES ('booking-101', 'tenant-1', 10000.0);
+
+	CREATE TABLE trips (
+		id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, booking_id TEXT, driver_id TEXT
+	);
+	INSERT INTO trips (id, tenant_id, booking_id, driver_id) VALUES ('trip-101', 'tenant-1', 'booking-101', 'drv-1');
+
 	CREATE TABLE driver_settlements (
 		id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, trip_id TEXT NOT NULL, driver_id TEXT NOT NULL,
 		gross_fare REAL NOT NULL, deductions REAL NOT NULL, net_payout REAL NOT NULL,
@@ -95,11 +105,59 @@ func setupSettlementHandlerDB(t *testing.T) *sql.DB {
 func TestSettlementHandler_RegisterRoutes(t *testing.T) {
 	r := chi.NewRouter()
 	h := NewSettlementHandler(nil)
-	h.RegisterRoutes(r)
+	h.RegisterRoutes(r, denySettlementAuth{})
 
 	// Verify route registration
 	routes := r.Routes()
 	require.NotEmpty(t, routes)
+}
+
+type denySettlementAuth struct{}
+
+func (denySettlementAuth) Can(string, string, string) bool     { return false }
+func (denySettlementAuth) Reload() error                       { return nil }
+func (denySettlementAuth) AddRoleForUser(string, string) error { return nil }
+func (denySettlementAuth) DeleteRolesForUser(string) error     { return nil }
+
+type allowSettlementAuth struct{}
+
+func (allowSettlementAuth) Can(string, string, string) bool     { return true }
+func (allowSettlementAuth) Reload() error                       { return nil }
+func (allowSettlementAuth) AddRoleForUser(string, string) error { return nil }
+func (allowSettlementAuth) DeleteRolesForUser(string) error     { return nil }
+
+// A viewer must not be able to reach the money-mutating settlement calculator;
+// the route used to sit behind RequireAPIAuth alone.
+func TestSettlementCalculateRequiresSettlementsWritePermission(t *testing.T) {
+	svc := application.NewSettlementAppService(
+		settleSQL.NewSQLSettlementRepository(setupSettlementHandlerDB(t)), "secret_key_123", 100.0)
+
+	for _, tc := range []struct {
+		name    string
+		authSvc auth.AuthorizationService
+		forbid  bool
+	}{
+		{"viewer denied", denySettlementAuth{}, true},
+		{"admin allowed", allowSettlementAuth{}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := chi.NewRouter()
+			NewSettlementHandler(svc).RegisterRoutes(r, tc.authSvc)
+
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/settlements/calculate",
+				bytes.NewBufferString(`{"trip_id":"trip-1"}`))
+			ctx := shared.ContextWithTenantID(context.Background(), "tenant-1")
+			ctx = context.WithValue(ctx, auth.ContextUser, &auth.SessionData{UserID: "u-1", Role: "viewer"})
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req.WithContext(ctx))
+
+			if tc.forbid {
+				assert.Equal(t, http.StatusForbidden, w.Code)
+			} else {
+				assert.NotEqual(t, http.StatusForbidden, w.Code, "permitted caller must pass the gate")
+			}
+		})
+	}
 }
 
 func TestSettlementHandler_CalculateSettlement(t *testing.T) {
@@ -143,6 +201,32 @@ func TestSettlementHandler_CalculateSettlement(t *testing.T) {
 	assert.Equal(t, "trip-101", resp.TripID)
 	assert.Equal(t, "drv-1", resp.DriverID)
 	assert.Equal(t, 10000.0, resp.GrossFare)
+}
+
+// The calculate endpoint must never trust client money fields. This posts a
+// fabricated gross fare (and another driver) for a real trip and expects the
+// server-derived booking price and the trip's actual driver.
+func TestSettlementHandler_IgnoresClientSuppliedMoney(t *testing.T) {
+	db := setupSettlementHandlerDB(t)
+	repo := settleSQL.NewSQLSettlementRepository(db)
+	svc := application.NewSettlementAppService(repo, "secret_key_123", 100.0)
+	h := NewSettlementHandler(svc)
+
+	ctx := shared.ContextWithTenantID(context.Background(), "tenant-1")
+	ctx = context.WithValue(ctx, auth.ContextUser, &auth.SessionData{UserID: "usr-attacker"})
+
+	body := []byte(`{"trip_id":"trip-101","driver_id":"drv-other","gross_fare":1000000,"toll_adjustment":50000,"commission_rate":0}`)
+	req := httptest.NewRequest("POST", "/api/v1/settlements/calculate", bytes.NewReader(body))
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+	h.CalculateSettlement(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp domain.Settlement
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, 10000.0, resp.GrossFare, "gross fare must come from the booking, not the request")
+	assert.Equal(t, "drv-1", resp.DriverID, "driver must come from the trip, not the request")
+	assert.Zero(t, resp.TollAdjustment, "toll adjustment must not be client-supplied")
 }
 
 func TestSettlementHandler_GetDriverWallet(t *testing.T) {

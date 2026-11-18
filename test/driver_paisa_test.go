@@ -39,7 +39,7 @@ func seedPaisaFixtures(t *testing.T, db *sql.DB, day string) {
 func TestSpec22_DriverBalance_Formula(t *testing.T) {
 	db := NewTestDB(t)
 	svc := service.NewDriverBalanceService(db, nil)
-	ctx := shared.ContextWithTenantID(context.Background(), "1")
+	ctx := shared.ContextWithTenantID(context.Background(), "tenant-a")
 	day := "2026-08-20 10:00:00"
 	seedPaisaFixtures(t, db, day)
 
@@ -75,7 +75,7 @@ func TestSpec22_DriverBalance_Formula(t *testing.T) {
 // flips to 'paid' when the settlement is marked paid; pending ones never are.
 func TestSpec22_AdvanceLifecycleThroughSettlement(t *testing.T) {
 	db := NewTestDB(t)
-	ctx := shared.ContextWithTenantID(context.Background(), "1")
+	ctx := shared.ContextWithTenantID(context.Background(), "tenant-a")
 	day := "2026-08-20 10:00:00"
 
 	seedPaisaFixtures(t, db, day)
@@ -114,14 +114,14 @@ func TestSpec22_AdvanceLifecycleThroughSettlement(t *testing.T) {
 	_, err = settleSvc.MarkPaid(ctx, rec.ID, "ref-1", time.Now().UTC())
 	require.NoError(t, err)
 
-	// Generated settlement net is engine-computed; assert the advance's
-	// effect instead: paid advance must cancel its earlier +4000 credit.
+	// Generated settlement net already nets out the paid advance, so the
+	// +4000 credit is cancelled once by net_payout — not subtracted again.
 	balAfter, err := svc.GetBalance(ctx, "drv-paisa")
 	require.NoError(t, err)
 	var genNet float64
 	require.NoError(t, db.QueryRow(`SELECT net_payout FROM driver_settlements WHERE id=?`, rec.ID).Scan(&genNet))
-	assert.InDelta(t, 13900.0+genNet-4000.0, balAfter.RunningBalance, 1.0,
-		"paid settlement nets minus paid-out advance")
+	assert.InDelta(t, 13900.0+genNet, balAfter.RunningBalance, 1.0,
+		"paid advance is deducted once, inside net_payout")
 
 	// And the advance row itself is 'paid'.
 	var advStatus string

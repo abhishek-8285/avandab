@@ -158,7 +158,7 @@ func TestSOS_TriggerFanOutAndDedup(t *testing.T) {
 	var nextEsc time.Time
 	err = db.QueryRow(`
 		SELECT id, source, alert_type, severity, status, title, message, occurrences, next_escalation_at
-		FROM alerts WHERE dedup_key = 'sos:veh-sos-99'`).Scan(
+		FROM alerts WHERE dedup_key = 'sos:tenant-42:veh-sos-99'`).Scan(
 		&id, &source, &alertType, &severity, &status, &title, &msg, &occurrences, &nextEsc)
 	require.NoError(t, err)
 
@@ -189,4 +189,56 @@ func TestSOS_TriggerFanOutAndDedup(t *testing.T) {
 	// No extra channel sends during cooldown
 	assert.Len(t, inApp.sent, 1)
 	assert.Len(t, telegram.sent, 1)
+
+	// The same vehicle id in another org is a different emergency and must not
+	// be collapsed into tenant-42's alert.
+	ctxOther := shared.ContextWithTenantID(context.Background(), "tenant-99")
+	require.NoError(t, engine.ProcessEvent(ctxOther, sosEv))
+	var total int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM alerts`).Scan(&total))
+	assert.Equal(t, 2, total, "cross-tenant SOS must create its own alert")
+}
+
+// Fuel producers publish events.FuelTheftAlert, not AlertEvent. The pipeline
+// must route it (with the payload tenant) instead of returning "unsupported".
+func TestProcessEvent_FuelTheftAlertIsRouted(t *testing.T) {
+	db, engine, _, _, _ := setupSOSTestDB(t)
+	defer db.Close()
+	ctx := context.Background() // async bus: tenant only in payload
+
+	ev := events.Event{
+		Type: events.FuelTheftAlert,
+		Payload: map[string]interface{}{
+			"tenant_id":  "tenant-fuel",
+			"vehicle_id": "veh-fuel-1",
+			"title":      "Fuel anomaly",
+			"severity":   "warning",
+		},
+	}
+	require.NoError(t, engine.ProcessEvent(ctx, ev))
+
+	var count int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM alerts WHERE tenant_id = 'tenant-fuel'`).Scan(&count))
+	require.Equal(t, 1, count, "fuel alert must be persisted for its tenant")
+}
+
+// Geofence breaches publish their canonical event; the pipeline must create a
+// canonical alert (the event previously had no consumer at all).
+func TestProcessEvent_GeofenceBreachCreatesAlert(t *testing.T) {
+	db, engine, _, _, _ := setupSOSTestDB(t)
+	defer db.Close()
+	ev := events.Event{
+		Type: events.GeofenceZoneBreach,
+		Payload: map[string]interface{}{
+			"TenantID":  "tenant-geo",
+			"VehicleID": "veh-geo-1",
+			"ZoneKind":  "restricted",
+			"Severity":  "critical",
+			"Details":   "entered restricted zone",
+		},
+	}
+	require.NoError(t, engine.ProcessEvent(context.Background(), ev))
+	var count int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM alerts WHERE tenant_id='tenant-geo'`).Scan(&count))
+	require.Equal(t, 1, count)
 }

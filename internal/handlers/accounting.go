@@ -10,6 +10,7 @@ import (
 	"transport-app/internal/auth"
 	"transport-app/internal/integration/accounting"
 	"transport-app/internal/middleware"
+	"transport-app/internal/shared"
 )
 
 // AccountingHandlers exposes REST APIs for external accounting sync and reconciliation.
@@ -64,7 +65,14 @@ func (h *AccountingHandlers) TriggerSync(w http.ResponseWriter, r *http.Request)
 	}
 	_ = json.NewDecoder(r.Body).Decode(&req)
 
-	res, err := h.consumer.TriggerSync(r.Context(), req.SinceMinutes)
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	if tenantID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "tenant is required"})
+		return
+	}
+	res, err := h.consumer.TriggerSync(r.Context(), tenantID, req.SinceMinutes)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -78,7 +86,14 @@ func (h *AccountingHandlers) TriggerSync(w http.ResponseWriter, r *http.Request)
 
 // SyncContacts pushes customer and driver contacts to the external accounting system.
 func (h *AccountingHandlers) SyncContacts(w http.ResponseWriter, r *http.Request) {
-	res, err := h.consumer.SyncContacts(r.Context())
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	if tenantID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "tenant is required"})
+		return
+	}
+	res, err := h.consumer.SyncContacts(r.Context(), tenantID)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)

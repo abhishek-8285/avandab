@@ -296,6 +296,17 @@ func (s *AuthService) ValidateSessionToken(ctx context.Context, token string) (*
 	if sess.UserStatus != string(domain.UserStatusActive) {
 		return nil, domain.ErrUnauthorized
 	}
+	// DPDP §6(4): withdrawal must invalidate tokens minted before it, even
+	// if the session row survived (defense in depth alongside revocation).
+	user, err := s.store.GetUserByID(ctx, sess.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if withdrawn, err := consentWithdrawn(ctx, s.consentDB(), user.TenantID, string(sess.UserID)); err != nil {
+		return nil, err
+	} else if withdrawn {
+		return nil, auth.ErrConsentWithdrawn
+	}
 	return &auth.SessionData{
 		UserID:  string(sess.UserID),
 		Role:    sess.RoleName,
@@ -317,6 +328,12 @@ func (s *AuthService) ValidateAPITokenUser(ctx context.Context, userID string) (
 		return "", false, err
 	}
 	if user.Status != domain.UserStatusActive {
+		return "", false, nil
+	}
+	// Bearer tokens carry no consent state: withdraw now means inactive now.
+	if withdrawn, err := consentWithdrawn(ctx, s.consentDB(), user.TenantID, string(user.ID)); err != nil {
+		return "", false, err
+	} else if withdrawn {
 		return "", false, nil
 	}
 	return string(user.Role.Name), true, nil

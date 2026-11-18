@@ -60,7 +60,7 @@ func NewEngine(db *sql.DB, uow ports.UnitOfWork, cfg *fuel.ConfigReader, log *sl
 		idGen:    id.NewUUIDGenerator(),
 		log:      log,
 		tenantID: shared.DefaultTenant, //nolint:tenant-default // single-instance global loop reads bootstrap policy; override per-org via WithTenantID
-		loc:      time.Local,
+		loc:      indiaLocation(),
 		state:    make(map[string]*vehicleState),
 		now:      time.Now,
 	}
@@ -515,4 +515,13 @@ func strOrNull(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+// indiaLocation returns Asia/Kolkata. time.Local on the shipped image is UTC,
+// which shifted the night-driving window by 5h30m and misclassified trips.
+func indiaLocation() *time.Location {
+	if loc, err := time.LoadLocation("Asia/Kolkata"); err == nil {
+		return loc
+	}
+	return time.FixedZone("IST", 5*60*60+30*60)
 }

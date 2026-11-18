@@ -56,6 +56,7 @@ type AccountingSyncLog struct {
 	LastError      sql.NullString `json:"last_error"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
+	TenantID       string         `json:"tenant_id"`
 }
 
 type Alert struct {
@@ -1847,6 +1848,15 @@ type ProviderEvent struct {
 	EventType       string    `json:"event_type"`
 	Payload         string    `json:"payload"`
 	ProcessedAt     time.Time `json:"processed_at"`
+}
+
+type RazorpayOrder struct {
+	OrderID     string    `json:"order_id"`
+	TenantID    string    `json:"tenant_id"`
+	InvoiceID   string    `json:"invoice_id"`
+	AmountPaise int64     `json:"amount_paise"`
+	Currency    string    `json:"currency"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type ReeferTemperatureExcursion struct {

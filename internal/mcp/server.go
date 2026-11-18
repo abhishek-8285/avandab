@@ -185,9 +185,12 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request, _ context.Con
 }
 
 func (s *Server) handlePOST(w http.ResponseWriter, r *http.Request, ctx context.Context) {
+	// Bound both buffered bytes and the number of tool calls a single request
+	// can dispatch (the route's rate limit is per request, not per call).
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		s.writeJSON(w, http.StatusBadRequest, NewErrorResponse(nil, CodeParseError, "failed to read request body"))
+		s.writeJSON(w, http.StatusBadRequest, NewErrorResponse(nil, CodeParseError, "failed to read request body (max 1 MiB)"))
 		return
 	}
 	defer func() { _ = r.Body.Close() }()
@@ -203,6 +206,10 @@ func (s *Server) handlePOST(w http.ResponseWriter, r *http.Request, ctx context.
 		var reqs []Request
 		if err := json.Unmarshal(trimmed, &reqs); err != nil {
 			s.writeJSON(w, http.StatusOK, NewErrorResponse(nil, CodeParseError, "invalid JSON batch"))
+			return
+		}
+		if len(reqs) > 50 {
+			s.writeJSON(w, http.StatusOK, NewErrorResponse(nil, CodeInvalidRequest, "batch too large (max 50 requests)"))
 			return
 		}
 		var resps []Response
@@ -310,8 +317,8 @@ func (s *Server) handleToolCall(ctx context.Context, req Request) *Response {
 		return &r
 	}
 
-	// Attach an episode ID for audit logging and approval workflow
-	ctx = agent.WithEpisodeID(ctx, "mcp-"+uuid.NewString())
+	// No synthetic episode ID: MCP calls have no episode row, so attaching one
+	// would write approval rewards against a nonexistent episode.
 
 	args := params.Arguments
 	if len(args) == 0 || string(args) == "null" {
@@ -321,7 +328,7 @@ func (s *Server) handleToolCall(ctx context.Context, req Request) *Response {
 	output, err := tool.Execute(ctx, args)
 	if err != nil {
 		slog.WarnContext(ctx, "mcp: tool execution error", "tool", params.Name, "error", err)
-		r := NewResponse(req.ID, NewErrorResult(err.Error()))
+		r := NewResponse(req.ID, NewErrorResult(agent.SanitizeToolError(err)))
 		return &r
 	}
 

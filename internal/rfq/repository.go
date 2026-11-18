@@ -605,17 +605,21 @@ func (r *Repository) AwardRFQBidTransaction(
 
 	now := time.Now().UTC()
 
-	// 1. Mark winning bid accepted
-	_, err = tx.ExecContext(ctx, `
+	// 1. Mark winning bid accepted. The status guard makes a second award a
+	// no-op instead of overwriting the winner/rate.
+	win, err := tx.ExecContext(ctx, `
 		UPDATE rfq_bids SET 
 			status = 'ACCEPTED',
 			bid_amount = ?,
 			decided_at = ?,
 			decided_by = ?
-		WHERE id = ? AND tenant_id = ?`,
+		WHERE id = ? AND tenant_id = ? AND status IN ('SUBMITTED', 'COUNTER_OFFERED')`,
 		awardedRate, now, userID, bidID, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to accept winning bid: %w", err)
+	}
+	if n, _ := win.RowsAffected(); n != 1 {
+		return fmt.Errorf("%w: bid is no longer awardable", ErrBidDecided)
 	}
 
 	// 2. Reject other bids
@@ -630,8 +634,8 @@ func (r *Repository) AwardRFQBidTransaction(
 		return fmt.Errorf("failed to reject competitor bids: %w", err)
 	}
 
-	// 3. Mark RFQ awarded
-	_, err = tx.ExecContext(ctx, `
+	// 3. Mark RFQ awarded (only while still open; a concurrent award loses).
+	awarded, err := tx.ExecContext(ctx, `
 		UPDATE rfqs SET
 			status = 'AWARDED',
 			awarded_bid_id = ?,
@@ -640,10 +644,13 @@ func (r *Repository) AwardRFQBidTransaction(
 			awarded_rate = ?,
 			awarded_at = ?,
 			updated_at = ?
-		WHERE id = ? AND tenant_id = ?`,
+		WHERE id = ? AND tenant_id = ? AND status IN ('OPEN', 'UNDER_NEGOTIATION')`,
 		bidID, carrierID, carrierName, awardedRate, now, now, rfqID, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to update rfq awarded status: %w", err)
+	}
+	if n, _ := awarded.RowsAffected(); n != 1 {
+		return fmt.Errorf("%w: rfq already awarded or closed", ErrRFQClosed)
 	}
 
 	return tx.Commit()

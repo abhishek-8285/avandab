@@ -96,3 +96,24 @@ func TestEnsurePODOTP_KeepsValidSQLiteFormatCode(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "654321", code, "valid sqlite-format code must not be regenerated")
 }
+
+// The operator sees trips.pod_otp, while the stop POD flow verifies
+// trip_stops.otp_code. Both must carry the same code, including when a stale
+// stop code predates the trip-level one.
+func TestEnsurePODOTP_SyncsStopCode(t *testing.T) {
+	svc, db := newPODOTPTestService(t)
+	ctx := shared.ContextWithTenantID(context.Background(), "t-otp")
+	futureSQL := time.Now().UTC().Add(24 * time.Hour).Format("2006-01-02 15:04:05")
+	seedOTPTrip(t, db, "trip-sync", "123456", futureSQL)
+	_, err := db.Exec(`INSERT INTO trip_stops (id, trip_id, tenant_id, stop_sequence, stop_type, location_name, address, otp_required, otp_code)
+		VALUES ('stop-sync', 'trip-sync', 't-otp', 2, 'drop', 'Consignee', 'Pune', 1, '999999')`)
+	require.NoError(t, err)
+
+	code, err := svc.EnsurePODOTP(ctx, "trip-sync")
+	require.NoError(t, err)
+	require.Equal(t, "123456", code)
+
+	var stopCode string
+	require.NoError(t, db.QueryRow(`SELECT otp_code FROM trip_stops WHERE id='stop-sync'`).Scan(&stopCode))
+	require.Equal(t, code, stopCode, "stop OTP must match the code shown to the operator")
+}

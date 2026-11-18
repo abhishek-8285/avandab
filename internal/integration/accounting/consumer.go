@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"transport-app/internal/events"
+	"transport-app/internal/shared"
 )
 
 // SyncStatusResponse represents sync health and metrics.
@@ -99,6 +100,16 @@ func (c *Consumer) ProcessEvent(ctx context.Context, evt events.Event) (bool, er
 	idempotencyKey := fmt.Sprintf("%s:%s", evt.Type, aggID)
 	entityType := inferEntityType(evt.Type)
 
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		if v, ok := pMap["tenant_id"].(string); ok {
+			tenantID = v
+		}
+	}
+	if tenantID == "" {
+		return false, fmt.Errorf("accounting sync: tenant is required for event %s", evt.Type)
+	}
+
 	payloadBytes, _ := json.Marshal(pMap)
 	client, cfg := c.clientFor(ctx)
 	adapterName := strings.ToLower(cfg.Provider)
@@ -111,11 +122,11 @@ func (c *Consumer) ProcessEvent(ctx context.Context, evt events.Event) (bool, er
 	// 1. Insert into accounting_sync_log (UNIQUE idempotency_key prevents duplicate processing)
 	res, err := c.db.ExecContext(ctx, `
 		INSERT INTO accounting_sync_log (
-			id, idempotency_key, direction, entity_type, entity_id, adapter,
+			id, tenant_id, idempotency_key, direction, entity_type, entity_id, adapter,
 			payload_json, status, attempts, created_at, updated_at
-		) VALUES ($1, $2, 'out', $3, $4, $5, $6, 'pending', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		) VALUES ($1, $2, $3, 'out', $4, $5, $6, $7, 'pending', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 		ON CONFLICT (idempotency_key) DO NOTHING
-	`, logID, idempotencyKey, entityType, aggID, adapterName, string(payloadBytes))
+	`, logID, tenantID, idempotencyKey, entityType, aggID, adapterName, string(payloadBytes))
 	if err != nil {
 		return false, fmt.Errorf("insert accounting_sync_log failed: %w", err)
 	}
@@ -201,27 +212,31 @@ func (c *Consumer) ProcessEvent(ctx context.Context, evt events.Event) (bool, er
 }
 
 // TriggerSync flushes pending or failed accounting sync items.
-func (c *Consumer) TriggerSync(ctx context.Context, sinceMinutes int) (TriggerResult, error) {
+func (c *Consumer) TriggerSync(ctx context.Context, tenantID string, sinceMinutes int) (TriggerResult, error) {
 	var res TriggerResult
 	if c.db == nil {
 		return res, nil
 	}
 
+	if tenantID == "" {
+		return res, fmt.Errorf("accounting sync: tenant is required")
+	}
 	timeClause := ""
-	var timeArgs []any
+	var args []any
+	args = append(args, tenantID)
 	if sinceMinutes > 0 {
-		timeClause = "AND created_at >= $1"
-		timeArgs = append(timeArgs, time.Now().UTC().Add(-time.Duration(sinceMinutes)*time.Minute))
+		timeClause = "AND created_at >= $2"
+		args = append(args, time.Now().UTC().Add(-time.Duration(sinceMinutes)*time.Minute))
 	}
 
 	query := fmt.Sprintf(`
 		SELECT id, idempotency_key, entity_type, entity_id, payload_json
 		FROM accounting_sync_log
-		WHERE status IN ('pending', 'failed') %s
+		WHERE tenant_id = $1 AND status IN ('pending', 'failed') %s
 		ORDER BY created_at ASC
 	`, timeClause)
 
-	rows, err := c.db.QueryContext(ctx, query, timeArgs...)
+	rows, err := c.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return res, fmt.Errorf("query sync log failed: %w", err)
 	}
@@ -287,15 +302,15 @@ func (c *Consumer) TriggerSync(ctx context.Context, sinceMinutes int) (TriggerRe
 			_, _ = c.db.ExecContext(ctx, `
 				UPDATE accounting_sync_log
 				SET attempts = attempts + 1, last_error = $1, updated_at = CURRENT_TIMESTAMP
-				WHERE id = $2
-			`, dispatchErr.Error(), it.id)
+				WHERE id = $2 AND tenant_id = $3
+			`, dispatchErr.Error(), it.id, tenantID)
 		} else {
 			res.Dispatched++
 			_, _ = c.db.ExecContext(ctx, `
 				UPDATE accounting_sync_log
 				SET status = 'acked', external_id = $1, updated_at = CURRENT_TIMESTAMP
-				WHERE id = $2
-			`, extID, it.id)
+				WHERE id = $2 AND tenant_id = $3
+			`, extID, it.id, tenantID)
 
 			if extID != "" {
 				mapID := "map-" + uuid.New().String()
@@ -312,15 +327,18 @@ func (c *Consumer) TriggerSync(ctx context.Context, sinceMinutes int) (TriggerRe
 }
 
 // SyncContacts loads customer and driver records and pushes them to the accounting adapter.
-func (c *Consumer) SyncContacts(ctx context.Context) (SyncResult, error) {
+func (c *Consumer) SyncContacts(ctx context.Context, tenantID string) (SyncResult, error) {
 	if c.db == nil {
 		return SyncResult{}, nil
+	}
+	if tenantID == "" {
+		return SyncResult{}, fmt.Errorf("accounting sync: tenant is required")
 	}
 
 	var contacts []Contact
 
 	// Customers
-	cRows, err := c.db.QueryContext(ctx, `SELECT id, name, COALESCE(email,''), phone, COALESCE(gst,''), COALESCE(address,'') FROM customers`)
+	cRows, err := c.db.QueryContext(ctx, `SELECT id, name, COALESCE(email,''), phone, COALESCE(gst,''), COALESCE(address,'') FROM customers WHERE tenant_id = $1`, tenantID)
 	if err == nil {
 		defer cRows.Close()
 		for cRows.Next() {
@@ -340,7 +358,7 @@ func (c *Consumer) SyncContacts(ctx context.Context) (SyncResult, error) {
 	}
 
 	// Drivers
-	dRows, err := c.db.QueryContext(ctx, `SELECT id, first_name || ' ' || COALESCE(last_name,''), phone FROM drivers`)
+	dRows, err := c.db.QueryContext(ctx, `SELECT id, first_name || ' ' || COALESCE(last_name,''), phone FROM drivers WHERE tenant_id = $1`, tenantID)
 	if err == nil {
 		defer dRows.Close()
 		for dRows.Next() {

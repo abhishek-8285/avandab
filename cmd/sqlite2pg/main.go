@@ -16,6 +16,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -30,6 +31,15 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "sqlite2pg: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+// run owns the DB lifecycle so deferred closes execute on every exit path
+// instead of being skipped by os.Exit.
+func run() error {
 	sqlitePath := flag.String("sqlite", "transport.db", "sqlite source file (opened read-only)")
 	pgURL := flag.String("pg-url", os.Getenv("DATABASE_URL"), "postgres URL (or DATABASE_URL env)")
 	checkOnly := flag.Bool("check", false, "read-only precheck report, migrate nothing")
@@ -38,35 +48,35 @@ func main() {
 	flag.Parse()
 
 	if *pgURL == "" {
-		fatal("pg-url or DATABASE_URL required")
+		return errors.New("pg-url or DATABASE_URL required")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
 	src, err := sql.Open("sqlite", "file:"+*sqlitePath+"?mode=ro")
 	if err != nil {
-		fatal("open sqlite: %v", err)
+		return fmt.Errorf("open sqlite: %w", err)
 	}
 	defer func() { _ = src.Close() }()
 	dst, err := sql.Open("pgx-rebind", *pgURL)
 	if err != nil {
-		fatal("open pg: %v", err)
+		return fmt.Errorf("open pg: %w", err)
 	}
 	defer func() { _ = dst.Close() }()
 
 	if *autoSchema {
 		if err := ensurePGSchema(ctx, dst); err != nil {
-			fatal("auto-schema on pg: %v", err)
+			return fmt.Errorf("auto-schema on pg: %w", err)
 		}
 	}
 
 	pre, err := datamigrate.RunPrecheck(ctx, src, dst)
 	if err != nil {
-		fatal("precheck: %v", err)
+		return fmt.Errorf("precheck: %w", err)
 	}
 	fmt.Print(pre.Report())
 	if !pre.VersionsMatch {
-		fatal("version mismatch — sqlite=%d pg=%d", pre.SQLiteVersion, pre.PGVersion)
+		return fmt.Errorf("version mismatch — sqlite=%d pg=%d", pre.SQLiteVersion, pre.PGVersion)
 	}
 	if *checkOnly {
 		// Tenant-isolation triggers hide orphan rows from pragma_foreign_key_check;
@@ -75,12 +85,12 @@ func main() {
 			fmt.Fprintln(os.Stderr, "sqlite2pg: --check failed: tenant orphans would be quarantined (see report above)")
 			os.Exit(1)
 		}
-		return
+		return nil
 	}
 
 	sum, err := datamigrate.Run(ctx, src, dst, datamigrate.Options{DryRun: *dryRun})
 	if err != nil {
-		fatal("migrate: %v", err)
+		return fmt.Errorf("migrate: %w", err)
 	}
 	mode := "LIVE"
 	if sum.DryRun {
@@ -106,6 +116,7 @@ func main() {
 		}
 		fmt.Printf("  %-28s %d -> %d (copied %d, skipped %d)%s\n", tc.Table, tc.SQLite, tc.PG, tc.Copied, tc.Skip, marker)
 	}
+	return nil
 }
 
 func ensurePGSchema(ctx context.Context, pg *sql.DB) error {
@@ -129,9 +140,4 @@ func ensurePGSchema(ctx context.Context, pg *sql.DB) error {
 		return fmt.Errorf("pg full up: %w", err)
 	}
 	return nil
-}
-
-func fatal(f string, a ...any) {
-	fmt.Fprintf(os.Stderr, "sqlite2pg: "+f+"\n", a...)
-	os.Exit(1)
 }

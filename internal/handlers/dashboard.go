@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -229,7 +230,9 @@ func (h *DashboardHandlers) writeDashFrame(w http.ResponseWriter, f http.Flusher
 	}
 
 	// Datastar v1.0.2 SSE integration format
-	fmt.Fprintf(w, "event: datastar-merge-signals\ndata: {\"dashboard\":%s}\n\n", jsonBytes)
+	if _, err := fmt.Fprintf(w, "event: datastar-merge-signals\ndata: {\"dashboard\":%s}\n\n", jsonBytes); err != nil {
+		slog.Warn("dashboard SSE write failed", "error", err)
+	}
 	f.Flush()
 }
 

@@ -3,9 +3,11 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"strings"
 
 	"transport-app/internal/agent/rl"
+	"transport-app/internal/shared"
 )
 
 // Orchestrator routes requests to specialized sub-agents and runs the
@@ -43,9 +45,12 @@ func (o *Orchestrator) AgentNames() []string { return o.order }
 func (o *Orchestrator) Handle(ctx context.Context, messages []Message, userID, userName string) (string, string, error) {
 	query := lastUserQuery(messages)
 
-	agentName, err := o.Route(ctx, query)
-	if err != nil {
-		agentName = "ops"
+	agentName, routeErr := o.Route(ctx, query)
+	if routeErr != nil {
+		// Route already fell back to keyword routing: keep its answer. Only
+		// an unknown/unregistered name falls back to ops below.
+		slog.DebugContext(ctx, "agent: router LLM failed, using keyword route",
+			slog.String("agent", agentName), slog.Any("error", routeErr))
 	}
 	sub := o.agents[agentName]
 	if sub == nil {
@@ -53,10 +58,11 @@ func (o *Orchestrator) Handle(ctx context.Context, messages []Message, userID, u
 		agentName = "ops"
 	}
 
-	system := o.buildSystem(sub, query, userName)
+	system := o.buildSystem(string(shared.TenantIDFromContext(ctx)), sub, query, userName)
 	ag := NewAgent(o.client, sub.Tools, system, o.maxTurns)
 
 	episode := &rl.Episode{
+		TenantID:  string(shared.TenantIDFromContext(ctx)),
 		UserID:    userID,
 		AgentName: agentName,
 		Query:     query,
@@ -167,14 +173,14 @@ func (o *Orchestrator) keywordRoute(query string) string {
 
 // buildSystem assembles the sub-agent prompt with the operator identity,
 // learned few-shot examples and policy warnings about unreliable tools.
-func (o *Orchestrator) buildSystem(sub *SubAgent, query, userName string) string {
+func (o *Orchestrator) buildSystem(tenantID string, sub *SubAgent, query, userName string) string {
 	system := sub.SystemPrompt
 	if userName != "" && userName != "Unknown" {
 		system += "\n\nYour authenticated operator is: " + userName
 	}
 
 	if o.rl != nil {
-		if examples := o.rl.ExamplesFor(sub.Name, query, 3); len(examples) > 0 {
+		if examples := o.rl.ExamplesFor(tenantID, sub.Name, query, 3); len(examples) > 0 {
 			system += rl.FormatExamples(examples)
 		}
 		if notes := o.rl.PolicyNotesFor(sub.Name); len(notes) > 0 {

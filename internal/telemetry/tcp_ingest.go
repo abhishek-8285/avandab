@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,16 +16,17 @@ import (
 
 // TCPIngestServer receives GPS telemetry from physical hardware devices over raw TCP sockets.
 type TCPIngestServer struct {
-	addr        string
-	ingestor    *Ingestor
-	deviceStore *DeviceStore
-	logger      *slog.Logger
-	listener    net.Listener
-	wg          sync.WaitGroup
-	quit        chan struct{}
-	mu          sync.Mutex
-	running     bool
-	conns       map[net.Conn]struct{}
+	addr         string
+	ingestor     *Ingestor
+	deviceStore  *DeviceStore
+	logger       *slog.Logger
+	listener     net.Listener
+	wg           sync.WaitGroup
+	quit         chan struct{}
+	mu           sync.Mutex
+	running      bool
+	conns        map[net.Conn]struct{}
+	allowedIMEIs map[string]struct{}
 }
 
 // NewTCPIngestServer constructs a TCPIngestServer.
@@ -36,13 +38,48 @@ func NewTCPIngestServer(addr string, ingestor *Ingestor, store *DeviceStore, log
 		logger = slog.Default()
 	}
 	return &TCPIngestServer{
-		addr:        addr,
-		ingestor:    ingestor,
-		deviceStore: store,
-		logger:      logger,
-		quit:        make(chan struct{}),
-		conns:       make(map[net.Conn]struct{}),
+		addr:         addr,
+		ingestor:     ingestor,
+		deviceStore:  store,
+		logger:       logger,
+		quit:         make(chan struct{}),
+		conns:        make(map[net.Conn]struct{}),
+		allowedIMEIs: make(map[string]struct{}),
 	}
+}
+
+// SetAllowedIMEIs pins hardware TCP ingest to known device IMEIs. The GT06/AIS-140
+// protocols carry a self-declared IMEI and no credential, so an allowlist is the
+// only authentication control available without changing device firmware.
+func (s *TCPIngestServer) SetAllowedIMEIs(imeis []string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.allowedIMEIs = make(map[string]struct{}, len(imeis))
+	for _, imei := range imeis {
+		if imei = strings.TrimSpace(imei); imei != "" {
+			s.allowedIMEIs[imei] = struct{}{}
+		}
+	}
+}
+
+// imeiAllowed reports whether a self-declared IMEI may ingest. An empty
+// allowlist means no pinning was configured (legacy/unauthenticated mode).
+func (s *TCPIngestServer) imeiAllowed(imei string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(s.allowedIMEIs) == 0 {
+		return true
+	}
+	_, ok := s.allowedIMEIs[imei]
+	return ok
+}
+
+func (s *TCPIngestServer) rejectUnknownIMEI(remoteAddr, imei string) bool {
+	if s.imeiAllowed(imei) {
+		return false
+	}
+	s.logger.Warn("hardware TCP ingest rejected unlisted IMEI", "remote", remoteAddr, "imei", imei)
+	return true
 }
 
 // Start launches the TCP listener and accepts incoming hardware GPS connections.
@@ -191,6 +228,9 @@ func (s *TCPIngestServer) handleConnection(ctx context.Context, conn net.Conn) {
 			}
 			if frame != nil && frame.IMEI != "" {
 				sessionIMEI = frame.IMEI
+				if s.rejectUnknownIMEI(remoteAddr, sessionIMEI) {
+					return
+				}
 				if ingestErr := s.ingestor.IngestAsync(ctx, *frame); ingestErr != nil {
 					s.logger.Error("ais140 ingest failed", "imei", frame.IMEI, "error", ingestErr)
 				}
@@ -204,6 +244,9 @@ func (s *TCPIngestServer) handleConnection(ctx context.Context, conn net.Conn) {
 			if telErr == nil && telRes != nil {
 				if telRes.IMEI != "" {
 					sessionIMEI = telRes.IMEI
+				}
+				if s.rejectUnknownIMEI(remoteAddr, sessionIMEI) {
+					return
 				}
 				if telRes.IsHandshake {
 					// Handshake ACK is transport, not data: accept immediately.
@@ -254,6 +297,9 @@ func (s *TCPIngestServer) handleConnection(ctx context.Context, conn net.Conn) {
 		if res.IMEI != "" {
 			sessionIMEI = res.IMEI
 		}
+		if s.rejectUnknownIMEI(remoteAddr, sessionIMEI) {
+			return
+		}
 
 		// Frameless packets (login handshake, heartbeat status): ACK the
 		// transport immediately — there is nothing to persist.
@@ -269,7 +315,10 @@ func (s *TCPIngestServer) handleConnection(ctx context.Context, conn net.Conn) {
 			continue
 		}
 
-		if ingestErr := s.ingestor.IngestAsync(ctx, *res.Frame); ingestErr != nil {
+		// Persist BEFORE acking. IngestAsync only enqueues, so a crash between
+		// enqueue and commit lost the frame even though the device had been
+		// told it was accepted (the protocol's NAK/retransmit contract).
+		if _, ingestErr := s.ingestor.IngestRawFrame(ctx, *res.Frame); ingestErr != nil {
 			s.logger.Error("hardware GPS ingest rejected, ACK withheld", "imei", res.Frame.IMEI, "error", ingestErr)
 			continue
 		}

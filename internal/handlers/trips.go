@@ -371,7 +371,7 @@ func (h *TripHandlers) Create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	id, err := h.createUC.Execute(r.Context(), tripapp.CreateTripCommand{
+	tripID, err := h.createUC.Execute(r.Context(), tripapp.CreateTripCommand{
 		TenantID:       shared.TenantIDFromContext(r.Context()),
 		BookingID:      bookingID,
 		RouteID:        r.PostFormValue("route_id"),
@@ -410,7 +410,7 @@ func (h *TripHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	assignFailures := make([]string, 0, 2)
 	if dID := r.PostFormValue("driver_id"); dID != "" {
 		if err := h.dispatchSvc.AssignDriver(r.Context(), dispatchapp.AssignDriverCommand{
-			TripID:   id,
+			TripID:   tripID,
 			DriverID: dID,
 			TenantID: shared.TenantIDFromContext(r.Context()),
 		}); err != nil {
@@ -419,7 +419,7 @@ func (h *TripHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	if vID := r.PostFormValue("vehicle_id"); vID != "" {
 		if err := h.dispatchSvc.AssignVehicle(r.Context(), dispatchapp.AssignVehicleCommand{
-			TripID:    id,
+			TripID:    tripID,
 			VehicleID: vID,
 			TenantID:  shared.TenantIDFromContext(r.Context()),
 		}); err != nil {
@@ -436,13 +436,13 @@ func (h *TripHandlers) Create(w http.ResponseWriter, r *http.Request) {
 func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 	h.init()
 	session, _ := h.getUserFromContext(r)
-	id := chi.URLParam(r, "id")
+	tripID := chi.URLParam(r, "id")
 	trip, err := h.getUC.Execute(r.Context(), tripapp.GetTripQuery{
-		TripID:   tripagg.TripID(id),
+		TripID:   tripagg.TripID(tripID),
 		TenantID: shared.TenantIDFromContext(r.Context()),
 	})
 	if err != nil {
-		h.renderError(w, http.StatusNotFound, "Trip Not Found", fmt.Sprintf("No trip found with ID %q.", id), session)
+		h.renderError(w, http.StatusNotFound, "Trip Not Found", fmt.Sprintf("No trip found with ID %q.", tripID), session)
 		return
 	}
 
@@ -451,18 +451,18 @@ func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 		availableDrivers, _, _ = h.Services.Drivers.ListDrivers(r.Context(), "", "available", 1000, 0)
 		availableVehicles, _, _ = h.Services.Vehicles.ListVehicles(r.Context(), "", "available", 1000, 0)
 	}
-	tripPnL, _ := pnl.NewService(h.DB).Calculate(r.Context(), id)
+	tripPnL, _ := pnl.NewService(h.DB).Calculate(r.Context(), tripID)
 
 	var ewbRecord interface{}
 	if h.App != nil && h.App.EWayBill != nil && h.App.EWayBill.svc != nil {
-		if rec, err := h.App.EWayBill.svc.GetByTripForTenant(r.Context(), id, string(shared.TenantIDFromContext(r.Context()))); err == nil {
+		if rec, err := h.App.EWayBill.svc.GetByTripForTenant(r.Context(), tripID, string(shared.TenantIDFromContext(r.Context()))); err == nil {
 			ewbRecord = rec
 		}
 	}
 
 	// Delivery OTP: shown to the operator, relayed to the consignee by phone
 	// until SMS delivery is configured (48h validity, regenerates on expiry).
-	podOTP, _ := h.Services.Trips.EnsurePODOTP(r.Context(), id)
+	podOTP, _ := h.Services.Trips.EnsurePODOTP(r.Context(), tripID)
 	flashMsg, flashOK := "", false
 	if c, err := r.Cookie("flash_success"); err == nil && c.Value != "" {
 		flashMsg, _ = url.QueryUnescape(c.Value)
@@ -482,7 +482,7 @@ func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	kharchaRows, _ := h.Services.Kharcha.ListLedger(r.Context(), id)
+	kharchaRows, _ := h.Services.Kharcha.ListLedger(r.Context(), tripID)
 	var kharchaTotal float64
 	for _, e := range kharchaRows {
 		if e.Status != "rejected" {
@@ -492,7 +492,7 @@ func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 
 	var tripInvoice interface{}
 	if h.DB != nil {
-		if agg, err := invoicesql.NewInvoiceRepository(h.DB).FindByTripID(r.Context(), id, shared.TenantIDFromContext(r.Context())); err == nil && agg != nil {
+		if agg, err := invoicesql.NewInvoiceRepository(h.DB).FindByTripID(r.Context(), tripID, shared.TenantIDFromContext(r.Context())); err == nil && agg != nil {
 			tripInvoice = agg
 		}
 	}
@@ -531,7 +531,7 @@ func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 
 	if h.DB != nil {
 		records, err := tripapp.NewTripReadQueries(h.DB).TripStops(r.Context(), tripapp.TripStopsQuery{
-			TripID:   id,
+			TripID:   tripID,
 			TenantID: shared.TenantIDFromContext(r.Context()),
 		})
 		if err == nil {
@@ -596,8 +596,8 @@ func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 			"Stops":             stopsList,
 			"CurrentStop":       currentStop,
 			"Progression":       progression,
-			"PODFiles":          h.tripPODFiles(r, id),
-			"FuelRollup":        fuelRollupOrNil(r, h.DB, id),
+			"PODFiles":          h.tripPODFiles(r, tripID),
+			"FuelRollup":        fuelRollupOrNil(r, h.DB, tripID),
 		},
 	})
 }
@@ -708,10 +708,10 @@ func (h *TripHandlers) UploadTripPOD(w http.ResponseWriter, r *http.Request) {
 
 func (h *TripHandlers) Edit(w http.ResponseWriter, r *http.Request) {
 	h.init()
-	id := chi.URLParam(r, "id")
+	tripID := chi.URLParam(r, "id")
 	session, _ := h.getUserFromContext(r)
 	trip, err := h.getUC.Execute(r.Context(), tripapp.GetTripQuery{
-		TripID:   tripagg.TripID(id),
+		TripID:   tripagg.TripID(tripID),
 		TenantID: shared.TenantIDFromContext(r.Context()),
 	})
 	if err != nil {
@@ -759,7 +759,7 @@ func (h *TripHandlers) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := domain.TripID(chi.URLParam(r, "id"))
+	tripID := domain.TripID(chi.URLParam(r, "id"))
 	var driverID *domain.DriverID
 	if d := r.PostFormValue("driver_id"); d != "" {
 		did := domain.DriverID(d)
@@ -771,10 +771,51 @@ func (h *TripHandlers) Update(w http.ResponseWriter, r *http.Request) {
 		vehicleID = &vid
 	}
 
-	_, err := h.Services.Trips.UpdateTrip(r.Context(), id, service.CreateTripRequest{
+	h.init()
+	tenantID := shared.TenantIDFromContext(r.Context())
+	current, err := h.getUC.Execute(r.Context(), tripapp.GetTripQuery{
+		TripID:   tripagg.TripID(tripID),
+		TenantID: tenantID,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	// Driver/vehicle changes must go through the assignment use cases, which
+	// enforce the trip state machine and the maintenance/compliance gate. The
+	// edit form previously wrote them straight into UpdateTrip, bypassing both
+	// and with only trips:update instead of trips:assign.
+	driverChanged := driverID != nil && (current.DriverID == nil || *current.DriverID != driverID.String())
+	vehicleChanged := vehicleID != nil && (current.VehicleID == nil || *current.VehicleID != vehicleID.String())
+	if driverChanged || vehicleChanged {
+		session, _ := h.getUserFromContext(r)
+		if session == nil || h.AuthSrv == nil || !h.AuthSrv.Can(session.UserID, "trips", "assign") {
+			http.Error(w, "forbidden: trips:assign is required to change driver or vehicle", http.StatusForbidden)
+			return
+		}
+	}
+	if driverChanged {
+		if err := h.dispatchSvc.AssignDriver(r.Context(), dispatchapp.AssignDriverCommand{
+			TripID: tripagg.TripID(tripID.String()), DriverID: driverID.String(), TenantID: tenantID,
+		}); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	if vehicleChanged {
+		if err := h.dispatchSvc.AssignVehicle(r.Context(), dispatchapp.AssignVehicleCommand{
+			TripID: tripagg.TripID(tripID.String()), VehicleID: vehicleID.String(), TenantID: tenantID,
+		}); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
+	_, err = h.Services.Trips.UpdateTrip(r.Context(), tripID, service.CreateTripRequest{
 		RouteID:       domain.RouteID(r.PostFormValue("route_id")),
-		DriverID:      driverID,
-		VehicleID:     vehicleID,
+		DriverID:      nil,
+		VehicleID:     nil,
 		DepartureTime: r.PostFormValue("departure_time"),
 		ArrivalTime:   r.PostFormValue("arrival_time"),
 		Remarks:       r.PostFormValue("remarks"),
@@ -783,12 +824,12 @@ func (h *TripHandlers) Update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	http.Redirect(w, r, "/trips/"+id.String(), http.StatusSeeOther)
+	http.Redirect(w, r, "/trips/"+tripID.String(), http.StatusSeeOther)
 }
 
 func (h *TripHandlers) Delete(w http.ResponseWriter, r *http.Request) {
-	id := domain.TripID(chi.URLParam(r, "id"))
-	if err := h.Services.Trips.DeleteTrip(r.Context(), id); err != nil {
+	tripID := domain.TripID(chi.URLParam(r, "id"))
+	if err := h.Services.Trips.DeleteTrip(r.Context(), tripID); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -797,16 +838,16 @@ func (h *TripHandlers) Delete(w http.ResponseWriter, r *http.Request) {
 
 func (h *TripHandlers) Schedule(w http.ResponseWriter, r *http.Request) {
 	h.init()
-	id := chi.URLParam(r, "id")
+	tripID := chi.URLParam(r, "id")
 	err := h.scheduleUC.Execute(r.Context(), tripapp.ScheduleTripCommand{
-		TripID:   tripagg.TripID(id),
+		TripID:   tripagg.TripID(tripID),
 		TenantID: shared.TenantIDFromContext(r.Context()),
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	http.Redirect(w, r, "/trips/"+id, http.StatusSeeOther)
+	http.Redirect(w, r, "/trips/"+tripID, http.StatusSeeOther)
 }
 
 func (h *TripHandlers) extractAssignParams(r *http.Request, key string) (string, bool, string) {
@@ -1069,9 +1110,9 @@ func (h *TripHandlers) AssignVehicle(w http.ResponseWriter, r *http.Request) {
 
 func (h *TripHandlers) StartTrip(w http.ResponseWriter, r *http.Request) {
 	h.init()
-	id := chi.URLParam(r, "id")
+	tripID := chi.URLParam(r, "id")
 	err := h.startUC.Execute(r.Context(), tripapp.StartTripCommand{
-		TripID:   tripagg.TripID(id),
+		TripID:   tripagg.TripID(tripID),
 		TenantID: shared.TenantIDFromContext(r.Context()),
 	})
 	if err != nil {
@@ -1082,49 +1123,49 @@ func (h *TripHandlers) StartTrip(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	http.Redirect(w, r, "/trips/"+id, http.StatusSeeOther)
+	http.Redirect(w, r, "/trips/"+tripID, http.StatusSeeOther)
 }
 
 func (h *TripHandlers) ReachPickup(w http.ResponseWriter, r *http.Request) {
 	h.init()
-	id := chi.URLParam(r, "id")
+	tripID := chi.URLParam(r, "id")
 	err := h.reachPickupUC.Execute(r.Context(), tripapp.ReachPickupCommand{
-		TripID:   tripagg.TripID(id),
+		TripID:   tripagg.TripID(tripID),
 		TenantID: shared.TenantIDFromContext(r.Context()),
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	http.Redirect(w, r, "/trips/"+id, http.StatusSeeOther)
+	http.Redirect(w, r, "/trips/"+tripID, http.StatusSeeOther)
 }
 
 func (h *TripHandlers) StartTransit(w http.ResponseWriter, r *http.Request) {
 	h.init()
-	id := chi.URLParam(r, "id")
+	tripID := chi.URLParam(r, "id")
 	err := h.startTransitUC.Execute(r.Context(), tripapp.StartTransitCommand{
-		TripID:   tripagg.TripID(id),
+		TripID:   tripagg.TripID(tripID),
 		TenantID: shared.TenantIDFromContext(r.Context()),
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	http.Redirect(w, r, "/trips/"+id, http.StatusSeeOther)
+	http.Redirect(w, r, "/trips/"+tripID, http.StatusSeeOther)
 }
 
 func (h *TripHandlers) Deliver(w http.ResponseWriter, r *http.Request) {
 	h.init()
-	id := chi.URLParam(r, "id")
+	tripID := chi.URLParam(r, "id")
 	err := h.deliverUC.Execute(r.Context(), tripapp.DeliverCommand{
-		TripID:   tripagg.TripID(id),
+		TripID:   tripagg.TripID(tripID),
 		TenantID: shared.TenantIDFromContext(r.Context()),
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	http.Redirect(w, r, "/trips/"+id, http.StatusSeeOther)
+	http.Redirect(w, r, "/trips/"+tripID, http.StatusSeeOther)
 }
 
 func (h *TripHandlers) CompleteTrip(w http.ResponseWriter, r *http.Request) {
@@ -1133,9 +1174,9 @@ func (h *TripHandlers) CompleteTrip(w http.ResponseWriter, r *http.Request) {
 		h.failPage(w, r, err, http.StatusBadRequest, "Trip Close Failed")
 		return
 	}
-	id := chi.URLParam(r, "id")
+	tripIDParam := chi.URLParam(r, "id")
 	tenant := shared.TenantIDFromContext(r.Context())
-	tripID := tripagg.TripID(id)
+	tripID := tripagg.TripID(tripIDParam)
 
 	// SOP close dialog (ZMOTM_MMS p.8): close odometer reading + optional
 	// breakdown flag. Reading is validated by the aggregate; breakdown files
@@ -1167,7 +1208,7 @@ func (h *TripHandlers) CompleteTrip(w http.ResponseWriter, r *http.Request) {
 			if trip.BookingID == nil {
 				return nil
 			}
-			detentions, err := h.detRepo.ListClosedForTrip(txCtx, string(tenant), id)
+			detentions, err := h.detRepo.ListClosedForTrip(txCtx, string(tenant), tripIDParam)
 			if err != nil {
 				return err
 			}
@@ -1207,7 +1248,7 @@ func (h *TripHandlers) CompleteTrip(w http.ResponseWriter, r *http.Request) {
 				TenantID:   tenant,
 				BookingID:  bookingID,
 				CustomerID: booking.CustomerID,
-				TripID:     &id,
+				TripID:     &tripIDParam,
 				Subtotal:   subtotal,
 				Tax:        tax,
 				Discount:   0,
@@ -1252,26 +1293,26 @@ func (h *TripHandlers) CompleteTrip(w http.ResponseWriter, r *http.Request) {
 				Title:       "Vehicle breakdown at trip close",
 				Description: res.Description,
 				EntityType:  strPtr("trip"),
-				EntityID:    &id,
+				EntityID:    &tripIDParam,
 			})
 		}
 	}
 
-	http.Redirect(w, r, "/trips/"+id, http.StatusSeeOther)
+	http.Redirect(w, r, "/trips/"+tripIDParam, http.StatusSeeOther)
 }
 
 func (h *TripHandlers) CancelTrip(w http.ResponseWriter, r *http.Request) {
 	h.init()
-	id := chi.URLParam(r, "id")
+	tripID := chi.URLParam(r, "id")
 	err := h.cancelUC.Execute(r.Context(), tripapp.CancelTripCommand{
-		TripID:   tripagg.TripID(id),
+		TripID:   tripagg.TripID(tripID),
 		TenantID: shared.TenantIDFromContext(r.Context()),
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	http.Redirect(w, r, "/trips/"+id, http.StatusSeeOther)
+	http.Redirect(w, r, "/trips/"+tripID, http.StatusSeeOther)
 }
 
 func (h *TripHandlers) ReachStop(w http.ResponseWriter, r *http.Request) {
@@ -1661,6 +1702,15 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "Trip ID required", http.StatusBadRequest)
 		return
 	}
+	// Public, unauthenticated endpoint. Only accept the trip's UUID: the old
+	// id-or-trip_number lookup exposed any tenant's certificate by a guessable
+	// sequential number.
+	parsedID, parseErr := uuid.Parse(tripID)
+	if parseErr != nil {
+		http.Error(w, "e-POD Certificate not found", http.StatusNotFound)
+		return
+	}
+	tripID = parsedID.String()
 
 	if h.App == nil || h.App.DB == nil {
 		http.Error(w, "Database unavailable", http.StatusInternalServerError)

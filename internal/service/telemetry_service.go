@@ -72,7 +72,7 @@ func (s *TelemetryService) ProcessTelemetryStream(ctx context.Context, dp Teleme
 				s.log.Warn("telemetry exception: GPS deviation", "dist_km", distKM, "vehicle_id", dp.VehicleID)
 			}
 			if s.events != nil {
-				s.events.Publish(ctx, events.Event{
+				s.safePublish(ctx, events.Event{
 					Type: "AlertEvent",
 					Payload: map[string]interface{}{
 						"source":      "telemetry",
@@ -89,7 +89,7 @@ func (s *TelemetryService) ProcessTelemetryStream(ctx context.Context, dp Teleme
 						"occurred_at": alert.CreatedAt,
 					},
 				})
-				s.events.Publish(ctx, events.Event{
+				s.safePublish(ctx, events.Event{
 					Type: events.GPSDeviationAlert,
 					Payload: map[string]interface{}{
 						"tenant_id":   string(shared.TenantIDFromContext(ctx)),
@@ -125,7 +125,7 @@ func (s *TelemetryService) ProcessTelemetryStream(ctx context.Context, dp Teleme
 				s.log.Warn("telemetry exception: Fuel Theft", "fuel_drop_l", fuelDrop, "vehicle_id", dp.VehicleID)
 			}
 			if s.events != nil {
-				s.events.Publish(ctx, events.Event{
+				s.safePublish(ctx, events.Event{
 					Type: "AlertEvent",
 					Payload: map[string]interface{}{
 						"source":      "fuel",
@@ -142,7 +142,7 @@ func (s *TelemetryService) ProcessTelemetryStream(ctx context.Context, dp Teleme
 						"occurred_at": alert.CreatedAt,
 					},
 				})
-				s.events.Publish(ctx, events.Event{
+				s.safePublish(ctx, events.Event{
 					Type: events.FuelTheftAlert,
 					Payload: map[string]interface{}{
 						"tenant_id":   string(shared.TenantIDFromContext(ctx)),
@@ -183,7 +183,7 @@ func (s *TelemetryService) ProcessTelemetryStream(ctx context.Context, dp Teleme
 				s.log.Warn("telemetry exception: Temperature Breach", "temp_c", temp, "vehicle_id", dp.VehicleID)
 			}
 			if s.events != nil {
-				_ = s.events.Publish(ctx, events.Event{
+				s.safePublish(ctx, events.Event{
 					Type: "AlertEvent",
 					Payload: map[string]interface{}{
 						"source":      "telemetry",
@@ -200,7 +200,7 @@ func (s *TelemetryService) ProcessTelemetryStream(ctx context.Context, dp Teleme
 						"occurred_at": alert.CreatedAt,
 					},
 				})
-				_ = s.events.Publish(ctx, events.Event{
+				s.safePublish(ctx, events.Event{
 					Type: events.TempBreachAlert,
 					Payload: map[string]interface{}{
 						"tenant_id":   string(shared.TenantIDFromContext(ctx)),

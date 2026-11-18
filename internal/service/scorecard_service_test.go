@@ -76,7 +76,7 @@ func scoreRowsFor(t *testing.T, db *sql.DB, driverID string) int {
 func TestScorecard_ScoreFormula(t *testing.T) {
 	db := auditTestDB(t)
 	svcs := scorecardTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	seedScorecardDriver(t, db, "d1", "D-001", "Ravi", "Kumar")
 	seedBehaviour(t, db, "b1", "d1", "speeding", "medium", 8, scorecardTestNow(), "")
@@ -113,7 +113,7 @@ func TestScorecard_ScoreFormula(t *testing.T) {
 func TestScorecard_ColdStart(t *testing.T) {
 	db := auditTestDB(t)
 	svcs := scorecardTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	seedScorecardDriver(t, db, "d-zero", "D-000", "Zero", "Events")
 	seedScorecardDriver(t, db, "d-one", "D-001", "One", "Event")
@@ -157,7 +157,7 @@ func TestScorecard_ColdStart(t *testing.T) {
 func TestScorecard_FraudCap(t *testing.T) {
 	db := auditTestDB(t)
 	svcs := scorecardTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	seedScorecardDriver(t, db, "d1", "D-001", "Fraud", "Driver")
 	// Raw score without cap: 100 - 25×1.0×1.0 = 75.
@@ -200,7 +200,7 @@ func TestScorecard_FraudCap(t *testing.T) {
 func TestScorecard_FraudCapDisabled(t *testing.T) {
 	db := auditTestDB(t)
 	svcs := scorecardTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	seedScorecardDriver(t, db, "d1", "D-001", "Fraud", "Driver")
 	seedBehaviour(t, db, "b-theft", "d1", "fuel_theft_suspicion", "low", 25, scorecardTestNow(), "")
@@ -220,7 +220,7 @@ func TestScorecard_FraudCapDisabled(t *testing.T) {
 func TestScorecard_BonusForPayout(t *testing.T) {
 	db := auditTestDB(t)
 	svcs := scorecardTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	// Tier A driver: 3 low-severity idling events → 91 (A), ≥ min_events.
 	seedScorecardDriver(t, db, "d-a", "D-A", "Alpha", "Driver")
@@ -257,7 +257,7 @@ func TestScorecard_BonusForPayout(t *testing.T) {
 func TestScorecard_Leaderboard(t *testing.T) {
 	db := auditTestDB(t)
 	svcs := scorecardTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	// d-a: 0 events → 100 (cold start). d-b: 1 speeding today → 88 (cold).
 	// d-c: 3 speeding 0/10/20d → 76. d-d: 5 speeding today → 20.
@@ -324,7 +324,7 @@ func TestScorecard_Leaderboard(t *testing.T) {
 func TestScorecard_NightlySweep(t *testing.T) {
 	db := auditTestDB(t)
 	svcs := scorecardTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	seedScorecardDriver(t, db, "d1", "D-001", "One", "Driver")
 	seedScorecardDriver(t, db, "d2", "D-002", "Two", "Driver")

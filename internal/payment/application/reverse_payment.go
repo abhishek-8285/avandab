@@ -18,12 +18,16 @@ var (
 	ErrPaymentNotFound        = errors.New("payment not found")
 	ErrMissingOriginalPayment = errors.New("original payment ID is required")
 	ErrMissingReversalReason  = errors.New("reversal reason is required")
+	ErrPaymentFullyRefunded   = errors.New("payment has already been fully refunded")
 )
 
 type ReversePaymentCommand struct {
 	TenantID      shared.TenantID
 	OriginalPayID paymentagg.PaymentID
 	Reason        string
+	// Amount is the refund amount in INR. Zero means "reverse the full
+	// original payment" (legacy / manual reverse callers).
+	Amount float64
 }
 
 type ReversePaymentUseCase struct {
@@ -63,7 +67,37 @@ func (uc *ReversePaymentUseCase) Execute(ctx context.Context, cmd ReversePayment
 			return ErrPaymentNotFound
 		}
 
-		reversalRef := fmt.Sprintf("REVERSAL:%s", string(original.ID))
+		// A partial refund reverses only what was refunded. Cap at the
+		// original (never refund more than was paid); zero preserves the
+		// legacy full-reversal behaviour for callers that omit Amount.
+		amount := cmd.Amount
+		if amount <= 0 {
+			amount = original.Amount
+		}
+		if amount > original.Amount {
+			amount = original.Amount
+		}
+
+		// Cap the refund by what is still refundable. A fixed per-payment
+		// reference made the second partial refund look like a retry and
+		// silently dropped it.
+		if totals, ok := payRepo.(interface {
+			SumReversalsForPayment(context.Context, shared.TenantID, paymentagg.PaymentID) (float64, error)
+		}); ok {
+			already, sumErr := totals.SumReversalsForPayment(txCtx, cmd.TenantID, original.ID)
+			if sumErr != nil {
+				return sumErr
+			}
+			remaining := original.Amount - already
+			if remaining <= 0 {
+				return ErrPaymentFullyRefunded
+			}
+			if amount > remaining {
+				amount = remaining
+			}
+		}
+
+		reversalRef := fmt.Sprintf("REVERSAL:%s:%0.2f", string(original.ID), amount)
 
 		// Idempotency guard: if a reversal for this payment already exists,
 		// return its ID without touching the invoice again — a retried
@@ -82,7 +116,7 @@ func (uc *ReversePaymentUseCase) Execute(ctx context.Context, cmd ReversePayment
 			cmd.TenantID,
 			original.InvoiceID,
 			uc.clock.Now(),
-			-original.Amount,
+			-amount,
 			original.Method,
 			&reversalRef,
 			&cmd.Reason,
@@ -116,7 +150,7 @@ func (uc *ReversePaymentUseCase) Execute(ctx context.Context, cmd ReversePayment
 			return ErrInvoiceNotFound
 		}
 
-		if err := inv.ApplyPayment(-original.Amount, uc.clock.Now()); err != nil {
+		if err := inv.ApplyPayment(-amount, uc.clock.Now()); err != nil {
 			return err
 		}
 

@@ -3,25 +3,31 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
+
+	"transport-app/internal/cache"
 )
 
 // ResetTokenStore issues single-use password-reset/email-verify tokens with an
-// expiry. Only the HMAC hash of a token is stored, so a memory or database
-// leak does not expose usable links.
+// expiry. Only the HMAC hash of a token is stored, so a memory, cache or
+// database leak does not expose usable links.
 //
-// By default tokens live in process memory (single-replica convenience). Call
-// WithPersistence to store them in auth_one_time_tokens (migration 00187), so
-// links survive restarts and work across replicas.
+// Tokens live in process memory by default. WithPersistence stores them in
+// auth_one_time_tokens (migration 00187) so links survive restarts; the cache
+// constructor backs them with a shared cache for multi-replica deployments.
 type ResetTokenStore struct {
-	mu      sync.Mutex
-	ttl     time.Duration
-	entries map[string]resetTokenEntry
-	db      *sql.DB
-	purpose string
+	mu        sync.Mutex
+	ttl       time.Duration
+	entries   map[string]resetTokenEntry
+	db        *sql.DB
+	purpose   string
+	cache     cache.Cache
+	namespace string
 }
 
 type resetTokenEntry struct {
@@ -29,15 +35,30 @@ type resetTokenEntry struct {
 	expires time.Time
 }
 
-// NewResetTokenStore creates a store with the given token lifetime
-// (defaults to 30 minutes when ttl <= 0).
+type resetCacheRecord struct {
+	Email   string    `json:"email"`
+	Expires time.Time `json:"expires"`
+}
+
+// NewResetTokenStore creates a process-local store with the given token
+// lifetime (defaults to 30 minutes when ttl <= 0). Use
+// NewResetTokenStoreWithCache for multi-replica deployments.
 func NewResetTokenStore(ttl time.Duration) *ResetTokenStore {
+	return NewResetTokenStoreWithCache(ttl, nil)
+}
+
+// NewResetTokenStoreWithCache backs tokens with a shared cache so a link
+// minted by one replica can be redeemed by another. Nil/no-op caches keep the
+// local map (single-instance tier, CACHE_DRIVER=none).
+func NewResetTokenStoreWithCache(ttl time.Duration, c cache.Cache) *ResetTokenStore {
 	if ttl <= 0 {
 		ttl = 30 * time.Minute
 	}
 	return &ResetTokenStore{
-		ttl:     ttl,
-		entries: make(map[string]resetTokenEntry),
+		ttl:       ttl,
+		cache:     sharedCache(c),
+		namespace: "auth:reset:",
+		entries:   make(map[string]resetTokenEntry),
 	}
 }
 
@@ -51,6 +72,20 @@ func (s *ResetTokenStore) WithPersistence(db *sql.DB, purpose string) *ResetToke
 		s.purpose = purpose
 	}
 	return s
+}
+
+// WithNamespace scopes the cache keys to one purpose (reset vs email verify).
+// Stores that share a cache must have distinct namespaces, otherwise a token
+// minted for one purpose redeems for the other.
+func (s *ResetTokenStore) WithNamespace(ns string) *ResetTokenStore {
+	if ns != "" {
+		s.namespace = ns
+	}
+	return s
+}
+
+func (s *ResetTokenStore) cacheKey(hash string) string {
+	return s.namespace + hash
 }
 
 // Create generates a fresh token for an email and returns the raw token to
@@ -76,6 +111,20 @@ func (s *ResetTokenStore) Create(email string) (string, error) {
 			 VALUES ($1, $2, $3, $4)`,
 			HashToken(token), email, s.purpose, expires); err != nil {
 			return "", err
+		}
+		return token, nil
+	}
+
+	if s.cache != nil {
+		data, err := json.Marshal(resetCacheRecord{
+			Email:   email,
+			Expires: time.Now().Add(s.ttl),
+		})
+		if err != nil {
+			return "", fmt.Errorf("reset: encode: %w", err)
+		}
+		if err := s.cache.Set(context.Background(), s.cacheKey(HashToken(token)), data, s.ttl); err != nil {
+			return "", fmt.Errorf("reset: cache set: %w", err)
 		}
 		return token, nil
 	}
@@ -112,6 +161,43 @@ func (s *ResetTokenStore) Consume(token string) (string, bool) {
 			return "", false
 		}
 		return email, true
+	}
+	if s.cache != nil {
+		ctx := context.Background()
+		hash := HashToken(token)
+		key := s.cacheKey(hash)
+
+		// Atomic counters (memory, Redis) claim single use across replicas.
+		// Other backends fall back to a local lock: weaker, but still safe
+		// for the single-process tier.
+		inc, atomic := s.cache.(cache.Incrementer)
+		if !atomic {
+			s.mu.Lock()
+			defer s.mu.Unlock()
+		}
+
+		raw, ok, err := s.cache.Get(ctx, key)
+		if err != nil || !ok {
+			return "", false
+		}
+		var rec resetCacheRecord
+		if json.Unmarshal(raw, &rec) != nil || time.Now().After(rec.Expires) {
+			return "", false
+		}
+		// Claim before the purge. Two racing DEL calls both succeed, so only
+		// the caller whose atomic increment returns 1 may redeem the token.
+		if atomic {
+			n, err := inc.Increment(ctx, s.namespace+"claim:"+hash, s.ttl)
+			if err != nil || n != 1 {
+				return "", false
+			}
+		}
+		// Fail closed: a token we cannot purge must not be redeemed, or a
+		// failed delete leaves it replayable.
+		if err := s.cache.Delete(ctx, key); err != nil {
+			return "", false
+		}
+		return rec.Email, true
 	}
 
 	s.mu.Lock()

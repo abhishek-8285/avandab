@@ -66,7 +66,7 @@ func LoadFuelRollup(ctx context.Context, db *sql.DB, tripID string) (*FuelRollup
 		roll.CompletedAt = &t
 	}
 
-	pts, _, _, _, err := fetchHistoryPointsWithCursor(ctx, db, tenantID, "", tripID, nil, nil, nil, "", 5000)
+	pts, err := fetchAllTripPoints(ctx, db, tenantID, tripID)
 	if err != nil {
 		return nil, err
 	}
@@ -110,6 +110,27 @@ func LoadFuelRollup(ctx context.Context, db *sql.DB, tripID string) (*FuelRollup
 		roll.KMPL = &kmpl
 	}
 	return roll, nil
+}
+
+// fetchAllTripPoints pages through every history point of a trip. The history
+// fetch caps each call; a single call silently keeps only the oldest slice of
+// a long trip, understating distance/duration/KMPL.
+func fetchAllTripPoints(ctx context.Context, db *sql.DB, tenantID, tripID string) ([]HistoryPoint, error) {
+	const pageSize = 5000
+	var all []HistoryPoint
+	var after *time.Time
+	var afterID string
+	for {
+		pts, truncated, nextFrom, nextID, err := fetchHistoryPointsWithCursor(ctx, db, tenantID, "", tripID, nil, nil, after, afterID, pageSize)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, pts...)
+		if !truncated || nextFrom == nil {
+			return all, nil
+		}
+		after, afterID = nextFrom, nextID
+	}
 }
 
 // formatDuration renders seconds as "2h 05m" / "45m" / "0m".

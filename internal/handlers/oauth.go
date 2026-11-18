@@ -161,6 +161,14 @@ func (h *GoogleOAuthHandlers) Callback(w http.ResponseWriter, r *http.Request) {
 		// would expose /tenants, suspend, and global-admin minting.
 		roleName = string(domain.RoleOrgAdmin)
 	}
+	if roleName == "" {
+		// Fail closed: an unmapped numeric role used to default to dispatcher
+		// and was granted in Casbin. Never issue a session without a role name.
+		clearState()
+		slog.Error("google sign-in refused: unmapped role", "user_id", user.ID, "role_id", user.Role.ID)
+		h.flashRedirect(w, r, "Your account role is not provisioned. Contact support.", "/login")
+		return
+	}
 	if h.AuthSrv != nil {
 		_ = h.AuthSrv.AddRoleForUser(user.ID.String(), roleName)
 	}

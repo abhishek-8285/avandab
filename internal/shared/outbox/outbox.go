@@ -33,8 +33,8 @@ func NewOutboxWriter(dbConn *sql.DB) *OutboxWriter {
 }
 
 // SaveEvents serializes and inserts all events within the active transaction context.
-func (w *OutboxWriter) SaveEvents(ctx context.Context, aggregateID string, aggregateType string, events []any) error {
-	if len(events) == 0 {
+func (w *OutboxWriter) SaveEvents(ctx context.Context, aggregateID string, aggregateType string, evts []any) error {
+	if len(evts) == 0 {
 		return nil
 	}
 
@@ -43,7 +43,7 @@ func (w *OutboxWriter) SaveEvents(ctx context.Context, aggregateID string, aggre
 		q = w.q.WithTx(tx)
 	}
 
-	for _, ev := range events {
+	for _, ev := range evts {
 		payload, err := json.Marshal(ev)
 		if err != nil {
 			return err

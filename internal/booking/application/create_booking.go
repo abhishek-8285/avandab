@@ -138,6 +138,23 @@ func (uc *CreateBookingUseCase) Execute(ctx context.Context, cmd CreateBookingCo
 				return nil
 			}
 		}
+		// Reject references to another org's customer/route before persisting.
+		// The FK triggers only check that a tenant exists, not that these IDs
+		// belong to the caller's tenant.
+		tx := repository.TxFromContext(txCtx)
+		if tx != nil {
+			var one int
+			if err := tx.QueryRowContext(txCtx,
+				`SELECT 1 FROM customers WHERE id = $1 AND tenant_id = $2`,
+				cmd.CustomerID, string(cmd.TenantID)).Scan(&one); err != nil {
+				return errors.New("customer does not belong to this tenant")
+			}
+			if err := tx.QueryRowContext(txCtx,
+				`SELECT 1 FROM routes WHERE id = $1 AND tenant_id = $2`,
+				cmd.RouteID, string(cmd.TenantID)).Scan(&one); err != nil {
+				return errors.New("route does not belong to this tenant")
+			}
+		}
 		if err := repo.Save(txCtx, booking); err != nil {
 			// Lost-race replay: a concurrent insert with the same key won.
 			if cmd.IdempotencyKey != "" && strings.Contains(err.Error(), "UNIQUE constraint failed") {

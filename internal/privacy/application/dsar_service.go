@@ -583,7 +583,7 @@ func (s *DSARService) EraseDataPrincipal(ctx context.Context, tenantID, targetUs
 	docsDeleted := int64(len(docURLs))
 
 	// 5. If driver record exists, scrub driver PII
-	_, err = tx.ExecContext(ctx, `
+	driverRes, err := tx.ExecContext(ctx, `
 		UPDATE drivers SET
 			first_name = '[ERASED]',
 			last_name = '',
@@ -603,6 +603,10 @@ func (s *DSARService) EraseDataPrincipal(ctx context.Context, tenantID, targetUs
 		tenantID, targetUserID, userEmail, cleanPhone)
 	if err != nil {
 		return nil, fmt.Errorf("could not scrub driver PII: %w", err)
+	}
+	driverRows, err := driverRes.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("could not confirm driver PII scrub: %w", err)
 	}
 
 	// 6. Deactivate driver vehicle assignments
@@ -647,10 +651,13 @@ func (s *DSARService) EraseDataPrincipal(ctx context.Context, tenantID, targetUs
 		DocumentsDeleted: docsDeleted,
 		BlobsDeleted:     blobsDeleted,
 		BlobsPending:     blobsPending,
-		ScrubbedFields: []string{
-			"name", "email", "phone", "password_hash", "address",
-			"emergency_contacts", "license_number", "aadhaar", "pan", "bank_details", "sessions", "kyc_documents",
-		},
+		ScrubbedFields: func() []string {
+			fields := []string{"name", "email", "phone", "password_hash", "address", "sessions", "kyc_documents"}
+			if driverRows > 0 {
+				fields = append(fields, "emergency_contacts", "license_number", "aadhaar", "pan", "bank_details")
+			}
+			return fields
+		}(),
 		RetainedRecordsNotice: "Statutory transaction and tax ledgers (CGST Act Section 36 / Income Tax Act 8-year retention rule) are retained in an immutable, anonymized state for fiscal compliance.",
 	}, nil
 }

@@ -232,6 +232,7 @@ func setupFinancialReconciliationDB(t *testing.T) *sql.DB {
 		confirmed_at DATETIME,
 		disputed_at DATETIME,
 		dispute_reason TEXT,
+		tenant_id TEXT NOT NULL DEFAULT 'tenant-1',
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);

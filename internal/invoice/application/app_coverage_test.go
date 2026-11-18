@@ -661,9 +661,10 @@ func TestGenerateInvoice_New_Success_WithLineItems(t *testing.T) {
 	}
 	assert.Equal(t, 500.0, freightAmt)
 	assert.Equal(t, 300.0, detAmt)
-	// subtotal recomputed = 800, total = 850
+	// subtotal recomputed = 800; tax follows the 10% line rates = 80, total 880
 	assert.Equal(t, 800.0, saved.Subtotal)
-	assert.Equal(t, 850.0, saved.Total)
+	assert.Equal(t, 80.0, saved.Tax)
+	assert.Equal(t, 880.0, saved.Total)
 }
 
 func TestGenerateInvoice_New_SaveError(t *testing.T) {
@@ -1291,4 +1292,27 @@ func TestVoidInvoice_UoWError(t *testing.T) {
 	err := uc.Execute(context.Background(), VoidInvoiceCommand{TenantID: "1", ID: "inv-1"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "uow fail")
+}
+
+// Auto-attached freight/detention lines must carry tax and total, otherwise
+// recalculating invoice totals from lines collapses the invoice to zero.
+func TestAttachLineItems_AppliesTaxToAutoLines(t *testing.T) {
+	clock := &fakeClockApp{now: time.Now()}
+	inv := aggregate.NewInvoiceAggregate("inv-tax", "1", "INV-TAX", "bk-1", "cust-1", nil, 500, 50, 0, 550, aggregate.PaymentStatusPending, clock.Now())
+	inv.ClearEvents()
+	ref := "det-tax"
+	cmd := GenerateInvoiceCommand{
+		TenantID: "1", BookingID: "bk-1",
+		LineItems: []InvoiceLineItemInput{
+			{LineType: aggregate.LineTypeDetention, Description: "Detention", Quantity: 1, UnitPrice: 100, RefID: &ref},
+		},
+	}
+	attachLineItems(inv, cmd, &seqIDGen{})
+	require.Len(t, inv.LineItems, 2)
+
+	for _, li := range inv.LineItems {
+		assert.Equal(t, li.Amount, li.TaxableValue, "taxable value must equal line amount")
+		require.InDelta(t, li.Amount*1.10, li.Total, 0.02, "line total must include 10%% tax")
+		require.InDelta(t, li.Amount*0.10, li.CgstAmount+li.SgstAmount+li.IgstAmount, 0.02)
+	}
 }

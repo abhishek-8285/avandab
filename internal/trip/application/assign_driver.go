@@ -11,6 +11,7 @@ import (
 	driverAgg "transport-app/internal/driver/domain/aggregate"
 	maintsql "transport-app/internal/maintenance/infrastructure/sql"
 	"transport-app/internal/repository"
+	"transport-app/internal/service"
 	"transport-app/internal/shared"
 	"transport-app/internal/shared/ports"
 	"transport-app/internal/trip/domain"
@@ -131,7 +132,7 @@ func (uc *AssignDriverUseCase) checkDriverCompliance(ctx ports.TxContext, driver
 	if d.Status == driverAgg.DriverInactive || d.Status == driverAgg.DriverLeave {
 		return fmt.Errorf("driver %s is not assignable (status: %s)", driverID, d.Status)
 	}
-	now := uc.clock.Now().Truncate(24 * time.Hour)
+	now := service.LocalMidnight(uc.clock.Now())
 	if !d.LicenseExpiry.IsZero() && d.LicenseExpiry.Before(now) {
 		if isExempt(ctx, "driver", driverID, "license") {
 			recordComplianceCheck(ctx, "driver", driverID, "license", "warning", "bypassed by exemption")

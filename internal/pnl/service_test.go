@@ -25,7 +25,7 @@ func newPnLTestDB(t *testing.T) *sql.DB {
 		pnl_confidence TEXT, fuel_cost_status TEXT
 	);
 	CREATE TABLE bookings (id TEXT PRIMARY KEY, price REAL);
-	CREATE TABLE vehicles (id TEXT PRIMARY KEY, fuel_type TEXT, current_mileage REAL);
+	CREATE TABLE vehicles (id TEXT PRIMARY KEY, fuel_type TEXT, current_mileage REAL, standard_kmpl REAL);
 	CREATE TABLE routes (id TEXT PRIMARY KEY);
 	CREATE TABLE telemetry_snapshots (trip_id TEXT, odometer REAL);
 	CREATE TABLE fuel_prices (tenant_id TEXT, diesel_price REAL, petrol_price REAL, updated_at DATETIME);
@@ -48,7 +48,7 @@ func seedTrip(t *testing.T, db *sql.DB) {
 	for _, q := range []string{
 		`INSERT INTO trips (id, tenant_id, booking_id, vehicle_id, departure_time, arrival_time) VALUES ('trp1', '1', 'bk1', 'veh1', '2026-01-10 08:00:00', '2026-01-12 18:00:00')`,
 		`INSERT INTO bookings VALUES ('bk1', 50000)`,
-		`INSERT INTO vehicles VALUES ('veh1', 'diesel', 5.0)`,
+		`INSERT INTO vehicles VALUES ('veh1', 'diesel', 5.0, 5.0)`,
 		`INSERT INTO fuel_prices VALUES ('1', 100.0, 110.0, datetime('now'))`,
 	} {
 		_, err := db.Exec(q)
@@ -158,7 +158,7 @@ func TestCalculate_MaintenanceTableMissingIsUnavailable(t *testing.T) {
 		pnl_confidence TEXT, fuel_cost_status TEXT
 	);
 	CREATE TABLE bookings (id TEXT PRIMARY KEY, price REAL);
-	CREATE TABLE vehicles (id TEXT PRIMARY KEY, fuel_type TEXT, current_mileage REAL);
+	CREATE TABLE vehicles (id TEXT PRIMARY KEY, fuel_type TEXT, current_mileage REAL, standard_kmpl REAL);
 	CREATE TABLE routes (id TEXT PRIMARY KEY);
 	CREATE TABLE telemetry_snapshots (trip_id TEXT, odometer REAL);
 	CREATE TABLE fuel_prices (tenant_id TEXT, diesel_price REAL, petrol_price REAL, updated_at DATETIME);
@@ -168,7 +168,7 @@ func TestCalculate_MaintenanceTableMissingIsUnavailable(t *testing.T) {
 	);
 	INSERT INTO trips (id, tenant_id, booking_id, vehicle_id) VALUES ('trp1', '1', 'bk1', 'veh1');
 	INSERT INTO bookings VALUES ('bk1', 50000);
-	INSERT INTO vehicles VALUES ('veh1', 'diesel', 5.0);
+	INSERT INTO vehicles VALUES ('veh1', 'diesel', 5.0, 5.0);
 	INSERT INTO fuel_prices VALUES ('1', 100.0, 110.0, datetime('now'));
 	INSERT INTO telemetry_snapshots VALUES ('trp1', 100), ('trp1', 600);`)
 	require.NoError(t, err)
@@ -181,4 +181,23 @@ func TestCalculate_MaintenanceTableMissingIsUnavailable(t *testing.T) {
 	assert.InDelta(t, 0, p.MaintenanceCost, 0.001)
 	assert.InDelta(t, 40000, p.EstimatedMargin, 0.001,
 		"margin = 50000 fare − 10000 fuel, no maintenance table")
+}
+
+// Fuel efficiency must come from the vehicle's standard KMPL, never from the
+// odometer value stored in current_mileage.
+func TestCalculate_UsesStandardKmplNotOdometer(t *testing.T) {
+	db := newPnLTestDB(t)
+	seedTrip(t, db)
+	// Odometer is 12,345; the real efficiency is 5 km/l.
+	_, err := db.Exec(`UPDATE vehicles SET current_mileage = 12345, standard_kmpl = 5 WHERE id = 'veh1'`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO telemetry_snapshots VALUES ('trp1', 100), ('trp1', 600)`)
+	require.NoError(t, err)
+
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
+	p, err := NewService(db).Calculate(ctx, "trp1")
+	require.NoError(t, err)
+	require.Equal(t, "estimated", p.FuelCostStatus)
+	require.InDelta(t, 100, p.FuelConsumedLiters, 0.01, "500 km / 5 kmpl = 100 L")
+	require.InDelta(t, 10000, p.FuelCost, 0.01)
 }

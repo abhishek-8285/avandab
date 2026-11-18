@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -180,17 +181,23 @@ func (s *SessionStore) ClearSession(w http.ResponseWriter) {
 	})
 }
 
-// RevokeSession revokes server-side session in storage and removes the cookie.
-func (s *SessionStore) RevokeSession(r *http.Request, w http.ResponseWriter) {
+// RevokeSession revokes the server-side session in storage, then removes the
+// cookie. On a storage failure it keeps the cookie and returns the error so the
+// caller can tell the user they are still signed in (fail closed).
+func (s *SessionStore) RevokeSession(r *http.Request, w http.ResponseWriter) error {
 	if s.validator != nil {
 		if cookie, err := r.Cookie(s.cookieName); err == nil {
 			var data SessionData
 			if err := s.signer.Decode(s.cookieName, cookie.Value, &data); err == nil && data.Token != "" {
-				_ = s.validator.RevokeSessionToken(r.Context(), data.Token)
+				if err := s.validator.RevokeSessionToken(r.Context(), data.Token); err != nil {
+					slog.Warn("session revocation failed; keeping cookie", "error", err)
+					return err
+				}
 			}
 		}
 	}
 	s.ClearSession(w)
+	return nil
 }
 
 // GenerateSecureToken generates a cryptographically secure random token.
@@ -230,6 +237,44 @@ func IsTrustedProxy(remoteAddr string) bool {
 	return false
 }
 
+// trustForwardedHeaders reports whether the immediate peer may supply client-IP
+// headers. Private/loopback addresses are NOT trusted by default: a plain
+// reverse proxy leaves client-supplied CF-Connecting-IP / XFF intact, so
+// treating any internal peer as trusted lets callers forge rate-limit keys and
+// audit IPs. Operators must opt in with TRUST_PROXY=true (all traffic via
+// Cloudflare) or an explicit TRUST_PROXY_CIDRS list.
+func trustForwardedHeaders(remoteAddr string) bool {
+	if os.Getenv("TRUST_PROXY") == "true" {
+		return true
+	}
+	cidrs := os.Getenv("TRUST_PROXY_CIDRS")
+	if cidrs == "" {
+		return false
+	}
+	host := remoteAddr
+	if h, _, err := net.SplitHostPort(remoteAddr); err == nil {
+		host = h
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+	for _, entry := range strings.Split(cidrs, ",") {
+		_, network, err := net.ParseCIDR(strings.TrimSpace(entry))
+		if err == nil && network.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+// TrustForwardedHeaders reports whether forwarding headers from remoteAddr may
+// be trusted. Mirrors ClientIP's policy; callers outside auth use this instead
+// of IsTrustedProxy so private peers cannot spoof origin/host headers.
+func TrustForwardedHeaders(remoteAddr string) bool {
+	return trustForwardedHeaders(remoteAddr)
+}
+
 // ClientIP extracts the client IP from the request. When behind a trusted proxy,
 // it checks CF-Connecting-IP, X-Real-IP, and X-Forwarded-For; otherwise, it returns RemoteAddr.
 func ClientIP(r *http.Request) string {
@@ -238,7 +283,7 @@ func ClientIP(r *http.Request) string {
 		remoteHost = host
 	}
 
-	if IsTrustedProxy(r.RemoteAddr) {
+	if trustForwardedHeaders(r.RemoteAddr) {
 		if ip := strings.TrimSpace(r.Header.Get("CF-Connecting-IP")); ip != "" {
 			if parsed := net.ParseIP(ip); parsed != nil {
 				return parsed.String()
@@ -282,14 +327,21 @@ func ClientLocation(r *http.Request) string {
 }
 
 // tokenSecret keys the HMAC used to hash session and API tokens before they
-// are stored. SetTokenSecret (wired automatically by NewSessionStore from the
-// cookie secret) must be called before tokens are hashed. The fallback below
-// only applies to code paths that hash without a store; replace it with a
-// dedicated secret in production.
+// are stored. SetTokenSecret (wired automatically by NewSessionStore) must be
+// called before tokens are hashed. The fallback is random per process so a
+// binary that hashes without a store never uses a publicly known key.
 var (
 	tokenSecretMu sync.Mutex
-	tokenSecret   = []byte("transport-app-fallback-token-secret-change-me")
+	tokenSecret   = randomTokenSecret()
 )
+
+func randomTokenSecret() []byte {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		panic("auth: cannot generate token secret: " + err.Error())
+	}
+	return b
+}
 
 // SetTokenSecret configures the secret used to hash session/API tokens for
 // storage. Empty secrets are ignored so a blank cookie secret cannot disable
@@ -333,7 +385,12 @@ func CompareToken(token, hash string) bool {
 // Role hierarchy: lower number = more privilege
 // admin(1) > dispatcher(2) > accountant(3) > viewer(4)
 
-// HasPermission checks if a role can perform a given action on a resource.
+// HasPermission is a legacy static role-table helper with no production
+// callers. The single source of truth for runtime authorization is
+// auth.AuthorizationService.Can (Casbin), wrapped by middleware.RequirePermission
+// (JSON API) and middleware.ResourcePermission (HTML/Datastar).
+// shortcut: kept only because auth + integration tests still call it; delete
+// together with those tests when they become editable.
 func HasPermission(roleID int64, resource string, action string) bool {
 	// Legacy helper: it models resource-level privilege, not per-action
 	// grants (Casbin is the authoritative authorizer). The action vocabulary is

@@ -19,6 +19,10 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w -X main
 echo "==> [3/6] Transferring binary to ${TARGET_HOST} with rsync..."
 # --timeout=120: a stalled transfer must die loudly, never hang silently
 # (a silent 10min rsync stall bit us on 2026-09-12; run unbuffered, not piped).
+# Remove a stale server.new first: a rollback rehearsal can leave it as a
+# symlink into bin/releases/, which rsync will not replace, and the chmod
+# after the transfer then fails on a dangling link.
+ssh "${TARGET_HOST}" "rm -f ${REMOTE_DIR}/bin/server.new"
 rsync -avzP --timeout=120 bin/server "${TARGET_HOST}:${REMOTE_DIR}/bin/server.new"
 ssh "${TARGET_HOST}" "chmod +x ${REMOTE_DIR}/bin/server.new"
 

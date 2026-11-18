@@ -574,10 +574,9 @@ func (h *DriverLifecycleAPIHandler) RegisterPushToken(w http.ResponseWriter, r *
 		deviceID = platform + "-" + userID
 	}
 
-	driverID := req.DriverID
-	if driverID == "" {
-		driverID = userID
-	}
+	// Bind the token to the authenticated caller. A caller-supplied driver_id
+	// let any authenticated user hijack another driver's notifications.
+	driverID := userID
 
 	err := h.appService.RegisterPushToken(r.Context(), tenantID, driverID, userID, deviceID, pushToken, platform)
 	if err != nil {

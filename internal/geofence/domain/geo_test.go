@@ -104,8 +104,9 @@ func TestPointInPolygon_ConcaveAndDegenerate(t *testing.T) {
 func TestPointToPolygonDistance(t *testing.T) {
 	ring := []Point{{Lat: 0, Lng: 0}, {Lat: 0, Lng: 0.001}, {Lat: 0.001, Lng: 0.001}, {Lat: 0.001, Lng: 0}}
 	inside := Point{Lat: 0.0005, Lng: 0.0005}
-	if d := PointToPolygonDistance(inside, ring); d != 0 {
-		t.Fatalf("inside point distance = %f, want 0", d)
+	// Distance is to the boundary even inside: hysteresis needs it.
+	if d := PointToPolygonDistance(inside, ring); d < 50 || d > 60 {
+		t.Fatalf("inside point boundary distance = %f, want ≈55m", d)
 	}
 	// 111m west of the left edge (0,0)-(0.001,0).
 	outside := Point{Lat: 0.0005, Lng: -0.001}

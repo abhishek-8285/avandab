@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"log/slog"
 	"strings"
 
 	"github.com/casbin/casbin/v2"
@@ -141,8 +142,15 @@ func NewCasbinAuthorizationService(db *sql.DB) (*CasbinAuthorizationService, err
 }
 
 // Can checks if a user has permission to perform an action on a resource.
+// Callers depend on the bool-only signature, so an internal enforcement error
+// stays a deny (fail closed) but is logged loudly instead of being swallowed.
 func (s *CasbinAuthorizationService) Can(userID string, resource string, action string) bool {
-	allowed, _ := s.enforcer.Enforce(userID, resource, action)
+	allowed, err := s.enforcer.Enforce(userID, resource, action)
+	if err != nil {
+		slog.Error("casbin enforcement failed; denying",
+			"user", userID, "resource", resource, "action", action, "error", err)
+		return false
+	}
 	return allowed
 }
 

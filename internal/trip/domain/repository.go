@@ -8,6 +8,13 @@ import (
 	"transport-app/internal/trip/domain/aggregate"
 )
 
+// ActiveTripRepository is an optional capability: every non-terminal trip
+// linked to a booking. Cancelling a booking must close all of them, not only
+// the oldest row a :one lookup happens to return.
+type ActiveTripRepository interface {
+	FindActiveByBookingID(ctx context.Context, bookingID string, tenantID shared.TenantID) ([]*aggregate.TripAggregate, error)
+}
+
 // TripReadModel represents an optimized read model combining trip, driver, vehicle, and route details.
 type TripReadModel struct {
 	ID                        string

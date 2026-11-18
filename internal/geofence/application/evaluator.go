@@ -91,6 +91,22 @@ func NewRealtimeEvaluator(db *sql.DB, bus events.EventBus, reader *ConfigReader,
 	}
 }
 
+// safePublish dispatches an event to the bus and logs delivery failures
+// instead of discarding them, so a lost zone breach or stop arrival is visible.
+func (e *RealtimeEvaluator) safePublish(ctx context.Context, evt events.Event) {
+	if e.bus == nil {
+		return
+	}
+	logger := e.logger
+	if logger == nil {
+		logger = slog.Default()
+	}
+	if err := e.bus.Publish(ctx, evt); err != nil {
+		logger.Warn("geofence event publish failed",
+			"event_type", evt.Type, "error", err)
+	}
+}
+
 // EvaluatedEvent represents a geofence transition or breach event.
 type EvaluatedEvent struct {
 	EventID    string
@@ -300,12 +316,12 @@ func (e *RealtimeEvaluator) EvaluateFix(ctx context.Context, fix TelemetryFix) (
 
 		// C. Publish to Event Bus if newly inserted
 		if (rowsEvent > 0 || rowsOutbox > 0) && e.bus != nil {
-			e.bus.Publish(ctx, events.Event{
+			e.safePublish(ctx, events.Event{
 				Type:    canonicalEventType,
 				Payload: outboxPayload,
 			})
 			if zev.EventType == domain.EventBreach {
-				e.bus.Publish(ctx, events.Event{
+				e.safePublish(ctx, events.Event{
 					Type: "AlertEvent",
 					Payload: map[string]interface{}{
 						"source":      "geofence",
@@ -338,7 +354,7 @@ func (e *RealtimeEvaluator) EvaluateFix(ctx context.Context, fix TelemetryFix) (
 			}
 
 			if (rowsEvent > 0 || rowsOutbox > 0) && e.bus != nil {
-				e.bus.Publish(ctx, events.Event{
+				e.safePublish(ctx, events.Event{
 					Type: "trip.stop_arrived",
 					Payload: map[string]interface{}{
 						"trip_id":     tripIDStr,

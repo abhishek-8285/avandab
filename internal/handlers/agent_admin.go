@@ -9,6 +9,7 @@ import (
 	"transport-app/internal/agent"
 	"transport-app/internal/domain"
 	"transport-app/internal/middleware"
+	"transport-app/internal/shared"
 )
 
 // AgentAdminHandlers renders the AI agent approval queue and learning stats.
@@ -23,19 +24,19 @@ func NewAgentAdminHandlers(app *App, approval *agent.ApprovalService) *AgentAdmi
 }
 
 func (h *AgentAdminHandlers) Routes(r chi.Router) {
-	r.With(middleware.RoleRequired(domain.DefaultRoleID(domain.RoleAdmin))).Get("/", h.Queue)
-	r.With(middleware.RoleRequired(domain.DefaultRoleID(domain.RoleAdmin))).Post("/{id}/approve", h.Approve)
-	r.With(middleware.RoleRequired(domain.DefaultRoleID(domain.RoleAdmin))).Post("/{id}/reject", h.Reject)
+	r.With(middleware.RoleRequired(domain.DefaultRoleID(domain.RoleAdmin), domain.DefaultRoleID(domain.RoleOrgAdmin))).Get("/", h.Queue)
+	r.With(middleware.RoleRequired(domain.DefaultRoleID(domain.RoleAdmin), domain.DefaultRoleID(domain.RoleOrgAdmin))).Post("/{id}/approve", h.Approve)
+	r.With(middleware.RoleRequired(domain.DefaultRoleID(domain.RoleAdmin), domain.DefaultRoleID(domain.RoleOrgAdmin))).Post("/{id}/reject", h.Reject)
 }
 
 func (h *AgentAdminHandlers) Queue(w http.ResponseWriter, r *http.Request) {
 	session, ok := h.getUserFromContext(r)
-	if !ok || session == nil || session.Role != "admin" {
+	if !ok || session == nil || (session.Role != string(domain.RoleAdmin) && session.Role != string(domain.RoleOrgAdmin)) {
 		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 		return
 	}
 
-	pending, err := h.Approval.ListPending()
+	pending, err := h.Approval.ListPendingForTenant(string(shared.TenantIDFromContext(r.Context())))
 	if err != nil {
 		pending = nil
 	}
@@ -49,7 +50,7 @@ func (h *AgentAdminHandlers) Queue(w http.ResponseWriter, r *http.Request) {
 
 func (h *AgentAdminHandlers) Approve(w http.ResponseWriter, r *http.Request) {
 	session, ok := h.getUserFromContext(r)
-	if !ok || session == nil || session.Role != "admin" {
+	if !ok || session == nil || (session.Role != string(domain.RoleAdmin) && session.Role != string(domain.RoleOrgAdmin)) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
@@ -74,7 +75,7 @@ func (h *AgentAdminHandlers) Approve(w http.ResponseWriter, r *http.Request) {
 
 func (h *AgentAdminHandlers) Reject(w http.ResponseWriter, r *http.Request) {
 	session, ok := h.getUserFromContext(r)
-	if !ok || session == nil || session.Role != "admin" {
+	if !ok || session == nil || (session.Role != string(domain.RoleAdmin) && session.Role != string(domain.RoleOrgAdmin)) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}

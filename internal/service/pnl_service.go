@@ -52,71 +52,80 @@ type PNLSnapshot struct {
 // tenant using the canonical P&L query set. Shared by GenerateDailySnapshot
 // (persists) and GetMoneyStrip (read-only) so the console money strip can
 // never drift from report totals (Spec 22 §7 S2 exit gate).
-func (s *PNLService) dailyTotals(ctx context.Context, tenantID, dateStr string) (
-	revenue, fuelCosts, driverPayouts, maintenance, tollCosts float64, err error,
-) {
+// pnlDailyTotals holds one day's P&L components for a tenant. A struct keeps
+// the helper's return list short and named at the call sites.
+type pnlDailyTotals struct {
+	revenue       float64
+	fuelCosts     float64
+	driverPayouts float64
+	maintenance   float64
+	tollCosts     float64
+}
+
+func (s *PNLService) dailyTotals(ctx context.Context, tenantID, dateStr string) (pnlDailyTotals, error) {
+	var totals pnlDailyTotals
 	// Revenue: sum of paid invoices dated on this day.
 	// Contract mirrors internal/pnl.Service.Calculate: toll/kharcha/
 	// telemetry/fuel reads fail the computation, maintenance degrades to
 	// unavailable (0, no error). A failed aggregate must never masquerade
 	// as a successful zero.
-	if err = s.db.QueryRowContext(ctx,
+	if err := s.db.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(total), 0) FROM invoices
 		 WHERE tenant_id = $1 AND payment_status = 'paid' AND DATE(created_at) = $2`,
-		tenantID, dateStr).Scan(&revenue); err != nil {
-		return 0, 0, 0, 0, 0, fmt.Errorf("pnl revenue read failed: %w", err)
+		tenantID, dateStr).Scan(&totals.revenue); err != nil {
+		return pnlDailyTotals{}, fmt.Errorf("pnl revenue read failed: %w", err)
 	}
 
 	// Fuel costs: standalone fuel-category driver expenses only.
 	// Claims already absorbed into a settlement (settlement_lines refs the
 	// expense id as deduction/advances) are excluded — their cost is inside
 	// driverPayouts (net_payout) below; counting both would double-book.
-	if err = s.db.QueryRowContext(ctx,
+	if err := s.db.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(de.amount), 0) FROM driver_expenses de
 		 WHERE de.tenant_id = $1 AND de.category = 'fuel' AND DATE(de.created_at) = $2
 		   AND NOT EXISTS (
 		     SELECT 1 FROM settlement_lines sl
 		     WHERE sl.ref_id = de.id AND sl.line_type IN ('deduction', 'advances')
 		   )`,
-		tenantID, dateStr).Scan(&fuelCosts); err != nil {
-		return 0, 0, 0, 0, 0, fmt.Errorf("pnl fuel cost read failed: %w", err)
+		tenantID, dateStr).Scan(&totals.fuelCosts); err != nil {
+		return pnlDailyTotals{}, fmt.Errorf("pnl fuel cost read failed: %w", err)
 	}
 
 	// Driver payouts: net_payout from driver_settlements.
-	if err = s.db.QueryRowContext(ctx,
+	if err := s.db.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(ds.net_payout), 0)
 		 FROM driver_settlements ds
 		 JOIN trips t ON ds.trip_id = t.id
 		 WHERE t.tenant_id = $1 AND DATE(ds.created_at) = $2`,
-		tenantID, dateStr).Scan(&driverPayouts); err != nil {
-		return 0, 0, 0, 0, 0, fmt.Errorf("pnl driver payout read failed: %w", err)
+		tenantID, dateStr).Scan(&totals.driverPayouts); err != nil {
+		return pnlDailyTotals{}, fmt.Errorf("pnl driver payout read failed: %w", err)
 	}
 
 	// Maintenance costs. Degrades to unavailable (0, no error) on read
 	// failure — mirrors internal/pnl fetchMaintenanceCost (0, "unavailable").
 	// Never blocks the snapshot; never folds in other tenants' costs.
-	if err = s.db.QueryRowContext(ctx,
+	if err := s.db.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(cost), 0) FROM maintenance_records
 		 WHERE tenant_id = $1 AND DATE(performed_at) = $2`,
-		tenantID, dateStr).Scan(&maintenance); err != nil {
-		maintenance = 0
+		tenantID, dateStr).Scan(&totals.maintenance); err != nil {
+		totals.maintenance = 0
 	}
 
 	// Toll costs from FASTag transactions.
-	if err = s.db.QueryRowContext(ctx,
+	if err := s.db.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(amount), 0) FROM fastag_transactions
 		 WHERE tenant_id = $1 AND DATE(txn_timestamp) = $2`,
-		tenantID, dateStr).Scan(&tollCosts); err != nil {
-		return 0, 0, 0, 0, 0, fmt.Errorf("pnl toll cost read failed: %w", err)
+		tenantID, dateStr).Scan(&totals.tollCosts); err != nil {
+		return pnlDailyTotals{}, fmt.Errorf("pnl toll cost read failed: %w", err)
 	}
 
-	return revenue, fuelCosts, driverPayouts, maintenance, tollCosts, nil
+	return totals, nil
 }
 
 func (s *PNLService) GenerateDailySnapshot(ctx context.Context, tenantID string, date time.Time) (*PNLSnapshot, error) {
 	dateStr := date.Format("2006-01-02")
 
-	revenue, fuelCosts, driverPayouts, maintenance, tollCosts, err := s.dailyTotals(ctx, tenantID, dateStr)
+	totals, err := s.dailyTotals(ctx, tenantID, dateStr)
 	if err != nil {
 		return nil, err
 	}
@@ -142,19 +151,19 @@ func (s *PNLService) GenerateDailySnapshot(ctx context.Context, tenantID string,
 		`SELECT COUNT(*) FROM vehicles WHERE tenant_id = $1 AND status = 'active'`,
 		tenantID).Scan(&vehicleCount)
 
-	expenses := fuelCosts + driverPayouts + maintenance + tollCosts
-	netProfit := revenue - expenses
+	expenses := totals.fuelCosts + totals.driverPayouts + totals.maintenance + totals.tollCosts
+	netProfit := totals.revenue - expenses
 
 	snap := &PNLSnapshot{
 		ID:            generateDisplayID("pnl"),
 		TenantID:      tenantID,
 		SnapshotDate:  dateStr,
-		Revenue:       revenue,
+		Revenue:       totals.revenue,
 		Expenses:      expenses,
-		FuelCosts:     fuelCosts,
-		DriverPayouts: driverPayouts,
-		Maintenance:   maintenance,
-		TollCosts:     tollCosts,
+		FuelCosts:     totals.fuelCosts,
+		DriverPayouts: totals.driverPayouts,
+		Maintenance:   totals.maintenance,
+		TollCosts:     totals.tollCosts,
 		TdsDeducted:   tdsDeducted,
 		NetProfit:     netProfit,
 		TripCount:     tripCount,
@@ -218,7 +227,7 @@ func (s *PNLService) GetMoneyStrip(ctx context.Context, tenantID string, now tim
 	}
 	tenantID = string(tid)
 	dateStr := now.Format("2006-01-02")
-	revenue, fuelCosts, driverPayouts, maintenance, tollCosts, err := s.dailyTotals(ctx, tenantID, dateStr)
+	totals, err := s.dailyTotals(ctx, tenantID, dateStr)
 	if err != nil {
 		return nil, err
 	}
@@ -237,8 +246,8 @@ func (s *PNLService) GetMoneyStrip(ctx context.Context, tenantID string, now tim
 
 	return &MoneyStrip{
 		Date:        dateStr,
-		Revenue:     revenue,
-		Spent:       fuelCosts + driverPayouts + maintenance + tollCosts,
+		Revenue:     totals.revenue,
+		Spent:       totals.fuelCosts + totals.driverPayouts + totals.maintenance + totals.tollCosts,
 		Receivables: receivables,
 	}, nil
 }

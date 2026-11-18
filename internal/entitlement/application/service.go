@@ -473,18 +473,12 @@ func (s *service) ProcessSubscriptionWebhook(ctx context.Context, p WebhookEvent
 		p.EventTimestamp = time.Now().UTC()
 	}
 
-	// 1. Replay Idempotency Check
-	var existingID string
-	err := s.db.QueryRowContext(ctx, `
-		SELECT id FROM subscription_webhook_events WHERE provider = $1 AND event_id = $2
-	`, p.Provider, p.EventID).Scan(&existingID)
-	if err == nil {
-		return nil // Already processed idempotently
-	}
-
-	// 2. Lookup Tenant Subscription
+	// 1. Lookup Tenant Subscription. Replay protection is an atomic claim
+	// (INSERT ... ON CONFLICT DO NOTHING) taken inside the write transaction
+	// below — a SELECT-then-INSERT check races two concurrent deliveries into
+	// a UNIQUE conflict and a 500 retry storm.
 	var tenantIDStr, currentStatus string
-	err = s.db.QueryRowContext(ctx, `
+	err := s.db.QueryRowContext(ctx, `
 		SELECT tenant_id, status FROM tenant_subscriptions WHERE provider_subscription_id = $1
 	`, p.ProviderSubscriptionID).Scan(&tenantIDStr, &currentStatus)
 	if err != nil {
@@ -507,6 +501,7 @@ func (s *service) ProcessSubscriptionWebhook(ctx context.Context, p WebhookEvent
 				_, _ = s.db.ExecContext(ctx, `
 					INSERT INTO subscription_webhook_events (id, tenant_id, provider, event_id, event_type, payload_json, provider_subscription_id, event_timestamp, processed_at, status)
 					VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, 'IGNORED_OUT_OF_ORDER')
+					ON CONFLICT (provider, event_id) DO NOTHING
 				`, recID, tenantIDStr, p.Provider, p.EventID, p.EventType, p.PayloadJSON, p.ProviderSubscriptionID, p.EventTimestamp.Format(time.RFC3339))
 				return nil
 			}
@@ -552,6 +547,24 @@ func (s *service) ProcessSubscriptionWebhook(ctx context.Context, p WebhookEvent
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	// Claim the event atomically before applying any side effect. Exactly one
+	// concurrent delivery wins the insert; the losers see no returned id and
+	// return without touching the subscription (no UNIQUE error, no retry).
+	recID := uuid.NewString()
+	var claimedID string
+	err = tx.QueryRowContext(ctx, `
+		INSERT INTO subscription_webhook_events (id, tenant_id, provider, event_id, event_type, payload_json, provider_subscription_id, event_timestamp, processed_at, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, 'PROCESSED')
+		ON CONFLICT (provider, event_id) DO NOTHING
+		RETURNING id
+	`, recID, tenantIDStr, p.Provider, p.EventID, p.EventType, p.PayloadJSON, p.ProviderSubscriptionID, p.EventTimestamp.Format(time.RFC3339)).Scan(&claimedID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil // already claimed by a concurrent delivery
+	}
+	if err != nil {
+		return err
+	}
+
 	if !p.PeriodStart.IsZero() && !p.PeriodEnd.IsZero() {
 		if planID != "" {
 			_, err = tx.ExecContext(ctx, `
@@ -579,16 +592,6 @@ func (s *service) ProcessSubscriptionWebhook(ctx context.Context, p WebhookEvent
 			WHERE provider_subscription_id = $3
 		`, string(newStatus), now.Format(time.RFC3339), p.ProviderSubscriptionID)
 	}
-	if err != nil {
-		return err
-	}
-
-	// 6. Record Processed Webhook Event
-	recID := uuid.NewString()
-	_, err = tx.ExecContext(ctx, `
-		INSERT INTO subscription_webhook_events (id, tenant_id, provider, event_id, event_type, payload_json, provider_subscription_id, event_timestamp, processed_at, status)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, 'PROCESSED')
-	`, recID, tenantIDStr, p.Provider, p.EventID, p.EventType, p.PayloadJSON, p.ProviderSubscriptionID, p.EventTimestamp.Format(time.RFC3339))
 	if err != nil {
 		return err
 	}

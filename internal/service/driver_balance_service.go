@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"transport-app/internal/shared"
 
 	"github.com/google/uuid"
 
@@ -15,8 +16,7 @@ import (
 
 // DriverBalanceService computes the driver "Paisa" view (Spec 22 §5.2, §5.5).
 //
-//	running_balance = Σ paid settlements.net_payout
-//	                − Σ advances with status 'paid'
+//	running_balance = Σ paid settlements.net_payout  (already nets advances)
 //	                + Σ advances with status 'approved' (not yet in a settlement)
 type DriverBalanceService struct {
 	db    *sql.DB
@@ -114,17 +114,17 @@ func (s *DriverBalanceService) GetBalance(ctx context.Context, driverID string) 
 		}
 	}
 
-	// − Σ paid-out advances, + Σ approved not yet inside a settlement.
-	var paidOut, approved float64
+	// + Σ approved not yet inside a settlement. Paid-out advances are already
+	// netted into each paid settlement's net_payout — subtracting them again
+	// would double-deduct the same advance (Spec 22 §5.2/§5.5).
+	var approved float64
 	if err := s.db.QueryRowContext(ctx, `
-		SELECT
-		  COALESCE(SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END), 0),
-		  COALESCE(SUM(CASE WHEN status = 'approved' THEN amount ELSE 0 END), 0)
-		FROM driver_advance_requests WHERE driver_id = $1 AND status IN ('paid','approved')
-	`, driverID).Scan(&paidOut, &approved); err != nil && err != sql.ErrNoRows {
+		SELECT COALESCE(SUM(amount), 0)
+		FROM driver_advance_requests WHERE driver_id = $1 AND status = 'approved'
+	`, driverID).Scan(&approved); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
-	bal.RunningBalance = bal.RunningBalance - paidOut + approved
+	bal.RunningBalance += approved
 
 	// Pending count.
 	if err := s.db.QueryRowContext(ctx,
@@ -198,12 +198,16 @@ func (s *DriverBalanceService) DecideAdvance(ctx context.Context, advanceID, dec
 	default:
 		return fmt.Errorf("decision must be approved or rejected")
 	}
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		return fmt.Errorf("advance tenant is required")
+	}
 	res, err := s.db.ExecContext(ctx, `
 		UPDATE driver_advance_requests
 		SET status = $1, decided_by = $2, decided_at = CURRENT_TIMESTAMP,
 		    reason = CASE WHEN $3 != '' THEN reason || ' | note: ' || $4 ELSE reason END
-		WHERE id = $5 AND status = $6`,
-		decision, decidedBy, note, note, advanceID, AdvancePending)
+		WHERE id = $5 AND status = $6 AND tenant_id = $7`,
+		decision, decidedBy, note, note, advanceID, AdvancePending, tenantID)
 	if err != nil {
 		return err
 	}
@@ -217,7 +221,7 @@ func (s *DriverBalanceService) DecideAdvance(ctx context.Context, advanceID, dec
 
 	var driverID string
 	_ = s.db.QueryRowContext(ctx,
-		`SELECT driver_id FROM driver_advance_requests WHERE id = $1`, advanceID).Scan(&driverID)
+		`SELECT driver_id FROM driver_advance_requests WHERE id = $1 AND tenant_id = $2`, advanceID, tenantID).Scan(&driverID)
 	s.invalidate(driverID)
 	return nil
 }

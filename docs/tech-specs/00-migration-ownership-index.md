@@ -1,7 +1,7 @@
 # Migration Ownership Index
 
 Single source of truth for `db/migrations/` version numbers. Repo head is
-`00189_kharcha_read_permission.sql`; next free slot is `00190`.
+`00192_invoice_number_per_tenant.sql`; next free slot is `00193`.
 (`00039_experiments.sql` remains TAKEN — never edit.) Every new migration
 appends the next free number. **This table is authoritative; spec §3 numbers
 MUST match it.**
@@ -185,7 +185,10 @@ which always allocate head-ward from the maximum above.
 | 00187 | auth_one_time_tokens — persistent password-reset / email-verify tokens; HMAC hash of the token value only, email stored as the lookup key (PII) | Audit M1 |
 | 00188 | login_throttle — per-account failed-login lockout keyed by sha256(email) | Audit M3 |
 | 00189 | kharcha:read seeded + granted to admin (1), dispatcher (2), accountant (3), viewer (4), org_admin (6); driver (5) denied; kharcha dashboard/queue/ledger/API read routes moved off trips:read | Audit follow-up (H1 read surface) |
-| 00190+ | future specs | reserved |
+| 00190 | razorpay_order_binding — order→invoice binding table (`razorpay_orders`) for webhook idempotency and tenant-scoped order lookup | Payment integrity |
+| 00191 | accounting_sync_tenant — add `tenant_id` to `accounting_sync_log` | Multi-tenancy |
+| 00192 | invoice_number_per_tenant — make invoice numbers unique per tenant instead of globally | Multi-tenancy |
+| 00193+ | future specs | reserved |
 
 ## Implementation rule
 Pick the number from this table for your feature and update the spec's §3 to

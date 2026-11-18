@@ -6,6 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"transport-app/internal/shared"
 )
 
 // TestDriverSettlementService_ListSettlementsDateRange proves the created_at
@@ -14,7 +16,7 @@ import (
 // date(substr(col,1,10)), not date(col).
 func TestDriverSettlementService_ListSettlementsDateRange(t *testing.T) {
 	dbConn, svcs, _ := setupComplianceTestDB(t)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	mk := func(id, tripID, status string, created string) {
 		_, err := dbConn.Exec(`INSERT INTO driver_settlements

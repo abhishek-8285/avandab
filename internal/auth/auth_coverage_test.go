@@ -292,6 +292,7 @@ func TestIsTrustedProxy_Branches(t *testing.T) {
 }
 
 func TestClientIP_Branches(t *testing.T) {
+	t.Setenv("TRUST_PROXY_CIDRS", "")
 	makeReq := func(remoteAddr string, headers map[string]string) *http.Request {
 		req := httptest.NewRequest("GET", "/", nil)
 		req.RemoteAddr = remoteAddr
@@ -330,11 +331,13 @@ func TestClientIP_Branches(t *testing.T) {
 	})
 
 	t.Run("trusted with CF-Connecting-IP valid", func(t *testing.T) {
+		t.Setenv("TRUST_PROXY_CIDRS", "127.0.0.0/8")
 		req := makeReq("127.0.0.1:1234", map[string]string{"CF-Connecting-IP": "203.0.113.5"})
 		assert.Equal(t, "203.0.113.5", ClientIP(req))
 	})
 
 	t.Run("trusted CF invalid falls to X-Real-IP", func(t *testing.T) {
+		t.Setenv("TRUST_PROXY_CIDRS", "127.0.0.0/8")
 		req := makeReq("127.0.0.1:1234", map[string]string{
 			"CF-Connecting-IP": "not-an-ip",
 			"X-Real-IP":        "198.51.100.7",
@@ -343,6 +346,7 @@ func TestClientIP_Branches(t *testing.T) {
 	})
 
 	t.Run("trusted CF and X-Real invalid falls to XFF", func(t *testing.T) {
+		t.Setenv("TRUST_PROXY_CIDRS", "127.0.0.0/8")
 		req := makeReq("127.0.0.1:1234", map[string]string{
 			"CF-Connecting-IP": "bad",
 			"X-Real-IP":        "bad2",
@@ -352,6 +356,7 @@ func TestClientIP_Branches(t *testing.T) {
 	})
 
 	t.Run("XFF with spaces trimmed", func(t *testing.T) {
+		t.Setenv("TRUST_PROXY_CIDRS", "127.0.0.0/8")
 		req := makeReq("127.0.0.1:1234", map[string]string{
 			"X-Forwarded-For": "  203.0.113.10  , 10.0.0.1",
 		})
@@ -372,6 +377,7 @@ func TestClientIP_Branches(t *testing.T) {
 	})
 
 	t.Run("header values with surrounding spaces", func(t *testing.T) {
+		t.Setenv("TRUST_PROXY_CIDRS", "127.0.0.0/8")
 		req := makeReq("127.0.0.1:1234", map[string]string{
 			"CF-Connecting-IP": "  192.0.2.1  ",
 		})
@@ -379,6 +385,7 @@ func TestClientIP_Branches(t *testing.T) {
 	})
 
 	t.Run("X-Real-IP with spaces", func(t *testing.T) {
+		t.Setenv("TRUST_PROXY_CIDRS", "127.0.0.0/8")
 		req := makeReq("127.0.0.1:1234", map[string]string{
 			"X-Real-IP": "  198.51.100.11  ",
 		})

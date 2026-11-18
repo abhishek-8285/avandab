@@ -103,7 +103,7 @@ func sameOrigin(r *http.Request) bool {
 	}
 
 	host := r.Host
-	if auth.IsTrustedProxy(r.RemoteAddr) {
+	if auth.TrustForwardedHeaders(r.RemoteAddr) {
 		if xfh := r.Header.Get("X-Forwarded-Host"); xfh != "" {
 			if idx := strings.Index(xfh, ","); idx >= 0 {
 				host = strings.TrimSpace(xfh[:idx])

@@ -102,8 +102,14 @@ func TestRazorpayWebhook_NotConfigured(t *testing.T) {
 func TestRazorpayWebhook_IgnoresNonCapturedEvents(t *testing.T) {
 	ctx, uc, sign, _ := setupWebhookTest(t)
 	body, _ := json.Marshal(map[string]interface{}{
-		"event":   "payment.failed",
-		"payload": map[string]interface{}{},
+		"event":      "payment.failed",
+		"event_id":   "evt_failed_1",
+		"created_at": 1700000000,
+		"payload": map[string]interface{}{
+			"payment": map[string]interface{}{
+				"entity": map[string]interface{}{"id": "pay_failed_1", "status": "failed"},
+			},
+		},
 	})
 	id, err := uc.Execute(ctx, body, sign(body))
 	require.NoError(t, err)

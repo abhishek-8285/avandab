@@ -1,8 +1,8 @@
 // Package ocr provides receipt amount extraction (Spec 22 §2.7, §6).
 // Provider is selected by OCR_PROVIDER: mock (default, non-verifying
-// placeholder), http (POST image ref to OCR_HTTP_URL), tesseract falls
-// back to mock until a local binary integration is justified — no external
-// calls unless explicitly configured.
+// placeholder), http (POST image ref to OCR_HTTP_URL), alibaba (Alibaba Cloud
+// OCR), tesseract falls back to mock until a local binary integration is
+// justified — no external calls unless explicitly configured.
 package ocr
 
 import (
@@ -18,9 +18,12 @@ import (
 
 // Config holds the adapter settings read from env.
 type Config struct {
-	Provider string // mock | tesseract | http
-	HTTPURL  string
-	HTTPKey  string
+	Provider               string // mock | tesseract | http | alibaba
+	HTTPURL                string
+	HTTPKey                string
+	AlibabaRegionID        string
+	AlibabaAccessKeyID     string
+	AlibabaAccessKeySecret string
 }
 
 // Result is one extraction outcome.
@@ -47,6 +50,12 @@ func NewClient(cfg Config, logger *slog.Logger) Client {
 			return NewMockClient()
 		}
 		return &httpClient{cfg: cfg, client: &http.Client{Timeout: 15 * time.Second}}
+	case "alibaba":
+		if cfg.AlibabaAccessKeyID == "" || cfg.AlibabaAccessKeySecret == "" {
+			logger.Warn("OCR_PROVIDER=alibaba but credentials empty — using mock, which cannot verify expenses")
+			return NewMockClient()
+		}
+		return newAlibabaClient(cfg, logger)
 	case "tesseract":
 		logger.Warn("tesseract provider not implemented yet — using mock, which cannot verify expenses (Spec 22 §11 open item)")
 		return NewMockClient()

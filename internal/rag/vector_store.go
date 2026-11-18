@@ -34,13 +34,17 @@ func NewVectorStore(dbPath string) (*VectorStore, error) {
 	}
 
 	store := &VectorStore{db: db}
+	closeOnError := func(op string, err error) error {
+		if cerr := db.Close(); cerr != nil {
+			return fmt.Errorf("%s: %w (close vector store: %v)", op, err, cerr)
+		}
+		return fmt.Errorf("%s: %w", op, err)
+	}
 	if err := store.setupPRAGMAs(); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("setup pragmas: %w", err)
+		return nil, closeOnError("setup pragmas", err)
 	}
 	if err := store.initSchema(); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("init schema: %w", err)
+		return nil, closeOnError("init schema", err)
 	}
 	return store, nil
 }

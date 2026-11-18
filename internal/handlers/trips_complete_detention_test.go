@@ -110,11 +110,11 @@ func TestTripHandlers_CompleteTrip_AttachesClosedDetentions(t *testing.T) {
 	require.NoError(t, db.QueryRow(`SELECT count(*) FROM invoices WHERE booking_id = 'b1'`).Scan(&invoiceCount))
 	assert.Equal(t, 1, invoiceCount)
 	require.NoError(t, db.QueryRow(`SELECT subtotal, tax, total FROM invoices WHERE booking_id = 'b1'`).Scan(&subtotal, &tax, &total))
-	// Subtotal = booking freight + detention line; GST applies to the freight
-	// subtotal only (spec silent on detention taxation — resolved from the
-	// company settings at 18%).
+	// Subtotal = booking freight + detention line. GST applies to the whole
+	// taxable value (freight + detention) at the configured 18%; detention used
+	// to be persisted with zero tax and zero total.
 	assert.InDelta(t, 25000+15.00, subtotal, 0.01)
-	assert.InDelta(t, 4500.0, tax, 0.01)
+	assert.InDelta(t, 4500.0+2.70, tax, 0.01)
 	assert.InDelta(t, subtotal+tax, total, 0.01)
 
 	// Detention line item persisted with the detention ref, freight preserved.

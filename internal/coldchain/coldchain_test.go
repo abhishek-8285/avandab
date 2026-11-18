@@ -307,3 +307,43 @@ func TestColdChain_TenantIsolation(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, listB)
 }
+
+// A tenant must never be able to overwrite another tenant's reefer profile by
+// presenting the victim's vehicle id. The upsert conflict target is the global
+// vehicle_id, so the update must be tenant-guarded.
+func TestUpsertProfile_CannotCrossTenantOverwrite(t *testing.T) {
+	db := newTestColdChainDB(t)
+	repo := coldchain.NewSQLRepository(db)
+	ctx := context.Background()
+
+	victim := &coldchain.ReeferProfile{
+		VehicleID: "veh-ref-1", TenantID: "tenant-cc-a",
+		ReeferMakeModel: "Carrier Vector 1550", NumZones: 1,
+		Zone1Type: "FROZEN", Zone1TargetTempC: -18, DefrostMode: "AUTO",
+	}
+	require.NoError(t, repo.UpsertProfile(ctx, victim))
+
+	attacker := &coldchain.ReeferProfile{
+		VehicleID: "veh-ref-1", TenantID: "tenant-cc-b",
+		ReeferMakeModel: "OVERWRITTEN", NumZones: 1,
+		Zone1Type: "CHILLED", Zone1TargetTempC: 4, DefrostMode: "AUTO",
+	}
+	_ = repo.UpsertProfile(ctx, attacker) // may be a no-op; must not alter victim
+
+	got, err := repo.GetProfile(ctx, "tenant-cc-a", "veh-ref-1")
+	require.NoError(t, err)
+	require.Equal(t, "Carrier Vector 1550", got.ReeferMakeModel, "cross-tenant upsert must not change the victim profile")
+}
+
+// Measured 0% fuel / 0 V must survive validation: rewriting them to 100% /
+// 12.6 V hid a reefer that had run dry or lost power.
+func TestValidateReeferTelemetry_PreservesMeasuredZero(t *testing.T) {
+	in := coldchain.IngestReeferTelemetryInput{
+		VehicleID:          "veh-zero",
+		ReeferFuelLevelPct: 0,
+		ReeferBatteryV:     0,
+	}
+	require.NoError(t, in.Validate())
+	require.Equal(t, 0.0, in.ReeferFuelLevelPct)
+	require.Equal(t, 0.0, in.ReeferBatteryV)
+}

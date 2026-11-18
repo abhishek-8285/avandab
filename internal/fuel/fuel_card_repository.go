@@ -356,10 +356,10 @@ func (r *SQLFuelCardRepository) PostGeneralLedgerAndSyncLog(ctx context.Context,
 	// 1. Insert into accounting_sync_log
 	_, err := r.q.ExecContext(ctx, `
 		INSERT INTO accounting_sync_log (
-			id, idempotency_key, direction, entity_type, entity_id,
+			id, tenant_id, idempotency_key, direction, entity_type, entity_id,
 			adapter, payload_json, external_id, status, attempts, created_at, updated_at
-		) VALUES ($1, $2, 'out', 'fuel_card_transaction', $3, $4, $5, $6, 'acked', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-		syncLogID, "fuel-card-txn-"+txn.ExternalTxnID, txn.ID, provider, string(payload), txn.ExternalTxnID,
+		) VALUES ($1, $7, $2, 'out', 'fuel_card_transaction', $3, $4, $5, $6, 'acked', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+		syncLogID, "fuel-card-txn-"+txn.ExternalTxnID, txn.ID, provider, string(payload), txn.ExternalTxnID, tenantID,
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to insert accounting sync log: %w", err)

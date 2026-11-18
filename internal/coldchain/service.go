@@ -3,6 +3,7 @@ package coldchain
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"time"
 
@@ -104,14 +105,18 @@ func (s *Service) IngestTelemetry(ctx context.Context, tenantID string, in Inges
 					SetpointC:      in.Zone1SetpointC,
 					Status:         ExcursionOpen,
 				}
-				_ = s.repo.CreateExcursion(ctx, newExc)
+				if err := s.repo.CreateExcursion(ctx, newExc); err != nil {
+					return nil, fmt.Errorf("persist temperature excursion: %w", err)
+				}
 			} else {
 				// Update peak temperature and duration
 				if in.Zone1TempC > activeExc.PeakTempC {
 					activeExc.PeakTempC = in.Zone1TempC
 				}
 				activeExc.DurationSeconds = int(now.Sub(activeExc.StartTime).Seconds())
-				_ = s.repo.UpdateExcursion(ctx, activeExc)
+				if err := s.repo.UpdateExcursion(ctx, activeExc); err != nil {
+					return nil, fmt.Errorf("update temperature excursion: %w", err)
+				}
 			}
 		} else if isUnderTemp {
 			hasActiveExcursion = true
@@ -135,13 +140,17 @@ func (s *Service) IngestTelemetry(ctx context.Context, tenantID string, in Inges
 					SetpointC:      in.Zone1SetpointC,
 					Status:         ExcursionOpen,
 				}
-				_ = s.repo.CreateExcursion(ctx, newExc)
+				if err := s.repo.CreateExcursion(ctx, newExc); err != nil {
+					return nil, fmt.Errorf("persist temperature excursion: %w", err)
+				}
 			} else {
 				if in.Zone1TempC < activeExc.PeakTempC {
 					activeExc.PeakTempC = in.Zone1TempC
 				}
 				activeExc.DurationSeconds = int(now.Sub(activeExc.StartTime).Seconds())
-				_ = s.repo.UpdateExcursion(ctx, activeExc)
+				if err := s.repo.UpdateExcursion(ctx, activeExc); err != nil {
+					return nil, fmt.Errorf("update temperature excursion: %w", err)
+				}
 			}
 		} else if activeExc != nil {
 			// Temperature normalized: resolve active thermal excursion
@@ -150,7 +159,9 @@ func (s *Service) IngestTelemetry(ctx context.Context, tenantID string, in Inges
 			activeExc.Status = ExcursionResolved
 			activeExc.ResolutionNote = "Thermal reading restored within permissible operational band"
 			activeExc.ResolvedBy = "telemetry-engine"
-			_ = s.repo.UpdateExcursion(ctx, activeExc)
+			if err := s.repo.UpdateExcursion(ctx, activeExc); err != nil {
+				return nil, fmt.Errorf("resolve temperature excursion: %w", err)
+			}
 		}
 	}
 
@@ -273,12 +284,15 @@ func (s *Service) CertifyTripCompliance(ctx context.Context, tenantID string, in
 
 	mkt := CalculateMKT(readings)
 
+	if profile == nil {
+		// Without thermal bands there is nothing to certify against. Stamping
+		// COMPLIANT produced a false GDP certificate.
+		return nil, fmt.Errorf("cannot certify trip %s: vehicle %s has no reefer profile", in.TripID, in.VehicleID)
+	}
 	complianceStatus := ComplianceCompliant
-	if profile != nil {
-		// GDP Pharma standard: if MKT exceeds upper/lower target, or cumulative excursion > 15 mins (900s)
-		if mkt > profile.Zone1MaxTempC || mkt < profile.Zone1MinTempC || excursionDurationSec > 900 {
-			complianceStatus = ComplianceBreached
-		}
+	// GDP Pharma standard: if MKT exceeds upper/lower target, or cumulative excursion > 15 mins (900s)
+	if mkt > profile.Zone1MaxTempC || mkt < profile.Zone1MinTempC || excursionDurationSec > 900 {
+		complianceStatus = ComplianceBreached
 	}
 
 	now := time.Now().UTC()

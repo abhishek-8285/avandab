@@ -136,7 +136,8 @@ func TestV1_EndToEndTransportLifecycleWorkflow(t *testing.T) {
 	}
 	trp.Status = trip.TripStarted
 
-	// 11. Complete Trip
+	// 11. Deliver then complete Trip (completion requires delivered status)
+	trp.Status = trip.TripDelivered
 	if err := trp.CanComplete(); err != nil {
 		t.Fatalf("failed to validate trip completion: %v", err)
 	}

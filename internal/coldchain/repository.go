@@ -60,7 +60,8 @@ func (r *SQLRepository) UpsertProfile(ctx context.Context, p *ReeferProfile) err
 		humidity_monitoring = EXCLUDED.humidity_monitoring,
 		target_humidity_rh = EXCLUDED.target_humidity_rh,
 		defrost_mode = EXCLUDED.defrost_mode,
-		updated_at = EXCLUDED.updated_at`
+		updated_at = EXCLUDED.updated_at
+	WHERE vehicle_reefer_profiles.tenant_id = EXCLUDED.tenant_id`
 
 	humidityInt := 0
 	if p.HumidityMonitoring {
@@ -132,7 +133,8 @@ func (r *SQLRepository) UpsertTelemetry(ctx context.Context, t *ReeferTelemetry)
 		reefer_fuel_level_pct = EXCLUDED.reefer_fuel_level_pct,
 		reefer_battery_v = EXCLUDED.reefer_battery_v,
 		has_active_excursion = EXCLUDED.has_active_excursion,
-		last_sync_at = EXCLUDED.last_sync_at`
+		last_sync_at = EXCLUDED.last_sync_at
+	WHERE vehicle_reefer_telemetry_latest.tenant_id = EXCLUDED.tenant_id`
 
 	excursionInt := 0
 	if t.HasActiveExcursion {

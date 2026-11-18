@@ -34,7 +34,10 @@ func MaskEmail(e string) string {
 		return "•••"
 	}
 	local, domain := e[:at], e[at:]
-	prefix := string(local[0]) + "***"
+	// Index by rune, not byte: a multibyte first character (common in Indian
+	// language email IDs) must stay whole or the mask emits invalid UTF-8.
+	runes := []rune(local)
+	prefix := string(runes[0]) + "***"
 	return prefix + domain
 }
 

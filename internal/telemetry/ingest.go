@@ -395,11 +395,14 @@ func (ing *Ingestor) IngestBatch(ctx context.Context, frames []RawFrame) ([]Inge
 			}
 			skipHistory := (dedup.Parked || dedup.MovingDedup) && !frame.SOS
 			writeLive := !dedup.Parked || frame.SOS
+			// Heartbeats/status frames carry no GNSS fix (0,0). Persisting them
+			// injected null-island breadcrumbs into history and trip playback.
+			hasFix := frame.Latitude != 0 || frame.Longitude != 0
 
 			// Step 7b: Insert position
 			positionID := ing.idGen.GenerateUUID()
 			receivedAt := time.Now().UTC()
-			if !skipHistory {
+			if !skipHistory && hasFix {
 				if err := ing.insertPosition(txCtx, positionID, device.TenantID, vehicleID, frame, adjustedOdometer, adjustedFuel, rawEventID, receivedAt); err != nil {
 					return fmt.Errorf("position insert: %w", err)
 				}
@@ -413,7 +416,7 @@ func (ing *Ingestor) IngestBatch(ctx context.Context, frames []RawFrame) ([]Inge
 			}
 
 			// Step 10: Enrich + INSERT telemetry_snapshots
-			if !skipHistory {
+			if !skipHistory && hasFix {
 				if err := ing.insertSnapshot(txCtx, frame, device, vehicleID, adjustedOdometer, adjustedFuel, positionID, receivedAt); err != nil {
 					return fmt.Errorf("snapshot insert: %w", err)
 				}
@@ -562,7 +565,8 @@ func (ing *Ingestor) IngestBatch(ctx context.Context, frames []RawFrame) ([]Inge
 				Type:    n.eventType,
 				Payload: n.payload,
 			}); err != nil {
-				slog.Default().Warn("telemetry notification publish failed", "error", err)
+				slog.Default().Warn("telemetry notification publish failed",
+					"event_type", n.eventType, "error", err)
 			}
 		}
 	}
@@ -716,13 +720,25 @@ func (ing *Ingestor) quarantineFrame(ctx context.Context, frame RawFrame, reason
 		ID:         ing.idGen.GenerateUUID(),
 		TenantID:   string(tenantID),
 		IMEI:       frame.IMEI,
-		Source:     frame.Provider,
+		Source:     quarantineSource(frame.Provider),
 		RawPayload: string(rawPayload),
 		Reason:     reason,
 		Status:     QuarantineStatusOpen,
 		CreatedAt:  time.Now().UTC(),
 	}
 	return ing.quarantine.Quarantine(ctx, entry)
+}
+
+// quarantineSource maps a decoder/provider name onto the device_quarantine
+// source CHECK. Unknown values used to fail the INSERT and abort the whole
+// ingest batch; the original provider is preserved in the reason.
+func quarantineSource(provider string) string {
+	switch provider {
+	case "own", "loconav", "wheelseye":
+		return provider
+	default:
+		return "own"
+	}
 }
 
 // insertRawEvent inserts a raw event with dedup. Returns true if the frame was

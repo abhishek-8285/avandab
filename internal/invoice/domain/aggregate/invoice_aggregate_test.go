@@ -220,3 +220,24 @@ func TestRecomputeTotals_NoopWithoutLineItems(t *testing.T) {
 	assert.Equal(t, 1000.0, inv.Subtotal, "flat booking pricing must survive a no-op recompute")
 	assert.Equal(t, 1000.0, inv.Total)
 }
+
+func TestVoid_IRNRequiresCreditNote(t *testing.T) {
+	inv := newBaseInvoice()
+	inv.Status = InvoiceStatusIssued
+	irn := "IRN-123"
+	inv.IRN = &irn
+	err := inv.Void(time.Now())
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "credit note")
+	assert.NotEqual(t, InvoiceStatusCancelled, inv.Status)
+}
+
+func TestVoid_PaymentRecordedRejected(t *testing.T) {
+	inv := newBaseInvoice()
+	inv.Status = InvoiceStatusOutstanding
+	inv.PaidAmount = 100
+	err := inv.Void(time.Now())
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "recorded payments")
+	assert.NotEqual(t, InvoiceStatusCancelled, inv.Status)
+}

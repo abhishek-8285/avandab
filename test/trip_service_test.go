@@ -114,6 +114,10 @@ func TestTripService_CompletedTrip_Immutable(t *testing.T) {
 	_, err = svc.Trips.StartTrip(ctx, trip.ID)
 	require.NoError(t, err)
 
+	// Deliver the trip (completion now requires delivered status)
+	_, err = svc.Trips.DeliverTripWithPOD(ctx, trip.ID, "https://avandab.com/pod/complete.png")
+	require.NoError(t, err)
+
 	// Complete the trip
 	_, err = svc.Trips.CompleteTrip(ctx, trip.ID)
 	require.NoError(t, err)

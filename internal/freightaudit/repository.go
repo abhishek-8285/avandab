@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // RecentTripRef is a lightweight trip option for the freight-audit create form.
@@ -82,7 +83,8 @@ func (r *Repository) GetTripAuditData(ctx context.Context, tenantID, tripID stri
 
 	// FASTag toll transactions sum
 	tollQuery := `SELECT COALESCE(SUM(amount), 0.0) FROM fastag_transactions 
-		WHERE tenant_id = $1 AND trip_id = $2 AND status = 'SUCCESS'`
+		WHERE tenant_id = $1 AND trip_id = $2 AND status = 'SUCCESS'
+		  AND provider_mode = 'LIVE' AND id NOT LIKE 'MOCK-%'`
 	var fastagTolls float64
 	if err := r.db.QueryRowContext(ctx, tollQuery, tenantID, tripID).Scan(&fastagTolls); err == nil {
 		data.FASTagTolls = fastagTolls
@@ -172,6 +174,8 @@ func (r *Repository) FindMatchingRateCard(ctx context.Context, tenantID string, 
 	WHERE tenant_id = $1 AND is_active = TRUE
 	  AND (route_id = $2 OR route_id IS NULL OR route_id = '')
 	  AND (vehicle_type = $3 OR vehicle_type = '')
+	  AND (effective_from IS NULL OR effective_from <= $4)
+	  AND (effective_to IS NULL OR effective_to >= $4)
 	ORDER BY 
 		CASE WHEN route_id = $2 THEN 1 ELSE 2 END,
 		CASE WHEN vehicle_type = $3 THEN 1 ELSE 2 END,
@@ -183,7 +187,7 @@ func (r *Repository) FindMatchingRateCard(ctx context.Context, tenantID string, 
 	var effectiveTo sql.NullTime
 	var isActiveInt int
 
-	err := r.db.QueryRowContext(ctx, query, tenantID, routeID, vehicleType).Scan(
+	err := r.db.QueryRowContext(ctx, query, tenantID, routeID, vehicleType, time.Now().UTC()).Scan(
 		&rc.ID, &rc.TenantID, &rc.ContractNumber, &rc.Name, &vendorID, &customerID, &rID, &rc.VehicleType,
 		&rc.BillingBasis, &rc.Rate, &rc.MinCharge, &rc.FreeDetentionHours, &rc.DetentionRatePerHour,
 		&rc.EffectiveFrom, &effectiveTo, &isActiveInt, &rc.CreatedAt, &rc.UpdatedAt,

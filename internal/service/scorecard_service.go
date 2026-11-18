@@ -507,11 +507,15 @@ func (s *ScorecardService) DriverDetail(ctx context.Context, driverID string) (D
 	periodStart := now.Add(-time.Duration(cfg.windowDays) * 24 * time.Hour)
 	db := s.scoreDB()
 
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		return DriverDetail{}, fmt.Errorf("scorecard: tenant is required")
+	}
 	var d DriverDetail
 	var driverCode string
 	err := db.QueryRowContext(ctx,
 		`SELECT COALESCE(driver_id, ''), first_name || ' ' || last_name
-		 FROM drivers WHERE id = $1`, driverID).Scan(&driverCode, &d.DriverName)
+		 FROM drivers WHERE id = $1 AND tenant_id = $2`, driverID, tenantID).Scan(&driverCode, &d.DriverName)
 	if err != nil {
 		return DriverDetail{}, fmt.Errorf("scorecard: driver %s: %w", driverID, err)
 	}
@@ -659,10 +663,17 @@ func (s *ScorecardService) BonusForPayout(ctx context.Context, driverID string, 
 func (s *ScorecardService) ResolveFraudEvent(ctx context.Context, eventID, adminUserID string) error {
 	db := s.scoreDB()
 
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		return fmt.Errorf("scorecard: tenant is required")
+	}
 	var driverID, eventType, metadata string
 	err := db.QueryRowContext(ctx,
-		`SELECT driver_id, event_type, metadata FROM driver_behaviour_events WHERE id = $1`,
-		eventID).Scan(&driverID, &eventType, &metadata)
+		`SELECT e.driver_id, e.event_type, e.metadata
+		 FROM driver_behaviour_events e
+		 JOIN drivers d ON d.id = e.driver_id
+		 WHERE e.id = $1 AND d.tenant_id = $2`,
+		eventID, tenantID).Scan(&driverID, &eventType, &metadata)
 	if err != nil {
 		return fmt.Errorf("scorecard: behaviour event %s not found", eventID)
 	}

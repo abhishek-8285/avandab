@@ -33,6 +33,19 @@ func newCascadeTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
+// completeTripStopsForTest closes every stop with POD/OTP satisfied so the
+// deliver transition can be exercised without the full mobile POD flow.
+func completeTripStopsForTest(t *testing.T, db *sql.DB, tripID string) {
+	t.Helper()
+	_, err := db.Exec(`UPDATE trip_stops
+		SET status = 'completed', actual_departure = CURRENT_TIMESTAMP,
+		    otp_verified_at = COALESCE(otp_verified_at, CURRENT_TIMESTAMP),
+		    pod_url = CASE WHEN pod_required = 1 THEN COALESCE(NULLIF(pod_url, ''), 'test-pod') ELSE pod_url END,
+		    pod_verified_at = CASE WHEN pod_required = 1 THEN COALESCE(pod_verified_at, CURRENT_TIMESTAMP) ELSE pod_verified_at END
+		WHERE trip_id = ?`, tripID)
+	require.NoError(t, err)
+}
+
 func seedCascadeLane(t *testing.T, db *sql.DB) {
 	t.Helper()
 	_, err := db.Exec(`INSERT INTO customers (id, tenant_id, name, email, phone) VALUES ('cust_cas_1', 'tenant-1', 'Cascade Buyer', 'cas@example.com', '9999999999')`)
@@ -150,6 +163,7 @@ func TestCancelBooking_CompletedTripUntouched(t *testing.T) {
 	require.NoError(t, tripApp.NewStartTripUseCase(unitOfWork, clk).Execute(ctx, tripApp.StartTripCommand{TripID: tripID, TenantID: tenantID}))
 	require.NoError(t, tripApp.NewReachPickupUseCase(unitOfWork, clk).Execute(ctx, tripApp.ReachPickupCommand{TripID: tripID, TenantID: tenantID}))
 	require.NoError(t, tripApp.NewStartTransitUseCase(unitOfWork, clk).Execute(ctx, tripApp.StartTransitCommand{TripID: tripID, TenantID: tenantID}))
+	completeTripStopsForTest(t, db, string(tripID))
 	require.NoError(t, tripApp.NewDeliverUseCase(unitOfWork, clk).Execute(ctx, tripApp.DeliverCommand{TripID: tripID, TenantID: tenantID}))
 	require.NoError(t, tripApp.NewCompleteTripUseCase(unitOfWork, clk).Execute(ctx, tripApp.CompleteTripCommand{TripID: tripID, TenantID: tenantID}))
 

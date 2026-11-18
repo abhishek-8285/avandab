@@ -50,7 +50,7 @@ func (s *Service) Calculate(ctx context.Context, tripID string) (LivePnL, error)
 	var efficiency sql.NullFloat64
 	err := s.db.QueryRowContext(ctx, `
 		SELECT t.id, COALESCE(b.price, 0), COALESCE(t.vehicle_id, ''),
-		       COALESCE(v.fuel_type, 'diesel'), COALESCE(v.current_mileage, 0)
+		       COALESCE(v.fuel_type, 'diesel'), COALESCE(v.standard_kmpl, 0)
 		FROM trips t
 		LEFT JOIN bookings b ON b.id = t.booking_id
 		LEFT JOIN vehicles v ON v.id = t.vehicle_id
@@ -135,7 +135,10 @@ func (s *Service) Calculate(ctx context.Context, tripID string) (LivePnL, error)
 	if p.MarginAvailable && p.QuotedFare > 0 {
 		p.MarginPercentage = p.EstimatedMargin / p.QuotedFare * 100
 	}
-	p.LowMargin = p.MarginAvailable && p.QuotedFare > 0 && p.MarginHigh/p.QuotedFare*100 < 10
+	// Flag on the central estimate (and worst case), not the optimistic
+	// high bound — a low actual estimate must not be hidden by uncertainty.
+	p.LowMargin = p.MarginAvailable && p.QuotedFare > 0 &&
+		(p.EstimatedMargin/p.QuotedFare*100 < 10 || p.MarginLow/p.QuotedFare*100 < 10)
 	p.LastUpdate = time.Now().UTC()
 	_, err = s.db.ExecContext(ctx, `UPDATE trips SET estimated_margin = $1, fuel_consumed_liters = $2, toll_costs = $3, last_pnl_update = $4, fuel_cost_low = $5, fuel_cost_high = $6, margin_low = $7, margin_high = $8, pnl_confidence = $9, fuel_cost_status = $10 WHERE id = $11 AND tenant_id = $12`,
 		p.EstimatedMargin, p.FuelConsumedLiters, p.TollCost, p.LastUpdate, p.FuelCostLow, p.FuelCostHigh, p.MarginLow, p.MarginHigh, p.Confidence, p.FuelCostStatus, tripID, tenantID)

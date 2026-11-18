@@ -128,30 +128,36 @@ type Config struct {
 	RazorpayKeyID       string
 	RazorpayKeySecret   string
 	RazorpayWebhook     string
-	OCRProvider         string // mock | http (Spec 22 §6)
+	OCRProvider         string // mock | http | alibaba (Spec 22 §6)
 	OCRHTTPURL          string
 	OCRHTTPKey          string
-	BootstrapAdmin      BootstrapAdminConfig
-	MultiTenant         MultiTenantConfig
-	RAG                 RAGConfig
-	Agent               AgentConfig
-	Experiment          ExperimentConfig
-	Telemetry           TelemetryConfig
-	LiveMap             LiveMapConfig
-	Alerts              AlertConfig
-	EWayBill            EWayBillConfig
-	GSTN                GSTNConfig
-	FASTag              FASTagConfig
-	Video               VideoConfig
-	Routing             RoutingConfig
-	Cache               CacheConfig
-	Storage             StorageConfig
-	WorkerLeaderLock    bool
-	Notify              NotifyConfig
-	Comm                CommConfig
-	Google              GoogleConfig
-	FCM                 FCMConfig
-	Turnstile           TurnstileConfig
+
+	// Alibaba OCR provider (Spec 22 §6).
+	OCRAlibabaRegionID        string
+	OCRAlibabaAccessKeyID     string
+	OCRAlibabaAccessKeySecret string
+
+	BootstrapAdmin   BootstrapAdminConfig
+	MultiTenant      MultiTenantConfig
+	RAG              RAGConfig
+	Agent            AgentConfig
+	Experiment       ExperimentConfig
+	Telemetry        TelemetryConfig
+	LiveMap          LiveMapConfig
+	Alerts           AlertConfig
+	EWayBill         EWayBillConfig
+	GSTN             GSTNConfig
+	FASTag           FASTagConfig
+	Video            VideoConfig
+	Routing          RoutingConfig
+	Cache            CacheConfig
+	Storage          StorageConfig
+	WorkerLeaderLock bool
+	Notify           NotifyConfig
+	Comm             CommConfig
+	Google           GoogleConfig
+	FCM              FCMConfig
+	Turnstile        TurnstileConfig
 }
 
 // CommConfig controls the durable outbound queue (comm_outbox, migration
@@ -476,6 +482,10 @@ func Load() *Config {
 		OCRProvider:            getEnv("OCR_PROVIDER", "mock"),
 		OCRHTTPURL:             getEnv("OCR_HTTP_URL", ""),
 		OCRHTTPKey:             getEnv("OCR_HTTP_KEY", ""),
+
+		OCRAlibabaRegionID:        getEnv("OCR_ALIBABA_REGION_ID", "ap-southeast-1"),
+		OCRAlibabaAccessKeyID:     getEnv("OCR_ALIBABA_ACCESS_KEY_ID", ""),
+		OCRAlibabaAccessKeySecret: getEnv("OCR_ALIBABA_ACCESS_KEY_SECRET", ""),
 		BootstrapAdmin: BootstrapAdminConfig{
 			Email:    os.Getenv("BOOTSTRAP_ADMIN_EMAIL"),
 			Name:     getEnv("BOOTSTRAP_ADMIN_NAME", "Admin"),

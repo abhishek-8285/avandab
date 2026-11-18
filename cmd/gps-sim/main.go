@@ -76,6 +76,15 @@ var routes = map[string][]Coordinate{
 }
 
 func main() {
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "%s❌ %v%s\n", colorRed, err, colorReset)
+		os.Exit(1)
+	}
+}
+
+// run owns the socket lifecycle so deferred cleanup (connection close, ticker
+// stop) executes on every exit path instead of being skipped by os.Exit.
+func run() error {
 	var (
 		protocolFlag = flag.String("protocol", "teltonika", "GPS hardware protocol: teltonika | ais140 | gt06")
 		imeiFlag     = flag.String("imei", "358123456789012", "15-digit Device IMEI")
@@ -89,8 +98,7 @@ func main() {
 
 	protocol := strings.ToLower(strings.TrimSpace(*protocolFlag))
 	if protocol != "teltonika" && protocol != "ais140" && protocol != "gt06" {
-		fmt.Fprintf(os.Stderr, "%sError: Unsupported protocol '%s'. Choose teltonika, ais140, or gt06.%s\n", colorRed, protocol, colorReset)
-		os.Exit(1)
+		return fmt.Errorf("unsupported protocol %q: choose teltonika, ais140, or gt06", protocol)
 	}
 
 	routePoints, ok := routes[*routeFlag]
@@ -115,17 +123,14 @@ func main() {
 	fmt.Printf("%s Connecting to TCP telemetry server at %s...%s\n", colorYellow, *addrFlag, colorReset)
 	conn, err := net.DialTimeout("tcp", *addrFlag, 5*time.Second)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s❌ Failed to connect to %s: %v%s\n", colorRed, *addrFlag, err, colorReset)
-		fmt.Fprintf(os.Stderr, "%sEnsure the server is running (`bin/server` or `TELEMETRY_TCP_PORT=:5023`).%s\n", colorDim, colorReset)
-		os.Exit(1)
+		return fmt.Errorf("failed to connect to %s: %w (ensure the server is running; `bin/server` or TELEMETRY_TCP_PORT=:5023)", *addrFlag, err)
 	}
 	defer conn.Close()
 	fmt.Printf("%s Connected successfully! Performing protocol handshake...%s\n", colorGreen, colorReset)
 
 	// Perform Protocol-Specific Handshake
 	if err := performHandshake(conn, protocol, *imeiFlag); err != nil {
-		fmt.Fprintf(os.Stderr, "%s❌ Handshake failed: %v%s\n", colorRed, err, colorReset)
-		os.Exit(1)
+		return fmt.Errorf("handshake failed: %w", err)
 	}
 	fmt.Printf("%s Handshake ACK confirmed! Commencing live telemetry streaming...%s\n\n", colorGreen, colorReset)
 
@@ -148,7 +153,7 @@ func main() {
 		select {
 		case <-sigChan:
 			fmt.Printf("\n%s🛑 Simulation interrupted by user. Closing socket session...%s\n", colorYellow, colorReset)
-			return
+			return nil
 		case t := <-ticker.C:
 			packetCount++
 
@@ -198,8 +203,7 @@ func main() {
 			// Transmit packet and receive ACK
 			ackStr, err := sendTelemetryFrame(conn, protocol, *imeiFlag, currentLat, currentLng, currentSpeed, heading, satellites, extVoltage, batteryPct, odometerKM, fuelLevelPct, serialNum, t)
 			if err != nil {
-				fmt.Printf("%s[%s] Packet #%d failed: %v%s\n", colorRed, t.Format("15:04:05"), packetCount, err, colorReset)
-				return
+				return fmt.Errorf("packet #%d failed at %s: %w", packetCount, t.Format("15:04:05"), err)
 			}
 			serialNum++
 

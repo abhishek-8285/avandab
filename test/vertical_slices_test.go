@@ -294,6 +294,10 @@ func TestSprint2_CreateTripAndLifecycle(t *testing.T) {
 	assert.NotNil(t, trip.ReachedPickupAt)
 
 	require.NoError(t, startTransitUC.Execute(ctx, tripApp.StartTransitCommand{TripID: tripID, TenantID: "1"}))
+	// Deliver now fails closed while any stop is open (POD audit fix). This
+	// lifecycle test does not exercise POD, so close the seeded stops first.
+	_, err = db.Exec(`UPDATE trip_stops SET status = 'skipped', pod_required = 0 WHERE trip_id = ?`, tripID)
+	require.NoError(t, err)
 	trip, err = getUC.Execute(ctx, tripApp.GetTripQuery{TripID: tripID, TenantID: "1"})
 	require.NoError(t, err)
 	assert.Equal(t, "in_transit", trip.Status)

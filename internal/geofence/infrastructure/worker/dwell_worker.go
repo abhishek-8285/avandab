@@ -441,10 +441,17 @@ func (w *DwellWorker) persist(ctx context.Context, current, next domain.EngineSt
 					return err
 				}
 				if w.bus != nil {
-					w.bus.Publish(ctx, events.Event{
+					if err := w.bus.Publish(ctx, events.Event{
 						Type:    events.GeofenceZoneBreach,
 						Payload: alert,
-					})
+					}); err != nil {
+						logger := w.log
+						if logger == nil {
+							logger = slog.Default()
+						}
+						logger.Warn("geofence zone breach publish failed",
+							"event_type", events.GeofenceZoneBreach, "error", err)
+					}
 				}
 			}
 		}

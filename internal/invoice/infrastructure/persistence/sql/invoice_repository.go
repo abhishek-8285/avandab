@@ -185,13 +185,13 @@ func (r *invoiceRepository) Save(ctx context.Context, inv *aggregate.InvoiceAggr
 // persistLineItems replaces the invoice's line items (aggregate owns the full
 // set; Spec 02 §6, Spec 07 §3.1).
 func (r *invoiceRepository) persistLineItems(ctx context.Context, inv *aggregate.InvoiceAggregate) error {
-	db := r.exec(ctx)
-	if _, err := db.ExecContext(ctx,
+	exec := r.exec(ctx)
+	if _, err := exec.ExecContext(ctx,
 		`DELETE FROM invoice_line_items WHERE invoice_id = $1`, string(inv.ID)); err != nil {
 		return err
 	}
 	for _, li := range inv.LineItems {
-		_, err := db.ExecContext(ctx,
+		_, err := exec.ExecContext(ctx,
 			`INSERT INTO invoice_line_items
 			 (id, tenant_id, invoice_id, trip_id, line_type, hsn_sac_code, description, unit,
 			  quantity, unit_price, rate, taxable_value, cgst_rate, sgst_rate, igst_rate,

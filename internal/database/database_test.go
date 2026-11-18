@@ -86,3 +86,36 @@ func TestResyncIdentitySequences_NonPostgresNoop(t *testing.T) {
 		t.Errorf("resync on sqlite = %v, want nil no-op", err)
 	}
 }
+
+// PRAGMAs must apply to every pooled SQLite connection, not just the one the
+// pool happened to open first.
+func TestOpen_SQLitePragmasOnEveryConnection(t *testing.T) {
+	s := &testSettings{
+		driver:  "sqlite",
+		url:     "file:" + t.TempDir() + "/pragma.db?mode=rwc",
+		maxOpen: 2,
+		maxIdle: 2,
+	}
+	db, err := database.Open(context.Background(), s, slog.Default())
+	if err != nil {
+		t.Fatalf("Open(sqlite) = %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	ctx := context.Background()
+	for i := 0; i < 2; i++ {
+		conn, err := db.Conn(ctx)
+		if err != nil {
+			t.Fatalf("conn %d: %v", i, err)
+		}
+		var fk int
+		if err := conn.QueryRowContext(ctx, "PRAGMA foreign_keys").Scan(&fk); err != nil {
+			conn.Close()
+			t.Fatalf("pragma read: %v", err)
+		}
+		conn.Close()
+		if fk != 1 {
+			t.Fatalf("connection %d foreign_keys = %d, want 1", i, fk)
+		}
+	}
+}

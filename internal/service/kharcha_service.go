@@ -233,9 +233,11 @@ func (s *KharchaService) ApproveExpense(ctx context.Context, expenseID, approved
 	// Fuel audit enforce gate (Spec 03 §3.2 step 4). MUST run BEFORE the
 	// status UPDATE: in enforce mode a claim flagged needs_review must never
 	// flip to approved, so the gate is a pre-flight check, not a post-check.
-	if s.fuelAuditEnforce(ctx, db) {
+	// Check-and-write must share the tx so a concurrent ReviewClaim cannot
+	// slip between the gate read and the status UPDATE.
+	if s.fuelAuditEnforce(ctx, tx) {
 		var as string
-		if err := db.QueryRowContext(ctx,
+		if err := tx.QueryRowContext(ctx,
 			`SELECT COALESCE(audit_status, 'pending') FROM driver_expenses WHERE id = $1 AND tenant_id = $2`,
 			expenseID, tenantIDFor(ctx)).Scan(&as); err != nil {
 			return fmt.Errorf("expense not found")
@@ -284,20 +286,27 @@ func (s *KharchaService) ApproveExpense(ctx context.Context, expenseID, approved
 			tripID, driverID, tenantIDFor(ctx)).Scan(&settlementID)
 		// Missing settlement is a normal state (trip not settled yet); the
 		// expense still approves, it just has no payout row to adjust.
-		if err == nil && settlementID != "" {
-			_, _ = tx.ExecContext(ctx,
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("find settlement for expense %s: %w", expenseID, err)
+		}
+		if settlementID != "" {
+			if _, err := tx.ExecContext(ctx,
 				`UPDATE driver_settlements
 				 SET advances_kharcha = advances_kharcha + $1,
 				     net_payout = CASE WHEN net_payout - $2 > 0 THEN net_payout - $2 ELSE 0.0 END
 				 WHERE id = $3`,
-				amount, amount, settlementID)
+				amount, amount, settlementID); err != nil {
+				return fmt.Errorf("update settlement for expense %s: %w", expenseID, err)
+			}
 
 			lineID := "stl-ln-" + uuid.New().String()
 			label := fmt.Sprintf("Approved expense (%s) #%s", category, expenseID)
-			_, _ = tx.ExecContext(ctx,
+			if _, err := tx.ExecContext(ctx,
 				`INSERT INTO settlement_lines (id, settlement_id, trip_id, line_type, label, amount, ref_id, created_at)
 				 VALUES ($1, $2, $3, 'deduction', $4, $5, $6, CURRENT_TIMESTAMP)`,
-				lineID, settlementID, tripID, label, -amount, expenseID)
+				lineID, settlementID, tripID, label, -amount, expenseID); err != nil {
+				return fmt.Errorf("insert settlement line for expense %s: %w", expenseID, err)
+			}
 		}
 	}
 
@@ -476,7 +485,7 @@ func (s *KharchaService) CreateExpenseWithOpts(ctx context.Context, o CreateExpe
 	// Async verification hook (Spec 22 §5.3): never blocks the driver's
 	// sync path; the verifier subscribes and writes verification_state.
 	if s.events != nil {
-		s.events.Publish(ctx, events.Event{
+		s.safePublish(ctx, events.Event{
 			Type:    events.ExpenseCreated,
 			Payload: map[string]any{"expense_id": expID},
 		})

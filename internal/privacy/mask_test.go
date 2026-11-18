@@ -3,6 +3,7 @@ package privacy
 import (
 	"fmt"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -36,6 +37,23 @@ func TestMaskEmail(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%q", tt.in), func(t *testing.T) {
 			assert.Equal(t, tt.want, MaskEmail(tt.in))
+		})
+	}
+}
+
+// Indian customers often use non-ASCII local parts (Hindi/Tamil email IDs).
+// Masking must keep one whole first character, never a broken UTF-8 byte.
+func TestMaskEmail_UnicodeLocalPart(t *testing.T) {
+	tests := []struct{ in, want string }{
+		{"रवि.kumar@example.com", "र***@example.com"},
+		{"அமித்@example.com", "அ***@example.com"},
+		{"josé@correo.es", "j***@correo.es"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.in, func(t *testing.T) {
+			got := MaskEmail(tt.in)
+			assert.Equal(t, tt.want, got)
+			assert.True(t, utf8.ValidString(got), "masked email must be valid UTF-8")
 		})
 	}
 }

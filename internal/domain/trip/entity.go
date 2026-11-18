@@ -73,10 +73,11 @@ func (t Trip) CanDeliver() error {
 	return nil
 }
 
-// CanComplete validates that a trip can be completed (must have been delivered or started).
+// CanComplete validates that a trip can be completed (only from delivered).
+// Must match TripAggregate.Complete and TripWorkflow.CanComplete.
 func (t Trip) CanComplete() error {
-	if t.Status != TripStarted && t.Status != TripInTransit && t.Status != TripDelivered {
-		return fmt.Errorf("trip must be started or delivered before completion; current status: %s", t.Status)
+	if t.Status != TripDelivered {
+		return fmt.Errorf("only delivered trips can be completed; current status: %s", t.Status)
 	}
 	return nil
 }

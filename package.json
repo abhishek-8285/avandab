@@ -9,9 +9,9 @@
   },
   "scripts": {
     "build:css": "npx @tailwindcss/cli -i src/input.css -o internal/static/css/tailwind.css --minify",
-    "test": "go test ./...",
-    "test:cover": "go test -coverprofile=coverage.out -covermode=atomic ./test",
-    "test:cover:html": "go tool cover -html=coverage.out",
+    "test": "sh ./scripts/go.sh test ./...",
+    "test:cover": "sh ./scripts/go.sh test -coverprofile=coverage.out -covermode=atomic ./test",
+    "test:cover:html": "sh ./scripts/go.sh tool cover -html=coverage.out",
     "test:ui": "playwright test",
     "android": "npm --prefix mobile run android",
     "ios": "npm --prefix mobile run ios"

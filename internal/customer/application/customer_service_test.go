@@ -51,7 +51,8 @@ func setupCustomerTestDB(t *testing.T) *sql.DB {
 		tenant_id TEXT NOT NULL,
 		registration_number TEXT NOT NULL,
 		vehicle_number TEXT NOT NULL,
-		vehicle_type TEXT NOT NULL
+		vehicle_type TEXT NOT NULL,
+		status TEXT NOT NULL DEFAULT 'available'
 	);
 	INSERT INTO vehicles (id, tenant_id, registration_number, vehicle_number, vehicle_type)
 	VALUES ('veh-1', 'tenant-1', 'MH12AB1234', 'MH12AB1234', 'truck');
@@ -93,6 +94,9 @@ func setupCustomerTestDB(t *testing.T) *sql.DB {
 		vehicle_id TEXT NOT NULL,
 		status TEXT DEFAULT 'assigned',
 		started_at DATETIME,
+		reached_pickup_at DATETIME,
+		in_transit_at DATETIME,
+		completed_at DATETIME,
 		created_at DATETIME DEFAULT (datetime('now')),
 		updated_at DATETIME DEFAULT (datetime('now'))
 	);
@@ -299,7 +303,7 @@ func TestPhase7_CustomerBookingWorkflow(t *testing.T) {
 	// Driver accepts offer -> Trip created
 	// New workflow seam: confirmation creates the operational trip; ACCEPT
 	// only assigns driver/vehicle. Seed the confirmation-created row here.
-	_, err = db.Exec(`INSERT INTO trips (id, tenant_id, booking_id, driver_id, vehicle_id, status) VALUES ('trip-cust-flow', ?, ?, '', '', 'created')`, tenantID, bookResp1.BookingID)
+	_, err = db.Exec(`INSERT INTO trips (id, tenant_id, booking_id, driver_id, vehicle_id, status) VALUES ('trip-cust-flow', ?, ?, '', '', 'scheduled')`, tenantID, bookResp1.BookingID)
 	require.NoError(t, err)
 	cmdAccept := driverApp.DriverCommandRequest{
 		CommandID: "cmd-accept-cust-trip",

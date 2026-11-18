@@ -51,6 +51,10 @@ func TestInsertRecord_TenantFromVehicle(t *testing.T) {
 	db := maintTenantTestDB(t)
 	_, err := db.Exec(`INSERT INTO vehicles (id, tenant_id) VALUES ('veh-1', 'tenant-W')`)
 	require.NoError(t, err)
+	_, err = db.Exec(`CREATE TABLE maintenance_schedules (id TEXT PRIMARY KEY, vehicle_id TEXT, service_type TEXT, last_done_km REAL, last_done_at DATETIME, active INTEGER DEFAULT 1, updated_at DATETIME)`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO maintenance_schedules (id, vehicle_id, service_type, active) VALUES ('sch-1', 'veh-1', 'oil', 1)`)
+	require.NoError(t, err)
 	r := NewMaintenanceRepository(db)
 
 	require.NoError(t, r.InsertRecord(context.Background(), domain.Record{

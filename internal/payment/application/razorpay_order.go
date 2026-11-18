@@ -4,12 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 
 	invoiceDomain "transport-app/internal/invoice/domain"
 	invoiceAgg "transport-app/internal/invoice/domain/aggregate"
 	"transport-app/internal/payment/domain"
 	paymentagg "transport-app/internal/payment/domain/aggregate"
+	"transport-app/internal/payment/orderstore"
 	"transport-app/internal/payment/razorpay"
 	"transport-app/internal/shared"
 	"transport-app/internal/shared/ports"
@@ -62,11 +64,19 @@ type CreateRazorpayOrderUseCase struct {
 	uow          ports.UnitOfWork
 	orderCreator razorpay.OrderCreator
 	keyID        string
+	orders       orderstore.Store
 }
 
 // NewCreateRazorpayOrderUseCase constructs a CreateRazorpayOrderUseCase.
 func NewCreateRazorpayOrderUseCase(uow ports.UnitOfWork, orderCreator razorpay.OrderCreator, keyID string) *CreateRazorpayOrderUseCase {
 	return &CreateRazorpayOrderUseCase{uow: uow, orderCreator: orderCreator, keyID: keyID}
+}
+
+// WithOrderBinding persists the order -> invoice mapping after the gateway
+// creates the order. Production must always wire this.
+func (uc *CreateRazorpayOrderUseCase) WithOrderBinding(store orderstore.Store) *CreateRazorpayOrderUseCase {
+	uc.orders = store
+	return uc
 }
 
 // Execute validates the invoice balance and creates the order server-side.
@@ -110,6 +120,16 @@ func (uc *CreateRazorpayOrderUseCase) Execute(ctx context.Context, cmd CreateRaz
 		return nil, err
 	}
 
+	if uc.orders != nil {
+		tenantID := string(cmd.TenantID)
+		if tenantID == "" {
+			tenantID = string(shared.TenantIDFromContext(ctx))
+		}
+		if err := uc.orders.SaveOrder(ctx, tenantID, cmd.InvoiceID, order.ID, order.Amount, order.Currency); err != nil {
+			return nil, fmt.Errorf("persist razorpay order binding: %w", err)
+		}
+	}
+
 	return &CreateRazorpayOrderResult{
 		OrderID:       order.ID,
 		RazorpayKeyID: uc.keyID,
@@ -137,6 +157,7 @@ type VerifyRazorpayPaymentUseCase struct {
 	gateway   razorpay.PaymentGateway
 	keySecret string
 	clock     ports.Clock
+	orders    orderstore.Store
 }
 
 // NewVerifyRazorpayPaymentUseCase constructs a VerifyRazorpayPaymentUseCase.
@@ -148,6 +169,13 @@ func NewVerifyRazorpayPaymentUseCase(uow ports.UnitOfWork, recordUC *RecordPayme
 // belongs to the invoice. Without it verification fails closed.
 func (uc *VerifyRazorpayPaymentUseCase) WithPaymentGateway(gw razorpay.PaymentGateway) *VerifyRazorpayPaymentUseCase {
 	uc.gateway = gw
+	return uc
+}
+
+// WithOrderBinding enforces that the presented order was created for the
+// invoice being settled. Production must always wire this.
+func (uc *VerifyRazorpayPaymentUseCase) WithOrderBinding(store orderstore.Store) *VerifyRazorpayPaymentUseCase {
+	uc.orders = store
 	return uc
 }
 
@@ -169,6 +197,19 @@ func (uc *VerifyRazorpayPaymentUseCase) Execute(ctx context.Context, cmd VerifyR
 	}
 	if tenantID != "" {
 		ctx = shared.ContextWithTenantID(ctx, tenantID)
+	}
+
+	// The HMAC covers order|payment only, so without this check any valid
+	// order/payment pair could settle any invoice. Fail closed when the order
+	// was not created for this invoice and tenant.
+	if uc.orders != nil {
+		binding, err := uc.orders.GetOrder(ctx, cmd.OrderID)
+		if err != nil {
+			return "", ErrInvoiceNotFound
+		}
+		if binding.TenantID != string(tenantID) || binding.InvoiceID != cmd.InvoiceID {
+			return "", ErrInvoiceNotFound
+		}
 	}
 
 	existing, err := uc.findRazorpayPayment(ctx, tenantID, cmd.PaymentID)

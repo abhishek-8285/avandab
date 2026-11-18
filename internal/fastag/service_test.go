@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	intFastag "transport-app/internal/integration/fastag"
+	"transport-app/internal/shared"
 )
 
 // LoadConfig with nil DB must return safe defaults without touching storage.
@@ -167,20 +168,22 @@ func TestFASTagService_ListTransactionsAndTags(t *testing.T) {
 		(id, tenant_id, tag_id, vehicle_id, vehicle_number, trip_id, plaza_id, plaza_name, amount, txn_timestamp, status, source, reconciled, kharcha_id)
 		VALUES 
 		('tx-1', 't-1', 'tag-1', 'veh-1', 'DL01A1111', 'trip-1', 'p-1', 'Plaza A', 150.0, ?, 'SUCCESS', 'PROVIDER', 1, 'kh-1'),
-		('tx-2', 't-1', 'tag-2', NULL, 'DL02B2222', NULL, 'p-2', 'Plaza B', 250.0, ?, 'SUCCESS', 'PROVIDER', 0, NULL);`,
-		now, now.Add(-time.Hour))
+		('tx-2', 't-1', 'tag-2', NULL, 'DL02B2222', NULL, 'p-2', 'Plaza B', 250.0, ?, 'SUCCESS', 'PROVIDER', 0, NULL),
+		('tx-foreign', 't-2', 'tag-3', NULL, 'DL03C3333', NULL, 'p-3', 'Plaza C', 999.0, ?, 'SUCCESS', 'PROVIDER', 0, NULL);`,
+		now, now.Add(-time.Hour), now.Add(-2*time.Hour))
 	require.NoError(t, err)
 
 	_, err = db.Exec(`INSERT INTO fastag_tags 
 		(id, tenant_id, vehicle_id, tag_id, vehicle_number, issuer, tag_class, balance, status, last_sync)
 		VALUES 
 		('tag-row-1', 't-1', 'veh-1', 'tag-1', 'DL01A1111', 'ICICI', 'VC4', 1200.0, 'ACTIVE', ?),
-		('tag-row-2', 't-1', NULL, 'tag-2', 'DL02B2222', 'PAYTM', 'VC4', 450.0, 'ACTIVE', NULL);`,
+		('tag-row-2', 't-1', NULL, 'tag-2', 'DL02B2222', 'PAYTM', 'VC4', 450.0, 'ACTIVE', NULL),
+		('tag-row-foreign', 't-2', NULL, 'tag-3', 'DL03C3333', 'HDFC', 'VC4', 1.0, 'ACTIVE', NULL);`,
 		now)
 	require.NoError(t, err)
 
 	s := NewFASTagService(db, nil, Config{})
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "t-1")
 
 	// ListTransactions with filter
 	txs, err := s.ListTransactions(ctx, "DL01A1111", 10)
@@ -200,7 +203,7 @@ func TestFASTagService_ListTransactionsAndTags(t *testing.T) {
 	// ListTags
 	tags, err := s.ListTags(ctx)
 	require.NoError(t, err)
-	assert.Len(t, tags, 2)
+	assert.Len(t, tags, 2, "another tenant's tags must not be listed")
 	assert.Equal(t, "DL01A1111", tags[0].VehicleNumber)
 	assert.Equal(t, "ICICI", tags[0].Issuer)
 	assert.NotEqual(t, "-", tags[0].LastSyncStr)

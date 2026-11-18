@@ -410,6 +410,7 @@ func TestDocumentVault_HTTP_Endpoints_And_Dashboard(t *testing.T) {
 				UserID: "admin-user",
 				Role:   "admin",
 			})
+			ctx = shared.ContextWithTenantID(ctx, shared.DefaultTenant)
 			next.ServeHTTP(w, req.WithContext(ctx))
 		})
 	})

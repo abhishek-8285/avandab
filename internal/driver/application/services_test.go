@@ -62,6 +62,9 @@ CREATE TABLE IF NOT EXISTS trips (
     vehicle_id TEXT,
     status TEXT NOT NULL DEFAULT 'draft',
     started_at DATETIME,
+    reached_pickup_at DATETIME,
+    in_transit_at DATETIME,
+    completed_at DATETIME,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -406,7 +409,7 @@ func TestDriverAppService_DispatchOffersAndConcurrency(t *testing.T) {
 	respStart, err := svc.ProcessDriverCommand(ctx, tenantID, driverA, startCmd)
 	require.NoError(t, err)
 	assert.True(t, respStart.Success)
-	assert.Equal(t, "en_route_pickup", respStart.TripState)
+	assert.Equal(t, "started", respStart.TripState)
 
 	// Complete trip
 	completeCmd := application.DriverCommandRequest{
@@ -505,7 +508,7 @@ func TestDriverAppService_FullTripStateMachineAndPODEnforcement(t *testing.T) {
 
 	// New workflow seam (commit 20c0660c): booking confirmation creates the
 	// operational trip; ACCEPT_OFFER only assigns driver/vehicle to it.
-	_, err = db.Exec(`INSERT INTO trips (id, tenant_id, booking_id, status) VALUES ('trip-full-flow', ?, ?, 'created')`, tenantID, bookingID)
+	_, err = db.Exec(`INSERT INTO trips (id, tenant_id, booking_id, status) VALUES ('trip-full-flow', ?, ?, 'scheduled')`, tenantID, bookingID)
 	require.NoError(t, err)
 
 	cmdAccept := application.DriverCommandRequest{
@@ -532,13 +535,13 @@ func TestDriverAppService_FullTripStateMachineAndPODEnforcement(t *testing.T) {
 		cmdType   string
 		wantState string
 	}{
-		{"START_TRIP", "en_route_pickup"},
-		{"ARRIVE_PICKUP", "arrived_pickup"},
-		{"START_LOADING", "loading"},
-		{"COMPLETE_LOADING", "loaded"},
+		{"START_TRIP", "started"},
+		{"ARRIVE_PICKUP", "reached_pickup"},
+		{"START_LOADING", "reached_pickup"},
+		{"COMPLETE_LOADING", "reached_pickup"},
 		{"START_DELIVERY", "in_transit"},
-		{"ARRIVE_DELIVERY", "arrived_delivery"},
-		{"START_UNLOADING", "unloading"},
+		{"ARRIVE_DELIVERY", "in_transit"},
+		{"START_UNLOADING", "in_transit"},
 	}
 
 	for _, s := range steps {

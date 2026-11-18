@@ -20,12 +20,15 @@ services:
       - mosquitto
     restart: unless-stopped
 
-  # MQTT broker for GPS telemetry ingestion
+  # MQTT broker for GPS telemetry ingestion.
+  # Dev config allows anonymous clients, so listeners stay loopback-only by
+  # default. Remote exposure requires auth (config/mosquitto.prod.conf.example
+  # + passwd + acl) and a firewall rule; then set MQTT_BIND_HOST=0.0.0.0.
   mosquitto:
     image: eclipse-mosquitto:2
     ports:
-      - "1883:1883"   # TCP for server-side own devices
-      - "9001:9001"   # WebSocket for mobile app (Spec 13)
+      - "${MQTT_BIND_HOST:-127.0.0.1}:1883:1883"   # TCP for server-side own devices
+      - "${MQTT_BIND_HOST:-127.0.0.1}:9001:9001"   # WebSocket for mobile app (Spec 13)
     volumes:
       - ./config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - mosquitto_data:/mosquitto/data

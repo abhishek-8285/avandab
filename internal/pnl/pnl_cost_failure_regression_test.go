@@ -33,7 +33,7 @@ func TestCalculate_FailedCostQueryMustNotYieldAvailableMargin(t *testing.T) {
 		pnl_confidence TEXT, fuel_cost_status TEXT
 	);
 	CREATE TABLE bookings (id TEXT PRIMARY KEY, price REAL);
-	CREATE TABLE vehicles (id TEXT PRIMARY KEY, fuel_type TEXT, current_mileage REAL);
+	CREATE TABLE vehicles (id TEXT PRIMARY KEY, fuel_type TEXT, current_mileage REAL, standard_kmpl REAL);
 	CREATE TABLE routes (id TEXT PRIMARY KEY);
 	CREATE TABLE telemetry_snapshots (trip_id TEXT, odometer REAL);
 	CREATE TABLE fuel_prices (tenant_id TEXT, diesel_price REAL, petrol_price REAL, updated_at DATETIME);
@@ -44,7 +44,7 @@ func TestCalculate_FailedCostQueryMustNotYieldAvailableMargin(t *testing.T) {
 	INSERT INTO trips (id, tenant_id, booking_id, vehicle_id, departure_time, arrival_time)
 		VALUES ('trp1', '1', 'bk1', 'veh1', '2026-01-10 08:00:00', '2026-01-12 18:00:00');
 	INSERT INTO bookings VALUES ('bk1', 50000);
-	INSERT INTO vehicles VALUES ('veh1', 'diesel', 5.0);
+	INSERT INTO vehicles VALUES ('veh1', 'diesel', 5.0, 5.0);
 	INSERT INTO fuel_prices VALUES ('1', 100.0, 110.0, datetime('now'));
 	INSERT INTO telemetry_snapshots VALUES ('trp1', 100), ('trp1', 600);`)
 	require.NoError(t, err)
@@ -84,7 +84,7 @@ func TestFetchMaintenanceCost_NeverDropsTenantPredicate(t *testing.T) {
 		pnl_confidence TEXT, fuel_cost_status TEXT
 	);
 	CREATE TABLE bookings (id TEXT PRIMARY KEY, price REAL);
-	CREATE TABLE vehicles (id TEXT PRIMARY KEY, fuel_type TEXT, current_mileage REAL);
+	CREATE TABLE vehicles (id TEXT PRIMARY KEY, fuel_type TEXT, current_mileage REAL, standard_kmpl REAL);
 	CREATE TABLE routes (id TEXT PRIMARY KEY);
 	CREATE TABLE telemetry_snapshots (trip_id TEXT, odometer REAL);
 	CREATE TABLE fuel_prices (tenant_id TEXT, diesel_price REAL, petrol_price REAL, updated_at DATETIME);
@@ -98,7 +98,7 @@ func TestFetchMaintenanceCost_NeverDropsTenantPredicate(t *testing.T) {
 	INSERT INTO trips (id, tenant_id, booking_id, vehicle_id, departure_time, arrival_time)
 		VALUES ('trp1', '1', 'bk1', 'veh1', '2026-01-10 08:00:00', '2026-01-12 18:00:00');
 	INSERT INTO bookings VALUES ('bk1', 50000);
-	INSERT INTO vehicles VALUES ('veh1', 'diesel', 5.0);
+	INSERT INTO vehicles VALUES ('veh1', 'diesel', 5.0, 5.0);
 	INSERT INTO fuel_prices VALUES ('1', 100.0, 110.0, datetime('now'));
 	INSERT INTO telemetry_snapshots VALUES ('trp1', 100), ('trp1', 600);
 	INSERT INTO maintenance_records (id, vehicle_id, service_type, performed_at, cost)

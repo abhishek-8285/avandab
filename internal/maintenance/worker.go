@@ -54,6 +54,22 @@ func NewWorker(db *sql.DB, bus events.EventBus, logger *slog.Logger, intervalMin
 	return w
 }
 
+// safePublish dispatches an event to the bus and logs delivery failures
+// instead of discarding them, so a lost maintenance alert stays observable.
+func (w *Worker) safePublish(ctx context.Context, evt events.Event) {
+	if w.bus == nil {
+		return
+	}
+	logger := w.logger
+	if logger == nil {
+		logger = slog.Default()
+	}
+	if err := w.bus.Publish(ctx, evt); err != nil {
+		logger.Warn("maintenance event publish failed",
+			"event_type", evt.Type, "error", err)
+	}
+}
+
 // Run starts the background evaluation loop.
 func (w *Worker) Run(ctx context.Context) {
 	w.logger.Info("preventive maintenance worker started", "interval", w.checkInterval)
@@ -285,9 +301,7 @@ func (w *Worker) markVehicleDue(ctx context.Context, vehicleID, tenant, schedule
 				"due_date":     dueDate.Format("2006-01-02"),
 			},
 		}
-		if err := w.bus.Publish(ctx, evt); err != nil {
-			w.logger.Warn("maintenance: event publish failed", "error", err)
-		}
+		w.safePublish(ctx, evt)
 	}
 }
 
@@ -386,9 +400,7 @@ func (w *Worker) EvaluateResolution(ctx context.Context, vehicleID string) {
 					"cleared_at": time.Now().UTC().Format(time.RFC3339),
 				},
 			}
-			if err := w.bus.Publish(ctx, evt); err != nil {
-				w.logger.Warn("maintenance: event publish failed", "error", err)
-			}
+			w.safePublish(ctx, evt)
 		}
 	}
 }
