@@ -39,8 +39,13 @@ CREATE TABLE trips (
     id TEXT PRIMARY KEY,
     driver_id TEXT,
     vehicle_id TEXT,
+    tenant_id TEXT,
     status TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE vehicles (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT
 );
 CREATE TABLE outbox_events (
     id TEXT PRIMARY KEY,
@@ -253,6 +258,44 @@ func TestSOSService_AuditTenantOrPlatformFallback(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, db.QueryRow(`SELECT tenant_id FROM audit_logs WHERE record_id = 'sos_ctx2'`).Scan(&tenant))
 	assert.Equal(t, "tenant-2", tenant)
+}
+
+func TestSOSService_ResolveSOSTargetsBindsToDriverAndTenant(t *testing.T) {
+	db := newSOSTestDB(t)
+	ctx := shared.ContextWithTenantID(context.Background(), "tenant-1")
+	seedSOSDriver(t, db, "d-1", "DRV-1", "", "tenant-1")
+	mustExecSOS(t, db, `INSERT INTO vehicles (id, tenant_id) VALUES ('v-own', 'tenant-1'), ('v-other', 'tenant-2')`)
+	mustExecSOS(t, db, `INSERT INTO trips (id, driver_id, vehicle_id, tenant_id, status) VALUES
+		('t-own', 'd-1', 'v-own', 'tenant-1', 'in_transit'),
+		('t-other', 'd-2', 'v-other', 'tenant-2', 'in_transit')`)
+	svc := NewSOSService(db, nil)
+
+	// Valid trip: the trip's vehicle wins over any caller-supplied one.
+	targets, err := svc.ResolveSOSTargets(ctx, "d-1", "t-own", "")
+	require.NoError(t, err)
+	assert.Equal(t, SOSTargets{TenantID: "tenant-1", TripID: "t-own", VehicleID: "v-own"}, targets)
+
+	// Unknown / foreign / mismatched IDs are rejected with the legacy wording.
+	_, err = svc.ResolveSOSTargets(ctx, "d-1", "t-missing", "")
+	assert.ErrorIs(t, err, ErrSOSTripNotActive)
+	_, err = svc.ResolveSOSTargets(ctx, "d-1", "t-other", "")
+	assert.ErrorIs(t, err, ErrSOSTripNotActive)
+	_, err = svc.ResolveSOSTargets(ctx, "d-1", "t-own", "v-other")
+	assert.ErrorIs(t, err, ErrSOSVehicleMismatch)
+	_, err = svc.ResolveSOSTargets(ctx, "d-1", "", "v-other")
+	assert.ErrorIs(t, err, ErrSOSVehicleForeign)
+
+	// Omitted IDs fall back to the driver's active trip (no tenant filter, legacy).
+	targets, err = svc.ResolveSOSTargets(ctx, "d-1", "", "")
+	require.NoError(t, err)
+	assert.Equal(t, SOSTargets{TenantID: "tenant-1", TripID: "t-own", VehicleID: "v-own"}, targets)
+
+	// No tenant context and no driver tenant: caller IDs are cleared, never
+	// emitted verbatim (legacy emergency behavior).
+	seedSOSDriver(t, db, "d-nt", "DRV-NT", "", "")
+	noTenant, err := svc.ResolveSOSTargets(context.Background(), "d-nt", "t-other", "v-other")
+	require.NoError(t, err)
+	assert.Equal(t, SOSTargets{}, noTenant)
 }
 
 func TestSOSService_InsertFailureRendersDuplicateAck(t *testing.T) {

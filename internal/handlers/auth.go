@@ -24,8 +24,7 @@ type AuthHandlers struct {
 // (mobile driver app). The response is identical whether or not the account
 // exists, to prevent enumeration. When SMTP is configured the reset email is
 // queued durably via comm_outbox (Phase 2 outbox consumer); in development
-// the reset link is returned so the flow is usable without a mailer (mirrors
-// SubmitForgotPassword).
+// the reset link is returned so the flow is usable without a mailer.
 func (h *AuthHandlers) ForgotPasswordAPI(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Email string `json:"email"`
@@ -716,11 +715,8 @@ func (h *AuthHandlers) SubmitForgotPassword(w http.ResponseWriter, r *http.Reque
 	h.renderAuthPage(w, r, "forgot_password.html", pd)
 }
 
-// enqueueResetEmail durably queues a password-reset email through comm_outbox
-// (Phase 2 — the outbox worker delivers via SMTP). The tenant is taken from
-// the user's own record (never hardcoded); comm_outbox requires a tenant_id.
-// Returns true when the email was queued, false when SMTP is unconfigured so
-// callers can fall back to the dev link.
+// enqueueResetEmail queues via comm_outbox using the user's own tenant (never
+// hardcoded); it returns false when SMTP is unconfigured so callers fall back to the dev link.
 func (h *AuthHandlers) enqueueResetEmail(r *http.Request, user domain.User, link string) bool {
 	if h.App == nil || h.App.DB == nil || h.App.Notify == nil || !h.App.Notify.EmailConfigured() {
 		return false
@@ -732,21 +728,6 @@ func (h *AuthHandlers) enqueueResetEmail(r *http.Request, user domain.User, link
 		slog.Error("password reset email enqueue failed", "email", user.Email, "error", err)
 	}
 	return true
-}
-
-// outOfBandURL builds an absolute link for email delivery. The origin comes
-// from configuration, never from r.Host or X-Forwarded-Proto: those are
-// attacker-controlled on an unauthenticated forgot-password request and were
-// used to send victims' reset tokens to an attacker host.
-func (h *AuthHandlers) outOfBandURL(path string) string {
-	base := ""
-	if h.App != nil && h.App.Config != nil {
-		base = strings.TrimRight(h.Config.PublicBaseURL, "/")
-	}
-	if base == "" {
-		base = "https://avandab.com" // safe default, matches config default
-	}
-	return base + path
 }
 
 // ResetPasswordPage renders the password reset form for a valid token.

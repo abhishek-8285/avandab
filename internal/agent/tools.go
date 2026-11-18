@@ -705,13 +705,10 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if db == nil {
 					return "database not available", nil
 				}
-				// Tenant isolation + wire shape live in the owning alerts read
-				// model (audit 2026-09-17 regression is pinned there and in
-				// TestGetOpenAlerts_TenantIsolation below).
+				// Tenant isolation + wire shape live in the alerts read model (audit 2026-09-17 regression pinned there and in TestGetOpenAlerts_TenantIsolation).
 				alerts, err := alertsapp.NewOpenAlertQueries(db).List(ctx, string(shared.TenantIDFromContext(ctx)), in.Severity, 20)
 				if err != nil {
-					// Propagate so Agent.Run traces the failure; DB internals
-					// must never be returned as a user-facing answer.
+					// Propagate: DB internals must never be a user-facing answer.
 					return "", err
 				}
 				if len(alerts) == 0 {

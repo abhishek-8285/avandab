@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -11,7 +12,6 @@ import (
 	alertsapp "transport-app/internal/alerts/application"
 	"transport-app/internal/events"
 	"transport-app/internal/httpx"
-	"transport-app/internal/shared"
 )
 
 // SOSRequest represents the payload sent from the driver mobile app or panic button.
@@ -46,10 +46,7 @@ type SOSHandlers struct {
 
 // NewSOSHandlers constructs a new SOSHandlers instance.
 func NewSOSHandlers(app *App, db *sql.DB) *SOSHandlers {
-	return &SOSHandlers{
-		app: app,
-		db:  db,
-	}
+	return &SOSHandlers{app: app, db: db}
 }
 
 // Mount registers the SOS endpoints on the router.
@@ -58,8 +55,7 @@ func (h *SOSHandlers) Mount(r chi.Router) {
 	r.Post("/api/v1/sos", h.TriggerSOS)
 }
 
-// eventBus returns the shared event bus when wired; nil-safe for partially
-// built apps (the service skips publishing on a nil bus).
+// eventBus is nil-safe for partially built apps (the service skips publishing on nil).
 func (h *SOSHandlers) eventBus() events.EventBus {
 	if h.app == nil || h.app.Services == nil {
 		return nil
@@ -70,7 +66,6 @@ func (h *SOSHandlers) eventBus() events.EventBus {
 // TriggerSOS handles emergency panic trigger from mobile client (Phase 8 §P3A).
 func (h *SOSHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 	svc := alertsapp.NewSOSService(h.db, h.eventBus())
-
 	driverID := ""
 	authorized := false
 	if session, ok := h.app.getUserFromContext(r); ok && session != nil && session.UserID != "" {
@@ -82,9 +77,7 @@ func (h *SOSHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 			driverID = headerID
 		} else {
 			httpx.JSON(w, http.StatusUnauthorized, map[string]string{
-				"error":   "unauthorized",
-				"message": "driver authentication required to trigger SOS",
-			})
+				"error": "unauthorized", "message": "driver authentication required to trigger SOS"})
 			return
 		}
 	}
@@ -92,9 +85,7 @@ func (h *SOSHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 	var req SOSRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httpx.JSON(w, http.StatusBadRequest, map[string]string{
-			"error":   "invalid_request",
-			"message": "invalid JSON body for SOS",
-		})
+			"error": "invalid_request", "message": "invalid JSON body for SOS"})
 		return
 	}
 
@@ -107,94 +98,50 @@ func (h *SOSHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Emergency path accepts header-auth drivers without a resolved tenant:
-	// attribute via the driver's own org. Never another org, never dropped.
-	tenantID := string(shared.TenantIDFromContext(r.Context()))
-	if tenantID == "" {
-		tenantID = svc.DriverTenant(r.Context(), driverID)
-	}
-
 	// Client-supplied trip/vehicle IDs are untrusted: bind them to the
 	// authenticated driver and tenant before they reach the alert payload.
-	if tenantID == "" {
-		// No way to attribute the IDs — never emit caller-provided ones.
-		req.TripID, req.VehicleID = "", ""
-	} else if req.TripID != "" {
-		var tripVehicleID string
-		err := h.db.QueryRowContext(r.Context(), `
-			SELECT vehicle_id FROM trips WHERE id = $1 AND driver_id = $2 AND tenant_id = $3`,
-			req.TripID, driverID, tenantID).Scan(&tripVehicleID)
-		if err != nil {
-			httpx.JSON(w, http.StatusBadRequest, map[string]string{
-				"error": "invalid_request", "message": "trip_id is not an active trip for this driver",
-			})
-			return
-		}
-		if req.VehicleID != "" && req.VehicleID != tripVehicleID {
-			httpx.JSON(w, http.StatusBadRequest, map[string]string{
-				"error": "invalid_request", "message": "vehicle_id does not match the trip",
-			})
-			return
-		}
-		req.VehicleID = tripVehicleID
-	} else if req.VehicleID != "" {
-		var one int
-		err := h.db.QueryRowContext(r.Context(), `
-			SELECT 1 FROM vehicles WHERE id = $1 AND tenant_id = $2`,
-			req.VehicleID, tenantID).Scan(&one)
-		if err != nil {
-			httpx.JSON(w, http.StatusBadRequest, map[string]string{
-				"error": "invalid_request", "message": "vehicle_id is not in this tenant",
-			})
-			return
-		}
+	targets, err := svc.ResolveSOSTargets(r.Context(), driverID, req.TripID, req.VehicleID)
+	if err != nil {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{
+			"error": "invalid_request", "message": err.Error()})
+		return
 	}
-
-	// Resolve active trip and vehicle if omitted in mobile request
-	if req.TripID == "" || req.VehicleID == "" {
-		tripID, vehicleID := svc.ActiveTrip(r.Context(), driverID)
-		if req.TripID == "" {
-			req.TripID = tripID
-		}
-		if req.VehicleID == "" {
-			req.VehicleID = vehicleID
-		}
-	}
-
+	req.TripID, req.VehicleID = targets.TripID, targets.VehicleID
 	if req.Reason == "" {
 		req.Reason = "Emergency SOS Triggered from Driver Mobile App"
 	}
 
 	sosID := alertsapp.NewSOSID(req.CommandID)
-
 	// Persist to outbox_events idempotently; only the first delivery of a
 	// command id publishes the event + audit row and alerts responders.
-	firstDelivery, _ := svc.Trigger(r.Context(), alertsapp.SOSTrigger{
-		SOSID:        sosID,
-		TenantID:     tenantID,
-		DriverID:     driverID,
-		VehicleID:    req.VehicleID,
-		TripID:       req.TripID,
-		Latitude:     req.Latitude,
-		Longitude:    req.Longitude,
-		Accuracy:     req.Accuracy,
-		BatteryLevel: req.BatteryLevel,
-		Reason:       req.Reason,
-		TriggeredAt:  req.TriggeredAt,
-		ReceivedAt:   now,
+	firstDelivery, triggerErr := svc.Trigger(r.Context(), alertsapp.SOSTrigger{
+		SOSID: sosID, TenantID: targets.TenantID, DriverID: driverID,
+		VehicleID: req.VehicleID, TripID: req.TripID,
+		Latitude: req.Latitude, Longitude: req.Longitude,
+		Accuracy: req.Accuracy, BatteryLevel: req.BatteryLevel,
+		Reason: req.Reason, TriggeredAt: req.TriggeredAt, ReceivedAt: now,
 	})
+	if triggerErr != nil {
+		// Fail closed: the alert pipeline only runs off the persisted outbox
+		// row. A 2xx here would tell a driver in danger that help is coming
+		// while nothing was recorded or published.
+		slog.Error("sos persist failed", "sos_id", sosID, "tenant_id", targets.TenantID, "error", triggerErr)
+		w.Header().Set("Cache-Control", "no-store")
+		httpx.JSON(w, http.StatusServiceUnavailable, SOSResponse{
+			Status: "failed", SOSID: sosID, DriverID: driverID,
+			VehicleID: req.VehicleID, ReceivedAt: now,
+			Message: "SOS could not be recorded. Retry immediately or call emergency services.",
+		})
+		return
+	}
 
 	status := http.StatusCreated
 	if !firstDelivery {
 		status = http.StatusOK // Idempotent duplicate acknowledgment
 	}
-
 	httpx.JSON(w, status, SOSResponse{
-		Status:     "acknowledged",
-		SOSID:      sosID,
-		DriverID:   driverID,
-		VehicleID:  req.VehicleID,
-		ReceivedAt: now,
-		Message:    "Emergency response team and dispatchers have been alerted.",
+		Status: "acknowledged", SOSID: sosID, DriverID: driverID,
+		VehicleID: req.VehicleID, ReceivedAt: now,
+		Message: "Emergency response team and dispatchers have been alerted.",
 	})
 }

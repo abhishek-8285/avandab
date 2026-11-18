@@ -73,6 +73,19 @@ func (s *DriverSelfService) resolveTenantDriverID(ctx context.Context, userID st
 	return driverID, nil
 }
 
+// RequireTenantDriver refuses when the acting user has no driver row in the
+// calling tenant. Mobile self-service handlers gate on this at the HTTP
+// boundary while the application service keeps its legacy tenant-unscoped
+// identity rule.
+func (s *DriverSelfService) RequireTenantDriver(ctx context.Context, userID string) error {
+	tenantID := shared.TenantIDFromContext(ctx)
+	if tenantID == "" {
+		return ErrDriverNotFound
+	}
+	_, err := s.resolveTenantDriverID(ctx, userID, tenantID)
+	return err
+}
+
 // DriverSelfProfile is the drivers row rendered by GET /api/v1/drivers/me.
 type DriverSelfProfile struct {
 	ID            string

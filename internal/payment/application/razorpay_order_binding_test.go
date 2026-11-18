@@ -10,6 +10,7 @@ import (
 
 	paymentagg "transport-app/internal/payment/domain/aggregate"
 	"transport-app/internal/payment/orderstore"
+	"transport-app/internal/payment/razorpay"
 	"transport-app/internal/shared"
 )
 
@@ -69,8 +70,18 @@ func TestVerifyRazorpayPayment_RecordsBoundAmount(t *testing.T) {
 	store := &fakeOrderBindingStore{bindings: map[string]orderstore.Binding{
 		"order-partial": {TenantID: "1", InvoiceID: string(invoiceID), AmountPaise: 10000},
 	}}
+	gw := &fakeGatewayApp{
+		payment: &razorpay.PaymentDetails{
+			ID: "pay_partial", OrderID: "order-partial", Status: "captured",
+			Currency: "INR", Amount: 10000,
+		},
+		order: &razorpay.OrderDetails{
+			ID: "order-partial", Status: "paid", Amount: 10000, Currency: "INR",
+			Notes: map[string]string{"invoice_id": string(invoiceID)},
+		},
+	}
 	uc := NewVerifyRazorpayPaymentUseCase(uow, recordUC, &fakeVerifier{ok: true}, "secret", clock).
-		WithOrderBinding(store)
+		WithOrderBinding(store).WithPaymentGateway(gw)
 
 	ctx := context.WithValue(context.Background(), shared.TenantIDKey, shared.TenantID("1"))
 	_, err := uc.Execute(ctx, VerifyRazorpayPaymentCommand{

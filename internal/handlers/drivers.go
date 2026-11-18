@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -117,9 +116,8 @@ func (h *DriverHandlers) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	licenseExpiry, err := time.Parse("2006-01-02", r.PostFormValue("license_expiry"))
+	licenseExpiry, err := parseLicenseExpiry(w, r)
 	if err != nil {
-		http.Error(w, "license_expiry must be YYYY-MM-DD", http.StatusBadRequest)
 		return
 	}
 	exp, _ := strconv.ParseInt(r.PostFormValue("experience"), 10, 64)
@@ -213,9 +211,8 @@ func (h *DriverHandlers) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	driverID := chi.URLParam(r, "id")
-	licenseExpiry, err := time.Parse("2006-01-02", r.PostFormValue("license_expiry"))
+	licenseExpiry, err := parseLicenseExpiry(w, r)
 	if err != nil {
-		http.Error(w, "license_expiry must be YYYY-MM-DD", http.StatusBadRequest)
 		return
 	}
 	exp, _ := strconv.ParseInt(r.PostFormValue("experience"), 10, 64)
@@ -329,10 +326,7 @@ func strPtr(s string) *string {
 	return &s
 }
 
-// UpdateMyStatus lets the authenticated driver flip their own duty status
-// from the mobile app (FleetBase-style online/offline toggle).
-// 'on_trip' is deliberately rejected here: it is system-controlled by the
-// trip lifecycle (start/complete), never hand-set.
+// UpdateMyStatus flips the driver's duty status; 'on_trip' is system-controlled.
 func (h *DriverHandlers) UpdateMyStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	session, ok := h.getUserFromContext(r)
@@ -357,6 +351,10 @@ func (h *DriverHandlers) UpdateMyStatus(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	h.init()
+
+	if !tenantDriverGate(h, w, r, session.UserID) {
+		return
+	}
 
 	driverID, err := h.self.UpdateMyStatus(r.Context(), session.UserID, req.Status)
 	if err != nil {

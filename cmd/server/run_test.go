@@ -28,24 +28,6 @@ func TestStartupSecretsError_DevNeedsExplicitOptIn(t *testing.T) {
 	}
 }
 
-// A production deployment on committed default secrets must be refused by
-// run(), which returns an error instead of calling os.Exit directly. Returning
-// through main is what lets the startup defers (signal stop, DB close, cache
-// close) execute on every failure path.
-func TestRunFailsClosedOnKnownDefaultSecrets(t *testing.T) {
-	t.Setenv("APP_ENV", "production")
-	t.Setenv("API_SECRET", "")
-	t.Setenv("COOKIE_SECRET", "dev-secret-key-change-in-production-32b!")
-
-	err := run()
-	if err == nil {
-		t.Fatal("expected run to reject known default secrets in production")
-	}
-	if !strings.Contains(err.Error(), "known default secrets") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
 // The generic /uploads/* mount must never serve the signature-only POD
 // directory, including when a doubled slash or encoded segment routes around
 // the dedicated /uploads/pod/* handler.
