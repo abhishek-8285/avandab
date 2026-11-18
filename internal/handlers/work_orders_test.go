@@ -48,6 +48,11 @@ func TestWorkOrderAPI_Lifecycle(t *testing.T) {
 	// tenant-A must exist: close-books records are trigger-FK-checked.
 	_, err := db.Exec(`INSERT INTO tenants (id, name, slug) VALUES ('tenant-A','A','a')`)
 	require.NoError(t, err)
+	// Closing a card writes a service record, which must resolve to a vehicle
+	// owned by the caller's tenant.
+	_, err = db.Exec(`INSERT INTO vehicles (id, tenant_id, registration_number, vehicle_number, vehicle_type, capacity, insurance_expiry, fitness_expiry, permit_expiry, status)
+		VALUES ('va', 'tenant-A', 'MH01WO1234', 'MH01WO1234', 'truck', 10000, '2029-01-01', '2029-01-01', '2029-01-01', 'running')`)
+	require.NoError(t, err)
 
 	// Validation: missing vehicle/title → 400.
 	w := woAPIRequest(t, r, "POST", "/api/v1/work-orders", "tenant-A", `{"title":"x"}`)
