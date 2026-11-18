@@ -11,6 +11,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	routeentity "transport-app/internal/domain/route"
@@ -125,6 +126,33 @@ func (q *AgentRouteQueries) Quote(ctx context.Context, tenantID shared.TenantID,
 // gstRate mirrors legacy GetSettings: per-tenant profile rate for org tenants,
 // company_settings id=1 for the bootstrap/global tenant; absent row = 0%.
 func (q *AgentRouteQueries) gstRate(ctx context.Context, tenantID shared.TenantID) (float64, error) {
+	// Tenant billing config overrides the profile/global default so agent
+	// quotes match invoice generation: gst_enabled=false means zero tax, and
+	// an explicit gst_rate wins over the profile rate.
+	if tid := string(tenantID); tid != "" {
+		var enabled, override sql.NullString
+		err := q.db.QueryRowContext(ctx, `SELECT
+			MAX(CASE WHEN key = 'billing.gst_enabled' THEN value END),
+			MAX(CASE WHEN key = 'billing.gst_rate' THEN value END)
+			FROM company_config WHERE tenant_id = ?`, tid).Scan(&enabled, &override)
+		if err != nil && !strings.Contains(err.Error(), "no such table: company_config") {
+			return 0, err
+		}
+		// Legacy/slim read-only DBs may not carry company_config; the
+		// profile/global rate below is the fallback in that case.
+		if err == nil {
+			if enabled.Valid && strings.EqualFold(enabled.String, "false") {
+				return 0, nil
+			}
+			if override.Valid {
+				rate, err := strconv.ParseFloat(override.String, 64)
+				if err != nil {
+					return 0, fmt.Errorf("invalid billing.gst_rate: %w", err)
+				}
+				return rate, nil
+			}
+		}
+	}
 	if tid := string(tenantID); tid != "" && tid != string(shared.DefaultTenant) { //nolint:tenant-default // bootstrap tenant reads the global company_settings GST rate; identity branching only
 		var rate float64
 		err := q.db.QueryRowContext(ctx, `SELECT gst_rate FROM tenant_company_profiles WHERE tenant_id = ?`, tid).Scan(&rate)

@@ -31,7 +31,7 @@ func (f *fakeOrderBindingStore) GetOrder(_ context.Context, orderID string) (ord
 
 // An order that was created for invoice A must never settle invoice B, even
 // when its order|payment signature is valid.
-func TestVerifyRazorpayPayment_RejectsOrderBoundToAnotherInvoice(t *testing.T) {
+func TestVerifyRazorpayPayment_WithOrderBindingRejectsForeignInvoice(t *testing.T) {
 	clock := &fakeClock{now: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}
 	uow := newFakeUnitOfWork()
 	invoiceID := seedInvoice(t, uow.repos.invoices, clock, 1000)

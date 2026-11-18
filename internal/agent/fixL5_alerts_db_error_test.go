@@ -3,14 +3,8 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"io"
-	"log/slog"
 	"testing"
 
-	"transport-app/internal/config"
-	"transport-app/internal/events"
-	"transport-app/internal/repository/sqlite"
-	"transport-app/internal/service"
 	"transport-app/internal/shared"
 )
 
@@ -18,11 +12,9 @@ import (
 // nil error, hiding outages from Agent.Run's error tracing.
 func TestGetOpenAlertsReturnsDBError(t *testing.T) {
 	db := newAgentTestDB(t)
-	services := service.NewServices(sqlite.NewRepository(db), &config.Config{},
-		slog.New(slog.NewTextHandler(io.Discard, nil)), events.NewInMemoryBus())
 
 	var alertTool *RegisteredTool
-	for _, tool := range RegisterTools(&ToolEnv{Services: services}) {
+	for _, tool := range RegisterTools(&ToolEnv{DB: db}) {
 		if tool.Name == "get_open_alerts" {
 			alertTool = tool
 			break

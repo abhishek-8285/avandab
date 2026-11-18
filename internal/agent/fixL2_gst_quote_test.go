@@ -3,16 +3,11 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"io"
-	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"transport-app/internal/config"
-	"transport-app/internal/events"
-	"transport-app/internal/repository/sqlite"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 )
@@ -46,10 +41,8 @@ func TestGetQuote_HonorsTenantGSTOverlay(t *testing.T) {
 		service.ConfigKeyGSTEnabled, service.ConfigKeyGSTEnabled, service.ConfigKeyGSTRate)
 	require.NoError(t, err)
 
-	services := service.NewServices(sqlite.NewRepository(db), &config.Config{},
-		slog.New(slog.NewTextHandler(io.Discard, nil)), events.NewInMemoryBus())
 	var quoteTool *RegisteredTool
-	for _, tool := range RegisterTools(&ToolEnv{Services: services}) {
+	for _, tool := range RegisterTools(&ToolEnv{DB: db}) {
 		if tool.Name == "get_quote" {
 			quoteTool = tool
 			break
