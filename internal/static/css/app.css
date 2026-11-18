@@ -706,6 +706,36 @@ button:disabled:hover {
         .login-link-button:hover {
             background-color: var(--color-primary-container);
         }
+        /* Pages with the mobile sticky dock need matching bottom space so the dock never covers content. */
+        body:has(#mobile-sticky-dock) {
+            padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+        }
+        /* Narrow phones: compact the header so it never overflows the viewport. */
+        @media (max-width: 639px) {
+            .navigation {
+                padding: 0 12px;
+            }
+            .navigation-button-container {
+                margin-right: 0.5rem;
+            }
+            .navigation-main-logo .font-display {
+                font-size: 1.15rem;
+            }
+            .navigation-top-menu-user-actions {
+                gap: 6px;
+            }
+            #lang-toggle-label {
+                display: none;
+            }
+            .navigation-top-menu-user-actions .login-link-button {
+                padding: 8px 10px;
+            }
+        }
+        @media (max-width: 379px) {
+            .navigation-main-logo .font-display {
+                display: none;
+            }
+        }
 
         /* ===== Universal loader (window.Loader) ===== */
         #global-loader {
@@ -881,6 +911,8 @@ button:disabled:hover {
             padding: 0;
             margin: 0;
             display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
             align-items: center;
             gap: 1.25rem;
         }
